@@ -1,0 +1,7 @@
+DROP INDEX message_bridge_id_msg_hash_message_id_unique_index;
+
+DROP INDEX message_request_msg_id_unique_index;
+
+DROP INDEX message_confirmation_tx_hash_validator_unique_index;
+
+DROP INDEX message_execution_msg_id_unique_index;

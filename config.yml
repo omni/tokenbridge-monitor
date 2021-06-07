@@ -1,0 +1,29 @@
+chains:
+  mainnet:
+    rpc:
+      host: https://mainnet.infura.io/v3/${INFURA_PROJECT_KEY}
+      timeout: 10000
+    block_time: 15000
+  xdai:
+    rpc:
+      host: https://dai.poa.network
+      timeout: 10000
+    block_time: 5000
+bridges:
+  xdai-amb:
+    home:
+      chain: xdai
+      address: 0x75Df5AF045d91108662D8080fD1FEFAd6aA0bb59
+      start_block: 7408640
+#      manual_block_ranges:
+#        - [15049195, 15059195]
+    foreign:
+      chain: mainnet
+      address: 0x4C36d2919e407f0Cc2Ee3c993ccF8ac26d9CE64e
+      start_block: 9130277
+postgres:
+  user: postgres
+  password: pass
+  host: postgres
+  port: 5432
+  database: db
