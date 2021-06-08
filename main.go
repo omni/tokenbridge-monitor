@@ -7,7 +7,6 @@ import (
 	"amb-monitor/logging"
 	"amb-monitor/monitor"
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 )
@@ -53,7 +52,6 @@ func main() {
 	}
 
 	for chainId, client := range clients {
-		fmt.Println(chainId, cfg.Chains)
 		go monitor.StartBlockIndexer(context.Background(), conn, chainId, client, cfg.Chains[chainId])
 	}
 

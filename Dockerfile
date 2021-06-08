@@ -12,7 +12,6 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
 
-COPY config.yml ./
 COPY migrations ./migrations/
 COPY --from=build /app/amb-monitor ./
 
