@@ -234,9 +234,10 @@ func StartBlockIndexer(ctx context.Context, conn *db.DB, clients map[string]*eth
 				continue
 			}
 			rows.Close()
+			wg.Wait()
 
 			if batch.Len() > 0 {
-				wg.Wait()
+				logger.Printf("found %d blocks without timestamps\n", batch.Len())
 				err = conn.SendBatch(context.Background(), &batch).Close()
 				if err != nil {
 					logger.Println(err)
