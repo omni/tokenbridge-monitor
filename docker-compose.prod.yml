@@ -14,5 +14,7 @@ services:
     build: .
     env_file:
       - .env
+    volumes:
+      - ./config.yml:/app/config.yml
 volumes:
   db:
