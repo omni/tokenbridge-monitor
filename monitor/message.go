@@ -3,7 +3,6 @@ package monitor
 import (
 	"context"
 	"github.com/jackc/pgtype/pgxtype"
-	"github.com/jackc/pgx/v4"
 )
 
 const (
@@ -81,71 +80,29 @@ func (m *MessageRequest) Insert(q pgxtype.Querier) error {
 }
 
 func (m *MessageConfirmation) Insert(q pgxtype.Querier) error {
-	err := q.QueryRow(
+	_, err := q.Exec(
 		context.Background(),
-		"SELECT id FROM message WHERE bridge_id = $1 AND msg_hash = $2",
-		m.Message.BridgeId, m.Message.MsgHash,
-	).Scan(&m.Message.dbId)
-	if err == pgx.ErrNoRows {
-		_, err = q.Exec(
-			context.Background(),
-			"INSERT INTO message_confirmation (msg_id, validator, chain_id, tx_hash, block_number, log_index, tmp_bridge_id, tmp_msg_hash) "+
-				"VALUES (NULL, $1, $2, $3, $4, $5, $6, $7) "+
-				"ON CONFLICT (tx_hash, validator) DO NOTHING "+
-				"RETURNING id ",
-			m.Validator,
-			m.ChainId, m.TxHash, m.BlockNumber, m.LogIndex,
-			m.Message.BridgeId, m.Message.MsgHash,
-		)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-	_, err = q.Exec(
-		context.Background(),
-		"INSERT INTO message_confirmation (msg_id, validator, chain_id, tx_hash, block_number, log_index) "+
-			"VALUES ($1, $2, $3, $4, $5, $6) "+
+		"INSERT INTO message_confirmation (msg_id, validator, chain_id, tx_hash, block_number, log_index, tmp_bridge_id, tmp_msg_hash) "+
+			"VALUES (NULL, $1, $2, $3, $4, $5, $6, $7) "+
 			"ON CONFLICT (tx_hash, validator) DO NOTHING "+
-			"RETURNING id",
-		m.Message.dbId,
+			"RETURNING id ",
 		m.Validator,
 		m.ChainId, m.TxHash, m.BlockNumber, m.LogIndex,
+		m.Message.BridgeId, m.Message.MsgHash,
 	)
 	return err
 }
 
 func (m *MessageExecution) Insert(q pgxtype.Querier) error {
-	err := q.QueryRow(
+	_, err := q.Exec(
 		context.Background(),
-		"SELECT id FROM message WHERE bridge_id = $1 AND message_id = $2",
-		m.Message.BridgeId, m.Message.MessageId,
-	).Scan(&m.Message.dbId)
-	if err == pgx.ErrNoRows {
-		_, err = q.Exec(
-			context.Background(),
-			"INSERT INTO message_execution (msg_id, status, chain_id, tx_hash, block_number, log_index, tmp_bridge_id, tmp_message_id) "+
-				"VALUES (NULL, $1, $2, $3, $4, $5, $6, $7) "+
-				"ON CONFLICT (msg_id) DO NOTHING "+
-				"RETURNING id",
-			m.Status,
-			m.ChainId, m.TxHash, m.BlockNumber, m.LogIndex,
-			m.Message.BridgeId, m.Message.MessageId,
-		)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-	_, err = q.Exec(
-		context.Background(),
-		"INSERT INTO message_execution (msg_id, status, chain_id, tx_hash, block_number, log_index) "+
-			"VALUES ($1, $2, $3, $4, $5, $6) "+
+		"INSERT INTO message_execution (msg_id, status, chain_id, tx_hash, block_number, log_index, tmp_bridge_id, tmp_message_id) "+
+			"VALUES (NULL, $1, $2, $3, $4, $5, $6, $7) "+
 			"ON CONFLICT (msg_id) DO NOTHING "+
 			"RETURNING id",
-		m.Message.dbId,
 		m.Status,
 		m.ChainId, m.TxHash, m.BlockNumber, m.LogIndex,
+		m.Message.BridgeId, m.Message.MessageId,
 	)
 	return err
 }
