@@ -4,11 +4,13 @@ chains:
       host: https://mainnet.infura.io/v3/${INFURA_PROJECT_KEY}
       timeout: 10000
     block_time: 15000
+    block_index_interval: 10000
   xdai:
     rpc:
       host: https://dai.poa.network
       timeout: 10000
     block_time: 5000
+    block_index_interval: 5000
 bridges:
   xdai-amb:
     home:

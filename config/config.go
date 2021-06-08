@@ -13,8 +13,9 @@ type RPCConfig struct {
 }
 
 type ChainConfig struct {
-	RPC       *RPCConfig `yaml:"rpc"`
-	BlockTime uint64     `yaml:"block_time"`
+	RPC                *RPCConfig `yaml:"rpc"`
+	BlockTime          uint64     `yaml:"block_time"`
+	BlockIndexInterval uint64     `yaml:"block_index_interval"`
 }
 
 type BridgeSideConfig struct {
@@ -80,9 +81,9 @@ func processConfig(cfg *Config) {
 	}
 }
 
-func ReadConfig() Config {
+func ReadConfig() *Config {
 	var cfg Config
 	readYamlConfig(&cfg)
 	processConfig(&cfg)
-	return cfg
+	return &cfg
 }

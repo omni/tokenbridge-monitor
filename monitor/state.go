@@ -69,7 +69,7 @@ func NewSideState(cfg *config.BridgeSideConfig, conn *db.DB) (*BridgeSideMonitor
 	}
 	if n, ok := res[0].(uint64); ok {
 		state := &BridgeSideMonitor{
-			ChainId:                    chainId.String(),
+			ChainId:                    chainId,
 			RequiredBlockConfirmations: n,
 			StartBlock:                 cfg.StartBlock,
 			CurrentBlock:               cfg.StartBlock,

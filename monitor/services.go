@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"amb-monitor/config"
 	"amb-monitor/db"
 	"amb-monitor/ethclient"
 	"amb-monitor/logging"
@@ -181,10 +182,14 @@ func (state *BridgeMonitor) StartReindexer(ctx context.Context, conn *db.DB) {
 	}
 }
 
-func StartBlockIndexer(ctx context.Context, conn *db.DB, clients map[string]*ethclient.Client) {
-	logger := logging.GetLogger("block-indexer")
+func StartBlockIndexer(ctx context.Context, conn *db.DB, chainName string, client *ethclient.Client, cfg *config.ChainConfig) {
+	logger := logging.GetLogger("block-indexer-" + chainName)
 
-	t := time.NewTicker(5 * time.Second)
+	t := time.NewTicker(time.Duration(cfg.BlockIndexInterval) * time.Millisecond)
+	chainId, err := client.ChainID()
+	if err != nil {
+		panic(err)
+	}
 
 	for {
 		select {
@@ -193,7 +198,11 @@ func StartBlockIndexer(ctx context.Context, conn *db.DB, clients map[string]*eth
 			return
 		case <-t.C:
 			logger.Println("searching for a batch of blocks without timestamps")
-			rows, err := conn.Query(ctx, "SELECT id, chain_id::text, block_number FROM block WHERE timestamp IS NULL LIMIT 100")
+			rows, err := conn.Query(
+				ctx,
+				"SELECT id, block_number FROM block WHERE chain_id = $1 AND timestamp IS NULL LIMIT 100",
+				chainId,
+			)
 			if err != nil {
 				logger.Println(err)
 				rows.Close()
@@ -203,22 +212,16 @@ func StartBlockIndexer(ctx context.Context, conn *db.DB, clients map[string]*eth
 			var wg sync.WaitGroup
 			var batch pgx.Batch
 			var id, blockNumber uint64
-			var chainId string
 
 			for rows.Next() {
-				err := rows.Scan(&id, &chainId, &blockNumber)
+				err := rows.Scan(&id, &blockNumber)
 				if err != nil {
 					logger.Println(err)
 					continue
 				}
 
-				client, ok := clients[chainId]
-				if !ok {
-					panic("required eth client does not exist")
-				}
-
 				wg.Add(1)
-				go func(id uint64, blockNumber uint64, chainId string) {
+				go func(id uint64, blockNumber uint64) {
 					defer wg.Done()
 
 					header, err := client.HeaderByNumber(blockNumber)
@@ -227,7 +230,7 @@ func StartBlockIndexer(ctx context.Context, conn *db.DB, clients map[string]*eth
 					} else {
 						batch.Queue("UPDATE block SET timestamp=$2 WHERE id=$1", id, time.Unix(int64(header.Time), 0))
 					}
-				}(id, blockNumber, chainId)
+				}(id, blockNumber)
 			}
 			if rows.Err() != nil {
 				logger.Println(rows.Err())

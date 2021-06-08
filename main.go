@@ -7,6 +7,7 @@ import (
 	"amb-monitor/logging"
 	"amb-monitor/monitor"
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 )
@@ -34,8 +35,8 @@ func main() {
 		if err != nil {
 			logger.Fatal(err)
 		}
-		clients[state.Home.ChainId] = state.Home.Client
-		clients[state.Foreign.ChainId] = state.Foreign.Client
+		clients[bridge.Home.ChainName] = state.Home.Client
+		clients[bridge.Foreign.ChainName] = state.Foreign.Client
 
 		logger.Printf("starting monitor for bridge %s\n", bridgeName)
 		go state.Home.StartBlockWatcher(context.Background())
@@ -51,7 +52,10 @@ func main() {
 		go state.StartReindexer(context.Background(), conn)
 	}
 
-	go monitor.StartBlockIndexer(context.Background(), conn, clients)
+	for chainId, client := range clients {
+		fmt.Println(chainId, cfg.Chains)
+		go monitor.StartBlockIndexer(context.Background(), conn, chainId, client, cfg.Chains[chainId])
+	}
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)

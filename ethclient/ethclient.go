@@ -11,6 +11,7 @@ import (
 
 type Client struct {
 	timeout time.Duration
+	chainId string
 	*ethclient.Client
 }
 
@@ -19,17 +20,24 @@ func NewClient(url string, timeout int64) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{time.Millisecond * time.Duration(timeout), rawClient}, nil
+	return &Client{timeout: time.Millisecond * time.Duration(timeout), Client: rawClient}, nil
 }
 
 func (c *Client) GetCtx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), c.timeout)
 }
 
-func (c *Client) ChainID() (*big.Int, error) {
-	ctx, cancel := c.GetCtx()
-	defer cancel()
-	return c.Client.ChainID(ctx)
+func (c *Client) ChainID() (string, error) {
+	if len(c.chainId) == 0 {
+		ctx, cancel := c.GetCtx()
+		defer cancel()
+		chainId, err := c.Client.ChainID(ctx)
+		if err != nil {
+			return "", err
+		}
+		c.chainId = chainId.String()
+	}
+	return c.chainId, nil
 }
 
 func (c *Client) BlockNumber() (uint64, error) {
