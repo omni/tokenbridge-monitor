@@ -3,63 +3,54 @@ package main
 import (
 	"amb-monitor/config"
 	"amb-monitor/db"
-	"amb-monitor/ethclient"
 	"amb-monitor/logging"
 	"amb-monitor/monitor"
+	"amb-monitor/repository"
 	"context"
 	"os"
 	"os/signal"
 )
 
 func main() {
-	var logger = logging.GetLogger("main")
+	var logger = logging.New()
 
-	cfg := config.ReadConfig()
-
-	err := db.SanityCheck(cfg.DBConfig)
+	cfg, err := config.ReadConfig()
 	if err != nil {
-		logger.Fatal(err)
+		logger.WithError(err).Fatal("can't read config")
 	}
 
-	conn, err := db.ConnectDB(cfg.DBConfig)
+	dbConn, err := db.New(cfg.DBConfig)
 	if err != nil {
-		logger.Fatal(err)
+		logger.WithError(err).Fatal("can't connect to database")
+	}
+	defer dbConn.Close()
+
+	if err = dbConn.Migrate(); err != nil {
+		logger.WithError(err).Fatal("can't run database migrations")
 	}
 
-	clients := make(map[string]*ethclient.Client, len(cfg.Bridges)*2)
+	repo := repository.NewRepo(dbConn)
 
-	for bridgeName, bridge := range cfg.Bridges {
-		logger.Printf("initializing monitor state for bridge %s\n", bridgeName)
-		state, err := monitor.NewState(bridge, conn)
-		if err != nil {
-			logger.Fatal(err)
+	monitors := make([]*monitor.Monitor, 0, len(cfg.Bridges))
+	ctx, cancel := context.WithCancel(context.Background())
+	for _, bridgeCfg := range cfg.Bridges {
+		m, err2 := monitor.NewMonitor(ctx, logger.WithField("bridge_id", bridgeCfg.ID), repo, bridgeCfg)
+		if err2 != nil {
+			logger.WithError(err2).Fatal("can't initialize bridge monitor")
 		}
-		clients[bridge.Home.ChainName] = state.Home.Client
-		clients[bridge.Foreign.ChainName] = state.Foreign.Client
 
-		logger.Printf("starting monitor for bridge %s\n", bridgeName)
-		go state.Home.StartBlockWatcher(context.Background())
-		go state.Home.StartEventFetcher(context.Background())
-		go state.Home.StartLogDispatcher(context.Background(), conn)
-		go state.Home.StartDbWriter(context.Background(), conn)
-
-		go state.Foreign.StartBlockWatcher(context.Background())
-		go state.Foreign.StartEventFetcher(context.Background())
-		go state.Foreign.StartLogDispatcher(context.Background(), conn)
-		go state.Foreign.StartDbWriter(context.Background(), conn)
-
-		go state.StartReindexer(context.Background(), conn)
+		monitors = append(monitors, m)
 	}
 
-	for chainId, client := range clients {
-		go monitor.StartBlockIndexer(context.Background(), conn, chainId, client, cfg.Chains[chainId])
+	for _, m := range monitors {
+		m.Start(ctx)
 	}
 
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-	for _ = range c {
-		logger.Printf("caught CTRL-C, gracefully terminating")
-		conn.Close()
+	for range c {
+		cancel()
+		logger.Warn("caught CTRL-C, gracefully terminating")
 		os.Exit(0)
 	}
 }

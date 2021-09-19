@@ -1,1 +1,0 @@
-DROP INDEX bridge_chain_id_address_uindex;

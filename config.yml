@@ -1,28 +1,34 @@
 chains:
   mainnet:
     rpc:
-      host: https://mainnet.infura.io/v3/${INFURA_PROJECT_KEY}
-      timeout: 10000
-    block_time: 15000
-    block_index_interval: 10000
+      host: https://mainnet.blockscout.com
+      timeout: 30s
+      rps: 10
+    chain_id: 1
+    block_time: 15s
+    block_index_interval: 10s
   xdai:
     rpc:
       host: https://dai.poa.network
-      timeout: 10000
-    block_time: 5000
-    block_index_interval: 5000
+      timeout: 20s
+      rps: 10
+    chain_id: 100
+    block_time: 5s
+    block_index_interval: 5s
 bridges:
   xdai-amb:
     home:
       chain: xdai
       address: 0x75Df5AF045d91108662D8080fD1FEFAd6aA0bb59
       start_block: 7408640
-#      manual_block_ranges:
-#        - [15049195, 15059195]
+      required_block_confirmations: 12
+      max_block_range_size: 10000
     foreign:
       chain: mainnet
       address: 0x4C36d2919e407f0Cc2Ee3c993ccF8ac26d9CE64e
       start_block: 9130277
+      required_block_confirmations: 12
+      max_block_range_size: 5000
 postgres:
   user: postgres
   password: pass

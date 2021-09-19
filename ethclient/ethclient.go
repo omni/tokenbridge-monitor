@@ -2,58 +2,65 @@ package ethclient
 
 import (
 	"context"
+	"fmt"
+	"math/big"
+	"time"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"math/big"
-	"time"
 )
 
 type Client struct {
+	ChainID string
+	url     string
 	timeout time.Duration
-	chainId string
-	*ethclient.Client
+	client  *ethclient.Client
 }
 
-func NewClient(url string, timeout int64) (*Client, error) {
-	rawClient, err := ethclient.Dial(url)
+func NewClient(url string, timeout time.Duration, chainID string) (*Client, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	rawClient, err := ethclient.DialContext(ctx, url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't dial JSON rpc url: %w", err)
 	}
-	return &Client{timeout: time.Millisecond * time.Duration(timeout), Client: rawClient}, nil
-}
-
-func (c *Client) GetCtx() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), c.timeout)
-}
-
-func (c *Client) ChainID() (string, error) {
-	if len(c.chainId) == 0 {
-		ctx, cancel := c.GetCtx()
-		defer cancel()
-		chainId, err := c.Client.ChainID(ctx)
-		if err != nil {
-			return "", err
-		}
-		c.chainId = chainId.String()
+	client := &Client{
+		ChainID: chainID,
+		url:     url,
+		timeout: timeout,
+		client:  rawClient,
 	}
-	return c.chainId, nil
+	ctx2, cancel2 := context.WithTimeout(context.Background(), timeout)
+	defer cancel2()
+	rpcChainID, err := client.client.ChainID(ctx2)
+	if err != nil {
+		return nil, fmt.Errorf("can't get chainID: %w", err)
+	}
+	if rpcChainID.String() != chainID {
+		return nil, fmt.Errorf("rpc url retunrned different chainID, expected %s, got %s", chainID, rpcChainID)
+	}
+	return client, nil
 }
 
-func (c *Client) BlockNumber() (uint64, error) {
-	ctx, cancel := c.GetCtx()
+func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	return c.Client.BlockNumber(ctx)
+
+	return c.client.BlockNumber(ctx)
 }
 
-func (c *Client) HeaderByNumber(n uint64) (*types.Header, error) {
-	ctx, cancel := c.GetCtx()
+func (c *Client) HeaderByNumber(ctx context.Context, n uint) (*types.Header, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	return c.Client.HeaderByNumber(ctx, big.NewInt(int64(n)))
+
+	return c.client.HeaderByNumber(ctx, big.NewInt(int64(n)))
 }
 
-func (c *Client) FilterLogs(q ethereum.FilterQuery) ([]types.Log, error) {
-	ctx, cancel := c.GetCtx()
+func (c *Client) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	return c.Client.FilterLogs(ctx, q)
+
+	return c.client.FilterLogs(ctx, q)
 }

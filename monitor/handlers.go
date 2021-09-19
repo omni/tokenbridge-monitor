@@ -1,208 +1,138 @@
 package monitor
 
 import (
-	"amb-monitor/db"
-	"encoding/binary"
+	"amb-monitor/entity"
+	"amb-monitor/repository"
+	"context"
+
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/jackc/pgtype/pgxtype"
-	"github.com/jackc/pgx/v4"
 )
 
-type EventHandler func(*BridgeSideMonitor, types.Log, map[string]interface{}) (db.Executable, error)
+type EventHandler func(ctx context.Context, log *entity.Log, data map[string]interface{}) error
 
-func buildMessage(bridgeId string, direction int, encodedData []byte) *Message {
-	msgHash := crypto.Keccak256Hash(encodedData).Hex()
-	messageId := encodedData[:32]
-	sender := encodedData[32:52]
-	executor := encodedData[52:72]
-	gasLimit := binary.BigEndian.Uint32(encodedData[72:76])
-	dataType := encodedData[78]
-	data := encodedData[79+encodedData[76]+encodedData[77]:]
+type BridgeEventHandler struct {
+	repo     *repository.Repo
+	bridgeID string
+}
 
-	return &Message{
-		BridgeId:  bridgeId,
-		Direction: direction,
-		MsgHash:   msgHash,
-		MessageId: hexutil.Encode(messageId[:]),
-		Sender:    hexutil.Encode(sender),
-		Executor:  hexutil.Encode(executor),
-		GasLimit:  gasLimit,
-		DataType:  dataType,
-		Data:      hexutil.Encode(data),
+func NewBridgeEventHandler(repo *repository.Repo, bridgeID string) *BridgeEventHandler {
+	return &BridgeEventHandler{
+		repo:     repo,
+		bridgeID: bridgeID,
 	}
 }
 
-func buildLegacyMessage(bridgeId string, direction int, encodedData []byte) *Message {
-	msgHash := crypto.Keccak256Hash(encodedData).Hex()
-	messageId := encodedData[:32]
-	sender := encodedData[32:52]
-	executor := encodedData[52:72]
-	gasLimit := binary.BigEndian.Uint32(encodedData[100:104])
-	dataType := encodedData[104]
-	if dataType > 0 {
-		panic("unsupported datatype")
+func (p *BridgeEventHandler) HandleUserRequestForAffirmation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	encodedData := data["encodedData"].([]byte)
+	message := unmarshalMessage(p.bridgeID, entity.DirectionForeignToHome, encodedData)
+	err := p.repo.Messages.Ensure(ctx, message)
+	if err != nil {
+		return err
 	}
-	data := encodedData[105:]
-
-	return &Message{
-		BridgeId:  bridgeId,
-		Direction: direction,
-		MsgHash:   msgHash,
-		MessageId: hexutil.Encode(messageId[:]),
-		Sender:    hexutil.Encode(sender),
-		Executor:  hexutil.Encode(executor),
-		GasLimit:  gasLimit,
-		DataType:  dataType,
-		Data:      hexutil.Encode(data),
-	}
+	return p.repo.SentMessages.Ensure(ctx, &entity.SentMessage{
+		LogID:    log.ID,
+		BridgeID: p.bridgeID,
+		MsgHash:  message.MsgHash,
+	})
 }
 
-func buildTxLogInfo(state *BridgeSideMonitor, log types.Log) *TxLogInfo {
-	return &TxLogInfo{
-		ChainId:     state.ChainId,
-		TxHash:      hexutil.Encode(log.TxHash[:]),
-		BlockNumber: log.BlockNumber,
-		LogIndex:    log.Index,
+func (p *BridgeEventHandler) HandleLegacyUserRequestForAffirmation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	encodedData := data["encodedData"].([]byte)
+	encodedData = append(log.TransactionHash[:], encodedData...)
+	message := unmarshalLegacyMessage(p.bridgeID, entity.DirectionForeignToHome, encodedData)
+	err := p.repo.Messages.Ensure(ctx, message)
+	if err != nil {
+		return err
 	}
+	return p.repo.SentMessages.Ensure(ctx, &entity.SentMessage{
+		LogID:    log.ID,
+		BridgeID: p.bridgeID,
+		MsgHash:  message.MsgHash,
+	})
 }
 
-func HandleUserRequestForAffirmation(state *BridgeSideMonitor, log types.Log, event map[string]interface{}) (db.Executable, error) {
-	encodedData := event["encodedData"].([]byte)
-	message := buildMessage(state.parent.Id, ForeignToHome, encodedData)
-	messageRequest := &MessageRequest{
-		Message:   message,
-		TxLogInfo: buildTxLogInfo(state, log),
+func (p *BridgeEventHandler) HandleUserRequestForSignature(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	encodedData := data["encodedData"].([]byte)
+	message := unmarshalMessage(p.bridgeID, entity.DirectionHomeToForeign, encodedData)
+	err := p.repo.Messages.Ensure(ctx, message)
+	if err != nil {
+		return err
 	}
-
-	return db.ExecFuncAtomic(func(q pgxtype.Querier) error {
-		err := message.Insert(q)
-		if err != nil && err != pgx.ErrNoRows {
-			return err
-		}
-		return messageRequest.Insert(q)
-	}), nil
+	return p.repo.SentMessages.Ensure(ctx, &entity.SentMessage{
+		LogID:    log.ID,
+		BridgeID: p.bridgeID,
+		MsgHash:  message.MsgHash,
+	})
 }
 
-func HandleLegacyUserRequestForAffirmation(state *BridgeSideMonitor, log types.Log, event map[string]interface{}) (db.Executable, error) {
-	encodedData := event["encodedData"].([]byte)
-	encodedData = append(log.TxHash[:], encodedData...)
-	message := buildLegacyMessage(state.parent.Id, ForeignToHome, encodedData)
-	messageRequest := &MessageRequest{
-		Message:   message,
-		TxLogInfo: buildTxLogInfo(state, log),
+func (p *BridgeEventHandler) HandleLegacyUserRequestForSignature(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	encodedData := data["encodedData"].([]byte)
+	encodedData = append(log.TransactionHash[:], encodedData...)
+	message := unmarshalLegacyMessage(p.bridgeID, entity.DirectionHomeToForeign, encodedData)
+	err := p.repo.Messages.Ensure(ctx, message)
+	if err != nil {
+		return err
 	}
-
-	return db.ExecFuncAtomic(func(q pgxtype.Querier) error {
-		err := message.Insert(q)
-		if err != nil && err != pgx.ErrNoRows {
-			return err
-		}
-		return messageRequest.Insert(q)
-	}), nil
+	return p.repo.SentMessages.Ensure(ctx, &entity.SentMessage{
+		LogID:    log.ID,
+		BridgeID: p.bridgeID,
+		MsgHash:  message.MsgHash,
+	})
 }
 
-func HandleUserRequestForSignature(state *BridgeSideMonitor, log types.Log, event map[string]interface{}) (db.Executable, error) {
-	encodedData := event["encodedData"].([]byte)
-	message := buildMessage(state.parent.Id, HomeToForeign, encodedData)
-	messageRequest := &MessageRequest{
-		Message:   message,
-		TxLogInfo: buildTxLogInfo(state, log),
-	}
+func (p *BridgeEventHandler) HandleSignedForUserRequest(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	msgHash := data["messageHash"].([32]byte)
+	validator := data["signer"].(common.Address)
 
-	return db.ExecFuncAtomic(func(q pgxtype.Querier) error {
-		err := message.Insert(q)
-		if err != nil && err != pgx.ErrNoRows {
-			return err
-		}
-		return messageRequest.Insert(q)
-	}), nil
+	return p.repo.SignedMessages.Ensure(ctx, &entity.SignedMessage{
+		LogID:         log.ID,
+		BridgeID:      p.bridgeID,
+		MsgHash:       msgHash,
+		Signer:        validator,
+		IsResponsible: false,
+	})
 }
 
-func HandleLegacyUserRequestForSignature(state *BridgeSideMonitor, log types.Log, event map[string]interface{}) (db.Executable, error) {
-	encodedData := event["encodedData"].([]byte)
-	encodedData = append(log.TxHash[:], encodedData...)
-	message := buildLegacyMessage(state.parent.Id, HomeToForeign, encodedData)
-	messageRequest := &MessageRequest{
-		Message:   message,
-		TxLogInfo: buildTxLogInfo(state, log),
-	}
+func (p *BridgeEventHandler) HandleSignedForAffirmation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	msgHash := data["messageHash"].([32]byte)
+	validator := data["signer"].(common.Address)
 
-	return db.ExecFuncAtomic(func(q pgxtype.Querier) error {
-		err := message.Insert(q)
-		if err != nil && err != pgx.ErrNoRows {
-			return err
-		}
-		return messageRequest.Insert(q)
-	}), nil
+	return p.repo.SignedMessages.Ensure(ctx, &entity.SignedMessage{
+		LogID:         log.ID,
+		BridgeID:      p.bridgeID,
+		MsgHash:       msgHash,
+		Signer:        validator,
+		IsResponsible: false,
+	})
 }
 
-func HandleSignedForUserRequest(state *BridgeSideMonitor, log types.Log, event map[string]interface{}) (db.Executable, error) {
-	msgHash := event["messageHash"].([32]byte)
-	validator := event["signer"].(common.Address)
+func (p *BridgeEventHandler) HandleRelayedMessage(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	messageID := data["messageId"].([32]byte)
+	status := data["status"].(bool)
 
-	message := &Message{
-		BridgeId: state.parent.Id,
-		MsgHash:  hexutil.Encode(msgHash[:]),
-	}
-	confirmation := &MessageConfirmation{
-		Message:   message,
-		TxLogInfo: buildTxLogInfo(state, log),
-		Validator: hexutil.Encode(validator[:]),
-	}
-
-	return db.ExecFuncAtomic(confirmation.Insert), nil
-}
-
-func HandleSignedForAffirmation(state *BridgeSideMonitor, log types.Log, event map[string]interface{}) (db.Executable, error) {
-	msgHash := event["messageHash"].([32]byte)
-	validator := event["signer"].(common.Address)
-
-	message := &Message{
-		BridgeId: state.parent.Id,
-		MsgHash:  hexutil.Encode(msgHash[:]),
-	}
-	confirmation := &MessageConfirmation{
-		Message:   message,
-		TxLogInfo: buildTxLogInfo(state, log),
-		Validator: hexutil.Encode(validator[:]),
-	}
-
-	return db.ExecFuncAtomic(confirmation.Insert), nil
-}
-
-func HandleRelayedMessage(state *BridgeSideMonitor, log types.Log, event map[string]interface{}) (db.Executable, error) {
-	messageId := event["messageId"].([32]byte)
-	status := event["status"].(bool)
-
-	message := &Message{
-		BridgeId:  state.parent.Id,
-		MessageId: hexutil.Encode(messageId[:]),
-	}
-	execution := &MessageExecution{
-		Message:   message,
-		TxLogInfo: buildTxLogInfo(state, log),
+	return p.repo.ExecutedMessages.Ensure(ctx, &entity.ExecutedMessage{
+		LogID:     log.ID,
+		BridgeID:  p.bridgeID,
+		MessageID: messageID,
 		Status:    status,
-	}
-
-	return db.ExecFuncAtomic(execution.Insert), nil
+	})
 }
 
-func HandleAffirmationCompleted(state *BridgeSideMonitor, log types.Log, event map[string]interface{}) (db.Executable, error) {
-	messageId := event["messageId"].([32]byte)
-	status := event["status"].(bool)
+func (p *BridgeEventHandler) HandleAffirmationCompleted(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	messageID := data["messageId"].([32]byte)
+	status := data["status"].(bool)
 
-	message := &Message{
-		BridgeId:  state.parent.Id,
-		MessageId: hexutil.Encode(messageId[:]),
-	}
-	execution := &MessageExecution{
-		Message:   message,
-		TxLogInfo: buildTxLogInfo(state, log),
+	return p.repo.ExecutedMessages.Ensure(ctx, &entity.ExecutedMessage{
+		LogID:     log.ID,
+		BridgeID:  p.bridgeID,
+		MessageID: messageID,
 		Status:    status,
-	}
+	})
+}
 
-	return db.ExecFuncAtomic(execution.Insert), nil
+func (p *BridgeEventHandler) HandleCollectedSignatures(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	msgHash := data["messageHash"].([32]byte)
+	relayer := data["authorityResponsibleForRelay"].(common.Address)
+
+	return p.repo.SignedMessages.MarkResponsibleSigner(ctx, p.bridgeID, msgHash, relayer)
 }

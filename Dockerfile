@@ -12,7 +12,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
 
-COPY migrations ./migrations/
+COPY db/migrations ./db/migrations/
 COPY --from=build /app/amb-monitor ./
 
 ENTRYPOINT ./amb-monitor

@@ -1,12 +1,12 @@
 package contract
 
 import (
+	"amb-monitor/entity"
 	"amb-monitor/ethclient"
 	"fmt"
-	"github.com/ethereum/go-ethereum"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type Contract struct {
@@ -15,8 +15,8 @@ type Contract struct {
 	abi     abi.ABI
 }
 
-func NewContract(client *ethclient.Client, addr string, abi abi.ABI) *Contract {
-	return &Contract{common.HexToAddress(addr), client, abi}
+func NewContract(client *ethclient.Client, addr common.Address, abi abi.ABI) *Contract {
+	return &Contract{addr, client, abi}
 }
 
 func (c *Contract) HasEvent(event string) bool {
@@ -24,29 +24,11 @@ func (c *Contract) HasEvent(event string) bool {
 	return ok
 }
 
-func (c *Contract) Call(method string, args ...interface{}) ([]interface{}, error) {
-	data, err := c.abi.Pack(method, args...)
-	if err != nil {
-		return nil, err
-	}
-	ctx, cancel := c.client.GetCtx()
-	defer cancel()
-	msg := ethereum.CallMsg{
-		To:   &c.Address,
-		Data: data,
-	}
-	result, err := c.client.CallContract(ctx, msg, nil)
-	if err != nil {
-		return nil, err
-	}
-	return c.abi.Unpack(method, result)
-}
-
-func (c *Contract) ParseLog(log *types.Log) (string, map[string]interface{}, error) {
-	if len(log.Topics) == 0 {
+func (c *Contract) ParseLog(log *entity.Log) (string, map[string]interface{}, error) {
+	if log.Topic0 == nil {
 		return "", nil, fmt.Errorf("cannot process event without topics")
 	}
-	event, err := c.abi.EventByID(log.Topics[0])
+	event, err := c.abi.EventByID(*log.Topic0)
 	if err != nil {
 		return "", nil, nil
 	}
@@ -55,7 +37,17 @@ func (c *Contract) ParseLog(log *types.Log) (string, map[string]interface{}, err
 	if err != nil {
 		return "", nil, err
 	}
-	err = abi.ParseTopicsIntoMap(m, Indexed(event.Inputs), log.Topics[1:])
+	topics := make([]common.Hash, 0, 3)
+	if log.Topic1 != nil {
+		topics = append(topics, *log.Topic1)
+		if log.Topic2 != nil {
+			topics = append(topics, *log.Topic2)
+			if log.Topic3 != nil {
+				topics = append(topics, *log.Topic3)
+			}
+		}
+	}
+	err = abi.ParseTopicsIntoMap(m, Indexed(event.Inputs), topics)
 	if err != nil {
 		return "", nil, err
 	}

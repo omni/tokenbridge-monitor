@@ -4,81 +4,22 @@ import (
 	"amb-monitor/config"
 	"context"
 	"fmt"
+
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jackc/pgtype/pgxtype"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
+	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 type DB struct {
-	*pgxpool.Pool
+	cfg *config.DBConfig
+	*sqlx.DB
 }
 
-type Executable interface {
-	Exec(q pgxtype.Querier) error
-	Committed()
-	ApplyTo(q *DB) error
-}
-
-// ExecFuncAtomic is an atomic action, for which no transaction creation is required
-type ExecFuncAtomic func(pgxtype.Querier) error
-type ExecFunc func(pgxtype.Querier) error
-type ExecBatch []Executable
-
-func (f ExecFuncAtomic) Exec(q pgxtype.Querier) error {
-	return f(q)
-}
-
-func (f ExecFuncAtomic) Committed() {}
-
-func (f ExecFuncAtomic) ApplyTo(q *DB) error {
-	return f.Exec(q)
-}
-
-func (f ExecFunc) Exec(q pgxtype.Querier) error {
-	return f(q)
-}
-
-func (f ExecFunc) Committed() {}
-
-func (f ExecFunc) ApplyTo(q *DB) error {
-	return q.BeginFunc(context.Background(), func(tx pgx.Tx) error {
-		return f.Exec(tx)
-	})
-}
-
-func (fs ExecBatch) Exec(q pgxtype.Querier) error {
-	for _, f := range fs {
-		err := f.Exec(q)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (fs ExecBatch) Committed() {
-	for _, f := range fs {
-		f.Committed()
-	}
-}
-
-func (fs ExecBatch) ApplyTo(q *DB) error {
-	err := q.BeginFunc(context.Background(), func(tx pgx.Tx) error {
-		return fs.Exec(tx)
-	})
-	if err != nil {
-		return err
-	}
-	fs.Committed()
-	return nil
-}
-
-func SanityCheck(config *config.DBConfig) error {
-	migrateDbURL := fmt.Sprintf("pgx://%s:%s@%s:%d/%s", config.User, config.Password, config.Host, config.Port, config.DB)
-	m, err := migrate.New("file://migrations", migrateDbURL)
+func (db *DB) Migrate() error {
+	m, err := migrate.New("file://db/migrations", db.dbURL("pgx"))
 	if err != nil {
 		return err
 	}
@@ -89,12 +30,20 @@ func SanityCheck(config *config.DBConfig) error {
 	return nil
 }
 
-func ConnectDB(config *config.DBConfig) (*DB, error) {
-	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", config.User, config.Password, config.Host, config.Port, config.DB)
-	conn, err := pgxpool.Connect(context.Background(), dbURL)
+func (db *DB) dbURL(prefix string) string {
+	return fmt.Sprintf("%s://%s:%s@%s:%d/%s", prefix, db.cfg.User, db.cfg.Password, db.cfg.Host, db.cfg.Port, db.cfg.DB)
+}
+
+func New(cfg *config.DBConfig) (*DB, error) {
+	db := &DB{
+		cfg: cfg,
+	}
+	conn, err := sqlx.ConnectContext(context.Background(), "pgx", db.dbURL("postgres"))
 	if err != nil {
 		return nil, err
 	}
-
-	return &DB{conn}, nil
+	conn.SetMaxIdleConns(3)
+	conn.SetMaxOpenConns(10)
+	db.DB = conn
+	return db, nil
 }

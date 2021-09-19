@@ -1,11 +1,19 @@
 package logging
 
 import (
-	"log"
-	"os"
+	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
-func GetLogger(prefix string) *log.Logger {
-	flags := log.LstdFlags | log.Lmicroseconds | log.Lshortfile
-	return log.New(os.Stdout, prefix+": ", flags)
+type Logger logrus.FieldLogger
+
+func New() Logger {
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: time.RFC3339Nano,
+	})
+	return logger
 }
