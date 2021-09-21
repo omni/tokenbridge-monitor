@@ -54,13 +54,13 @@ func (c *Contract) ParseLog(log *entity.Log) (string, map[string]interface{}, er
 		return "", nil, nil
 	}
 	m := make(map[string]interface{})
-	err := event.Inputs.UnpackIntoMap(m, log.Data)
-	if err != nil {
-		return "", nil, err
+	if len(indexed) < len(event.Inputs) {
+		if err := event.Inputs.UnpackIntoMap(m, log.Data); err != nil {
+			return "", nil, fmt.Errorf("can't unpack data: %w", err)
+		}
 	}
-	err = abi.ParseTopicsIntoMap(m, indexed, topics)
-	if err != nil {
-		return "", nil, err
+	if err := abi.ParseTopicsIntoMap(m, indexed, topics); err != nil {
+		return "", nil, fmt.Errorf("can't unpack topics: %w", err)
 	}
 	return event.Name, m, nil
 }

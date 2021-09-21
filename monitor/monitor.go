@@ -76,7 +76,7 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 		blocksRangeChan: make(chan *BlocksRange, 10),
 		logsChan:        make(chan *LogsBatch, 200),
 		contract:        contract.NewContract(client, cfg.Address, constants.AMB),
-		eventHandlers:   make(map[string]EventHandler, 6),
+		eventHandlers:   make(map[string]EventHandler, 7),
 	}, nil
 }
 
@@ -95,6 +95,7 @@ func NewMonitor(ctx context.Context, logger logging.Logger, repo *repository.Rep
 	homeMonitor.eventHandlers["SignedForUserRequest"] = handlers.HandleSignedForUserRequest
 	homeMonitor.eventHandlers["SignedForAffirmation"] = handlers.HandleSignedForAffirmation
 	homeMonitor.eventHandlers["AffirmationCompleted"] = handlers.HandleAffirmationCompleted
+	homeMonitor.eventHandlers["AffirmationCompleted0"] = handlers.HandleAffirmationCompleted
 	homeMonitor.eventHandlers["CollectedSignatures"] = handlers.HandleCollectedSignatures
 	foreignMonitor.eventHandlers["UserRequestForAffirmation"] = handlers.HandleUserRequestForAffirmation
 	foreignMonitor.eventHandlers["UserRequestForAffirmation0"] = handlers.HandleLegacyUserRequestForAffirmation
@@ -376,7 +377,7 @@ func (m *ContractMonitor) tryToProcessLogsBatch(ctx context.Context, logs *LogsB
 	for _, log := range logs.Logs {
 		event, data, err := m.contract.ParseLog(log)
 		if err != nil {
-			return err
+			return fmt.Errorf("can't parse log: %w", err)
 		}
 		handle, ok := m.eventHandlers[event]
 		if !ok {
