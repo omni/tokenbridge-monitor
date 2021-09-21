@@ -26,5 +26,5 @@ type Log struct {
 type LogsRepo interface {
 	Ensure(ctx context.Context, logs ...*Log) error
 	GetByID(ctx context.Context, id uint) (*Log, error)
-	FindByBlockRange(ctx context.Context, chainID string, fromBlock, toBlock uint) ([]*Log, error)
+	FindByBlockRange(ctx context.Context, chainID string, addr common.Address, fromBlock, toBlock uint) ([]*Log, error)
 }

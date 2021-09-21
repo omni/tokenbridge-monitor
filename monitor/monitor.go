@@ -133,7 +133,7 @@ func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, to
 	var logs []*entity.Log
 	for {
 		var err error
-		logs, err = m.repo.Logs.FindByBlockRange(ctx, m.client.ChainID, fromBlock, toBlock)
+		logs, err = m.repo.Logs.FindByBlockRange(ctx, m.client.ChainID, m.cfg.Address, fromBlock, toBlock)
 		if err != nil {
 			m.logger.WithError(err).Error("can't find unprocessed logs in block")
 			time.Sleep(time.Second) // TODO fix
