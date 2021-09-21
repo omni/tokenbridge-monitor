@@ -7,8 +7,11 @@ import (
 	"amb-monitor/monitor"
 	"amb-monitor/repository"
 	"context"
+	"net/http"
 	"os"
 	"os/signal"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -19,7 +22,7 @@ func main() {
 		logger.WithError(err).Fatal("can't read config")
 	}
 
-	dbConn, err := db.New(cfg.DBConfig)
+	dbConn, err := db.NewDB(cfg.DBConfig)
 	if err != nil {
 		logger.WithError(err).Fatal("can't connect to database")
 	}
@@ -28,6 +31,14 @@ func main() {
 	if err = dbConn.Migrate(); err != nil {
 		logger.WithError(err).Fatal("can't run database migrations")
 	}
+
+	http.Handle("/metrics", promhttp.Handler())
+	go func() {
+		err := http.ListenAndServe(":2112", nil)
+		if err != nil {
+			logger.WithError(err).Fatal("can't start listener for prometheus metrics")
+		}
+	}()
 
 	repo := repository.NewRepo(dbConn)
 

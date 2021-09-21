@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 type Client struct {
@@ -22,7 +23,7 @@ func NewClient(url string, timeout time.Duration, chainID string) (*Client, erro
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	rawClient, err := ethclient.DialContext(ctx, url)
+	rawClient, err := rpc.DialContext(ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("can't dial JSON rpc url: %w", err)
 	}
@@ -30,7 +31,7 @@ func NewClient(url string, timeout time.Duration, chainID string) (*Client, erro
 		ChainID: chainID,
 		url:     url,
 		timeout: timeout,
-		client:  rawClient,
+		client:  ethclient.NewClient(rawClient),
 	}
 	ctx2, cancel2 := context.WithTimeout(context.Background(), timeout)
 	defer cancel2()
@@ -45,22 +46,31 @@ func NewClient(url string, timeout time.Duration, chainID string) (*Client, erro
 }
 
 func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
+	defer ObserveDuration(c.url, "eth_blockNumber")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	return c.client.BlockNumber(ctx)
+	n, err := c.client.BlockNumber(ctx)
+	ObserveError(c.url, "eth_getBlockByNumber", err)
+	return n, err
 }
 
 func (c *Client) HeaderByNumber(ctx context.Context, n uint) (*types.Header, error) {
+	defer ObserveDuration(c.url, "eth_getBlockByNumber")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	return c.client.HeaderByNumber(ctx, big.NewInt(int64(n)))
+	header, err := c.client.HeaderByNumber(ctx, big.NewInt(int64(n)))
+	ObserveError(c.url, "eth_getBlockByNumber", err)
+	return header, err
 }
 
 func (c *Client) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
+	defer ObserveDuration(c.url, "eth_getLogs")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	return c.client.FilterLogs(ctx, q)
+	logs, err := c.client.FilterLogs(ctx, q)
+	ObserveError(c.url, "eth_getLogs", err)
+	return logs, err
 }
