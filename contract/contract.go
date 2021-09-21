@@ -3,6 +3,7 @@ package contract
 import (
 	"amb-monitor/entity"
 	"amb-monitor/ethclient"
+	"bytes"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -28,15 +29,6 @@ func (c *Contract) ParseLog(log *entity.Log) (string, map[string]interface{}, er
 	if log.Topic0 == nil {
 		return "", nil, fmt.Errorf("cannot process event without topics")
 	}
-	event, err := c.abi.EventByID(*log.Topic0)
-	if err != nil {
-		return "", nil, nil
-	}
-	m := make(map[string]interface{})
-	err = event.Inputs.UnpackIntoMap(m, log.Data)
-	if err != nil {
-		return "", nil, err
-	}
 	topics := make([]common.Hash, 0, 3)
 	if log.Topic1 != nil {
 		topics = append(topics, *log.Topic1)
@@ -47,7 +39,26 @@ func (c *Contract) ParseLog(log *entity.Log) (string, map[string]interface{}, er
 			}
 		}
 	}
-	err = abi.ParseTopicsIntoMap(m, Indexed(event.Inputs), topics)
+	var event *abi.Event
+	var indexed abi.Arguments
+	for _, e := range c.abi.Events {
+		if bytes.Equal(e.ID.Bytes(), log.Topic0.Bytes()) {
+			indexed = Indexed(e.Inputs)
+			if len(indexed) == len(topics) {
+				event = &e
+				break
+			}
+		}
+	}
+	if event == nil {
+		return "", nil, nil
+	}
+	m := make(map[string]interface{})
+	err := event.Inputs.UnpackIntoMap(m, log.Data)
+	if err != nil {
+		return "", nil, err
+	}
+	err = abi.ParseTopicsIntoMap(m, indexed, topics)
 	if err != nil {
 		return "", nil, err
 	}

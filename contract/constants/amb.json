@@ -1112,5 +1112,32 @@
     ],
     "name": "RelayedMessage",
     "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "executor",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "messageId",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "status",
+        "type": "bool"
+      }
+    ],
+    "name": "RelayedMessage",
+    "type": "event"
   }
 ]

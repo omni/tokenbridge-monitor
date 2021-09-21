@@ -1,12 +1,20 @@
 chains:
   mainnet:
     rpc:
-      host: https://mainnet.blockscout.com
+      host: https://mainnet.infura.io/v3/5d7bd94c50ed43fab1cb8e74f58678b0
       timeout: 30s
       rps: 10
     chain_id: 1
     block_time: 15s
-    block_index_interval: 10s
+    block_index_interval: 60s
+  kovan:
+    rpc:
+      host: https://kovan.poa.network
+      timeout: 30s
+      rps: 10
+    chain_id: 42
+    block_time: 5s
+    block_index_interval: 60s
   xdai:
     rpc:
       host: https://dai.poa.network
@@ -14,7 +22,15 @@ chains:
       rps: 10
     chain_id: 100
     block_time: 5s
-    block_index_interval: 5s
+    block_index_interval: 30s
+  sokol:
+    rpc:
+      host: https://sokol.poa.network
+      timeout: 20s
+      rps: 10
+    chain_id: 77
+    block_time: 5s
+    block_index_interval: 30s
 bridges:
   xdai-amb:
     home:
@@ -22,16 +38,29 @@ bridges:
       address: 0x75Df5AF045d91108662D8080fD1FEFAd6aA0bb59
       start_block: 7408640
       required_block_confirmations: 12
-      max_block_range_size: 10000
+      max_block_range_size: 2000
     foreign:
       chain: mainnet
       address: 0x4C36d2919e407f0Cc2Ee3c993ccF8ac26d9CE64e
       start_block: 9130277
       required_block_confirmations: 12
-      max_block_range_size: 5000
+      max_block_range_size: 1000
+  test-amb:
+    home:
+      chain: sokol
+      address: 0xFe446bEF1DbF7AFE24E81e05BC8B271C1BA9a560
+      start_block: 9849619
+      required_block_confirmations: 12
+      max_block_range_size: 10000
+    foreign:
+      chain: kovan
+      address: 0xFe446bEF1DbF7AFE24E81e05BC8B271C1BA9a560
+      start_block: 12372929
+      required_block_confirmations: 12
+      max_block_range_size: 10000
 postgres:
   user: postgres
   password: pass
-  host: postgres
+  host: localhost
   port: 5432
   database: db

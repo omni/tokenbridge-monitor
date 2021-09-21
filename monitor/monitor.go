@@ -81,11 +81,11 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 }
 
 func NewMonitor(ctx context.Context, logger logging.Logger, repo *repository.Repo, cfg *config.BridgeConfig) (*Monitor, error) {
-	homeMonitor, err := newContractMonitor(ctx, logger.WithField("side", "home"), repo, cfg.Home)
+	homeMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "home"), repo, cfg.Home)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize home side monitor: %w", err)
 	}
-	foreignMonitor, err := newContractMonitor(ctx, logger.WithField("side", "foreign"), repo, cfg.Foreign)
+	foreignMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "foreign"), repo, cfg.Foreign)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize foreign side monitor: %w", err)
 	}
@@ -99,6 +99,7 @@ func NewMonitor(ctx context.Context, logger logging.Logger, repo *repository.Rep
 	foreignMonitor.eventHandlers["UserRequestForAffirmation"] = handlers.HandleUserRequestForAffirmation
 	foreignMonitor.eventHandlers["UserRequestForAffirmation0"] = handlers.HandleLegacyUserRequestForAffirmation
 	foreignMonitor.eventHandlers["RelayedMessage"] = handlers.HandleRelayedMessage
+	foreignMonitor.eventHandlers["RelayedMessage0"] = handlers.HandleRelayedMessage
 	return &Monitor{
 		cfg:            cfg,
 		logger:         logger,
