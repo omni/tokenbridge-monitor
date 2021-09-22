@@ -357,6 +357,14 @@ func (m *ContractMonitor) StartLogsProcessor(ctx context.Context) {
 }
 
 func (m *ContractMonitor) tryToGetBlockTimestamp(ctx context.Context, blockNumber uint) error {
+	ts, err := m.repo.BlockTimestamps.GetByBlockNumber(ctx, m.client.ChainID, blockNumber)
+	if err != nil {
+		return err
+	}
+	if ts != nil {
+		m.logger.WithField("block_number", blockNumber).Debug("timestamp already exists, skipping")
+		return nil
+	}
 	m.logger.WithField("block_number", blockNumber).Debug("fetching block timestamp")
 	header, err := m.client.HeaderByNumber(ctx, blockNumber)
 	if err != nil {

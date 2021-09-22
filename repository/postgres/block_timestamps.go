@@ -4,6 +4,8 @@ import (
 	"amb-monitor/db"
 	"amb-monitor/entity"
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -36,4 +38,27 @@ func (r *blockTimestampsRepo) Ensure(ctx context.Context, ts *entity.BlockTimest
 		return fmt.Errorf("can't insert block timestamp: %w", err)
 	}
 	return nil
+}
+
+func (r *blockTimestampsRepo) GetByBlockNumber(ctx context.Context, chainID string, blockNumber uint) (*entity.BlockTimestamp, error) {
+	q, args, err := sq.Select("*").
+		From(r.table).
+		Where(sq.Eq{
+			"chain_id":     chainID,
+			"block_number": blockNumber,
+		}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	ts := new(entity.BlockTimestamp)
+	err = r.db.GetContext(ctx, ts, q, args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("can't get block timestamp: %w", err)
+	}
+	return ts, nil
 }

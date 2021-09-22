@@ -79,13 +79,12 @@ CREATE TABLE sent_messages
 
 CREATE TABLE signed_messages
 (
-    log_id         SERIAL REFERENCES logs PRIMARY KEY,
-    bridge_id      TEXT_ID,
-    msg_hash       WORD,
-    signer         ADDRESS,
-    is_responsible FLAG,
-    updated_at     TS_NOW,
-    created_at     TS_NOW
+    log_id     SERIAL REFERENCES logs PRIMARY KEY,
+    bridge_id  TEXT_ID,
+    msg_hash   WORD,
+    signer     ADDRESS,
+    updated_at TS_NOW,
+    created_at TS_NOW
 );
 
 CREATE TABLE executed_messages
@@ -96,6 +95,17 @@ CREATE TABLE executed_messages
     status     FLAG,
     updated_at TS_NOW,
     created_at TS_NOW
+);
+
+CREATE TABLE collected_messages
+(
+    log_id             SERIAL REFERENCES logs PRIMARY KEY,
+    bridge_id          TEXT_ID,
+    msg_hash           WORD,
+    responsible_signer ADDRESS,
+    num_signatures     BYTE,
+    updated_at         TS_NOW,
+    created_at         TS_NOW
 );
 
 CREATE UNIQUE INDEX logs_chain_id_block_number_log_idx ON logs (chain_id, block_number, log_index);

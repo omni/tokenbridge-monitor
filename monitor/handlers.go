@@ -4,6 +4,7 @@ import (
 	"amb-monitor/entity"
 	"amb-monitor/repository"
 	"context"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -89,7 +90,6 @@ func (p *BridgeEventHandler) HandleSignedForUserRequest(ctx context.Context, log
 		BridgeID:      p.bridgeID,
 		MsgHash:       msgHash,
 		Signer:        validator,
-		IsResponsible: false,
 	})
 }
 
@@ -102,7 +102,6 @@ func (p *BridgeEventHandler) HandleSignedForAffirmation(ctx context.Context, log
 		BridgeID:      p.bridgeID,
 		MsgHash:       msgHash,
 		Signer:        validator,
-		IsResponsible: false,
 	})
 }
 
@@ -133,6 +132,13 @@ func (p *BridgeEventHandler) HandleAffirmationCompleted(ctx context.Context, log
 func (p *BridgeEventHandler) HandleCollectedSignatures(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
 	msgHash := data["messageHash"].([32]byte)
 	relayer := data["authorityResponsibleForRelay"].(common.Address)
+	numSignatures := data["NumberOfCollectedSignatures"].(*big.Int)
 
-	return p.repo.SignedMessages.MarkResponsibleSigner(ctx, p.bridgeID, msgHash, relayer)
+	return p.repo.CollectedMessages.Ensure(ctx, &entity.CollectedMessage{
+		LogID:             log.ID,
+		BridgeID:          p.bridgeID,
+		MsgHash:           msgHash,
+		ResponsibleSigner: relayer,
+		NumSignatures:     uint(numSignatures.Uint64()),
+	})
 }

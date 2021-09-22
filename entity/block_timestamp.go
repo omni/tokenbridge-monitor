@@ -15,4 +15,5 @@ type BlockTimestamp struct {
 
 type BlockTimestampsRepo interface {
 	Ensure(ctx context.Context, cursor *BlockTimestamp) error
+	GetByBlockNumber(ctx context.Context, chainID string, blockNumber uint) (*BlockTimestamp, error)
 }
