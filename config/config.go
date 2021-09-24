@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -32,10 +33,16 @@ type BridgeSideConfig struct {
 	MaxBlockRangeSize  uint           `yaml:"max_block_range_size"`
 }
 
+type BridgeAlertConfig struct {
+	HomeStartBlock    uint `yaml:"home_start_block"`
+	ForeignStartBlock uint `yaml:"foreign_start_block"`
+}
+
 type BridgeConfig struct {
-	ID      string            `yaml:"-"`
-	Home    *BridgeSideConfig `yaml:"home"`
-	Foreign *BridgeSideConfig `yaml:"foreign"`
+	ID      string                        `yaml:"-"`
+	Home    *BridgeSideConfig             `yaml:"home"`
+	Foreign *BridgeSideConfig             `yaml:"foreign"`
+	Alerts  map[string]*BridgeAlertConfig `yaml:"alerts"`
 }
 
 type DBConfig struct {
@@ -47,9 +54,12 @@ type DBConfig struct {
 }
 
 type Config struct {
-	Chains   map[string]*ChainConfig  `yaml:"chains"`
-	Bridges  map[string]*BridgeConfig `yaml:"bridges"`
-	DBConfig *DBConfig                `yaml:"postgres"`
+	Chains          map[string]*ChainConfig  `yaml:"chains"`
+	Bridges         map[string]*BridgeConfig `yaml:"bridges"`
+	DBConfig        *DBConfig                `yaml:"postgres"`
+	LogLevel        logrus.Level             `yaml:"log_level"`
+	DisabledBridges []string                 `yaml:"disabled_bridges"`
+	EnabledBridges  []string                 `yaml:"enabled_bridges"`
 }
 
 func readYamlConfig(cfg *Config) error {

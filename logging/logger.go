@@ -8,7 +8,7 @@ import (
 
 type Logger logrus.FieldLogger
 
-func New() Logger {
+func New() *logrus.Logger {
 	logger := logrus.New()
 	logger.SetLevel(logrus.InfoLevel)
 	logger.SetFormatter(&logrus.TextFormatter{

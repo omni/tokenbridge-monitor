@@ -1,11 +1,19 @@
 chains:
   mainnet:
     rpc:
-      host: https://mainnet.infura.io/v3/5d7bd94c50ed43fab1cb8e74f58678b0
+      host: https://mainnet.infura.io/v3/${INFURA_PROJECT_KEY}
       timeout: 30s
       rps: 10
     chain_id: 1
     block_time: 15s
+    block_index_interval: 60s
+  bsc:
+    rpc:
+      host: https://bsc-dataseed1.defibit.io/
+      timeout: 20s
+      rps: 10
+    chain_id: 56
+    block_time: 3s
     block_index_interval: 60s
   kovan:
     rpc:
@@ -17,10 +25,18 @@ chains:
     block_index_interval: 60s
   xdai:
     rpc:
-      host: https://dai.poa.network
+      host: https://dai.poa.network/oe-only
       timeout: 20s
       rps: 10
     chain_id: 100
+    block_time: 5s
+    block_index_interval: 30s
+  poa:
+    rpc:
+      host: https://core.poa.network
+      timeout: 20s
+      rps: 10
+    chain_id: 99
     block_time: 5s
     block_index_interval: 30s
   sokol:
@@ -31,6 +47,14 @@ chains:
     chain_id: 77
     block_time: 5s
     block_index_interval: 30s
+  rinkeby:
+    rpc:
+      host: https://rinkeby.infura.io/v3/${INFURA_PROJECT_KEY}
+      timeout: 20s
+      rps: 10
+    chain_id: 4
+    block_time: 15s
+    block_index_interval: 60s
 bridges:
   xdai-amb:
     home:
@@ -45,6 +69,19 @@ bridges:
       start_block: 9130277
       required_block_confirmations: 12
       max_block_range_size: 1000
+    alerts:
+      unknown_message_confirmation:
+        home_start_block: 7408640
+        foreign_start_block: 9130277
+      unknown_message_execution:
+        home_start_block: 7408640
+        foreign_start_block: 9130277
+      stuck_message_confirmation:
+        home_start_block: 7408640
+        foreign_start_block: 11907302
+      failed_message_execution:
+        home_start_block: 17518126
+        foreign_start_block: 12927769
   test-amb:
     home:
       chain: sokol
@@ -58,9 +95,121 @@ bridges:
       start_block: 12372929
       required_block_confirmations: 12
       max_block_range_size: 10000
+    alerts:
+      stuck_message_confirmation:
+        home_start_block: 9849619
+        foreign_start_block: 25437689
+      unknown_message_confirmation:
+        home_start_block: 10666885
+        foreign_start_block: 12372929
+      unknown_message_execution:
+        home_start_block: 9849619
+        foreign_start_block: 13603170
+  bsc-xdai-amb:
+    home:
+      chain: xdai
+      address: 0x162E898bD0aacB578C8D5F8d6ca588c13d2A383F
+      start_block: 14496725
+      required_block_confirmations: 12
+      max_block_range_size: 10000
+    foreign:
+      chain: bsc
+      address: 0x05185872898b6f94AA600177EF41B9334B1FA48B
+      start_block: 4792263
+      required_block_confirmations: 12
+      max_block_range_size: 1000
+    alerts:
+      stuck_message_confirmation:
+        home_start_block: 14496725
+        foreign_start_block: 4792263
+      failed_message_execution:
+        home_start_block: 14496725
+        foreign_start_block: 4792263
+      unknown_message_confirmation:
+        home_start_block: 14496725
+        foreign_start_block: 4792263
+      unknown_message_execution:
+        home_start_block: 14496725
+        foreign_start_block: 4792263
+  rinkeby-xdai-amb:
+    home:
+      chain: xdai
+      address: 0xc38D4991c951fE8BCE1a12bEef2046eF36b0FA4A
+      start_block: 10030211
+      required_block_confirmations: 12
+      max_block_range_size: 20000
+    foreign:
+      chain: rinkeby
+      address: 0xD4075FB57fCf038bFc702c915Ef9592534bED5c1
+      start_block: 6529875
+      required_block_confirmations: 12
+      max_block_range_size: 20000
+    alerts:
+      stuck_message_confirmation:
+        home_start_block: 10030211
+        foreign_start_block: 8360609
+      unknown_message_confirmation:
+        home_start_block: 10030211
+        foreign_start_block: 6529875
+      unknown_message_execution:
+        home_start_block: 10030211
+        foreign_start_block: 6529875
+  poa-xdai-amb:
+    home:
+      chain: xdai
+      address: 0xc2d77d118326c33BBe36EbeAbf4F7ED6BC2dda5c
+      start_block: 17976497
+      required_block_confirmations: 12
+      max_block_range_size: 10000
+    foreign:
+      chain: poa
+      address: 0xB2218bdEbe8e90f80D04286772B0968ead666942
+      start_block: 23152190
+      required_block_confirmations: 12
+      max_block_range_size: 10000
+    alerts:
+      stuck_message_confirmation:
+        home_start_block: 17976497
+        foreign_start_block: 23152190
+      failed_message_execution:
+        home_start_block: 17976497
+        foreign_start_block: 23152190
+      unknown_message_confirmation:
+        home_start_block: 17976497
+        foreign_start_block: 23152190
+      unknown_message_execution:
+        home_start_block: 17976497
+        foreign_start_block: 23152190
+  eth-bsc-amb:
+    home:
+      chain: bsc
+      address: 0x6943A218d58135793F1FE619414eD476C37ad65a
+      start_block: 2756521
+      required_block_confirmations: 12
+      max_block_range_size: 1000
+    foreign:
+      chain: mainnet
+      address: 0x07955be2967B655Cf52751fCE7ccC8c61EA594e2
+      start_block: 11375619
+      required_block_confirmations: 12
+      max_block_range_size: 10000
+    alerts:
+      stuck_message_confirmation:
+        home_start_block: 2756521
+        foreign_start_block: 11375619
+      failed_message_execution:
+        home_start_block: 2756521
+        foreign_start_block: 11375619
+      unknown_message_confirmation:
+        home_start_block: 2756521
+        foreign_start_block: 11375619
+      unknown_message_execution:
+        home_start_block: 2756521
+        foreign_start_block: 11375619
 postgres:
   user: postgres
   password: pass
-  host: localhost
+  host: postgres
   port: 5432
   database: db
+log_level: info

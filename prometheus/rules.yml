@@ -1,0 +1,28 @@
+groups:
+  - name: StuckMessage
+    rules:
+      - alert: StuckMessage
+        expr: alert_monitor_stuck_message_confirmation > 3600
+        for: 3m
+        annotations:
+          wait_time: '{{ humanizeDuration $value }}'
+  - name: UnknownMessageConfirmation
+    rules:
+      - alert: UnknownMessageConfirmation
+        expr: alert_monitor_unknown_message_confirmation > 0
+        for: 3m
+  - name: UnknownMessageExecution
+    rules:
+      - alert: UnknownMessageExecution
+        expr: alert_monitor_unknown_message_execution > 0
+        for: 3m
+  - name: FailedMessageExecution
+    rules:
+      - alert: FailedMessageExecution
+        expr: alert_monitor_failed_message_execution > 0
+        for: 3m
+  - name: InstanceIsDown
+    rules:
+      - alert: InstanceIsDown
+        expr: up < 1
+        for: 1m

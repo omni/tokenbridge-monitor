@@ -1,0 +1,19 @@
+{{ define "explorer.tx.link" -}}
+{{- if eq .chain_id "1" -}}
+https://etherscan.io/tx/{{ .tx_hash  }}
+{{- else if eq .chain_id "4" -}}
+https://rinkeby.etherscan.io/tx/{{ .tx_hash  }}
+{{- else if eq .chain_id "42" -}}
+https://kovan.etherscan.io/tx/{{ .tx_hash  }}
+{{- else if eq .chain_id "56" -}}
+https://bscscan.com/tx/{{ .tx_hash  }}
+{{- else if eq .chain_id "77" -}}
+https://blockscout.com/poa/sokol/tx/{{ .tx_hash  }}
+{{- else if eq .chain_id "99" -}}
+https://blockscout.com/poa/core/tx/{{ .tx_hash  }}
+{{- else if eq .chain_id "100" -}}
+https://blockscout.com/xdai/mainnet/tx/{{ .tx_hash  }}
+{{- else -}}
+{{ .tx_hash }}
+{{- end -}}
+{{- end }}

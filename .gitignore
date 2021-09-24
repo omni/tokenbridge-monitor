@@ -1,2 +1,3 @@
 .env
 .idea/
+prometheus/slack_api_url.txt

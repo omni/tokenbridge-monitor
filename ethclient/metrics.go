@@ -3,7 +3,7 @@ package ethclient
 import (
 	"context"
 	"errors"
-	"strconv"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/rpc"
@@ -31,10 +31,7 @@ func ObserveError(url, query string, err error) {
 		if errors.Is(err, context.DeadlineExceeded) {
 			RequestResults.WithLabelValues(url, query, "timeout").Inc()
 		} else if err, ok := err.(rpc.Error); ok {
-			RequestResults.MustCurryWith(prometheus.Labels{
-				"code":    strconv.Itoa(err.ErrorCode()),
-				"message": err.Error(),
-			}).WithLabelValues(url, query, "error").Inc()
+			RequestResults.WithLabelValues(url, query, fmt.Sprintf("error-%d-%s", err.ErrorCode(), err.Error())).Inc()
 		} else {
 			RequestResults.WithLabelValues(url, query, "error").Inc()
 		}

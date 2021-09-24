@@ -1,0 +1,91 @@
+global:
+  slack_api_url_file: /etc/prometheus/slack_api_url.txt
+receivers:
+  - name: slack-default
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: 'Unrecognized alert occurred'
+        text: '{{ . }}'
+  - name: slack-stuck-message
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: '{{ template "slack.stuck_message.title" . }}'
+        text: '{{ template "slack.stuck_message.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-unknown-confirmation
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: '{{ template "slack.unknown_confirmation.title" . }}'
+        text: '{{ template "slack.unknown_confirmation.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-unknown-execution
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: '{{ template "slack.unknown_execution.title" . }}'
+        text: '{{ template "slack.unknown_execution.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-failed-execution
+    slack_configs:
+      - send_resolved: false
+        channel: '#amb-alerts'
+        title: '{{ template "slack.failed_execution.title" . }}'
+        text: '{{ template "slack.failed_execution.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-dm
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: 'Monitor application is down'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
+route:
+  receiver: slack-default
+  group_by: [ "..." ]
+  routes:
+    - receiver: slack-stuck-message
+      group_by: [ "bridge", "chain_id", "block_number", "tx_hash" ]
+      matchers:
+        - alertname = StuckMessage
+    - receiver: slack-unknown-confirmation
+      group_by: [ "..." ]
+      matchers:
+        - alertname = UnknownMessageConfirmation
+    - receiver: slack-unknown-execution
+      group_by: [ "..." ]
+      matchers:
+        - alertname = UnknownMessageExecution
+    - receiver: slack-failed-execution
+      group_by: [ "..." ]
+      repeat_interval: 10000d
+      matchers:
+        - alertname = FailedMessageExecution
+    - receiver: slack-dm
+      group_by: [ "..." ]
+      matchers:
+        - alertname = InstanceIsDown
+inhibit_rules:
+  - target_matchers:
+      - alertname =~ .*
+  - source_matchers:
+      - alertname = InstanceIsDown
+    equal: [ "job", "instance" ]
+templates:
+  - templates/*.tmpl

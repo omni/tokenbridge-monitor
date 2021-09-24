@@ -21,6 +21,7 @@ func main() {
 	if err != nil {
 		logger.WithError(err).Fatal("can't read config")
 	}
+	logger.SetLevel(cfg.LogLevel)
 
 	dbConn, err := db.NewDB(cfg.DBConfig)
 	if err != nil {
@@ -44,8 +45,18 @@ func main() {
 
 	monitors := make([]*monitor.Monitor, 0, len(cfg.Bridges))
 	ctx, cancel := context.WithCancel(context.Background())
+	for _, bridge := range cfg.DisabledBridges {
+		delete(cfg.Bridges, bridge)
+	}
+	if cfg.EnabledBridges != nil {
+		newBridgeCfg := make(map[string]*config.BridgeConfig, len(cfg.EnabledBridges))
+		for _, bridge := range cfg.EnabledBridges {
+			newBridgeCfg[bridge] = cfg.Bridges[bridge]
+		}
+		cfg.Bridges = newBridgeCfg
+	}
 	for _, bridgeCfg := range cfg.Bridges {
-		m, err2 := monitor.NewMonitor(ctx, logger.WithField("bridge_id", bridgeCfg.ID), repo, bridgeCfg)
+		m, err2 := monitor.NewMonitor(ctx, logger.WithField("bridge_id", bridgeCfg.ID), dbConn, repo, bridgeCfg)
 		if err2 != nil {
 			logger.WithError(err2).Fatal("can't initialize bridge monitor")
 		}

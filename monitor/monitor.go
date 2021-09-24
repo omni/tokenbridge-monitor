@@ -4,9 +4,11 @@ import (
 	"amb-monitor/config"
 	"amb-monitor/contract"
 	"amb-monitor/contract/constants"
+	"amb-monitor/db"
 	"amb-monitor/entity"
 	"amb-monitor/ethclient"
 	"amb-monitor/logging"
+	"amb-monitor/monitor/alerts"
 	"amb-monitor/repository"
 	"context"
 	"database/sql"
@@ -42,6 +44,7 @@ type Monitor struct {
 	repo           *repository.Repo
 	homeMonitor    *ContractMonitor
 	foreignMonitor *ContractMonitor
+	alertManager   *alerts.AlertManager
 }
 
 func newContractMonitor(ctx context.Context, logger logging.Logger, repo *repository.Repo, cfg *config.BridgeSideConfig) (*ContractMonitor, error) {
@@ -80,7 +83,7 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 	}, nil
 }
 
-func NewMonitor(ctx context.Context, logger logging.Logger, repo *repository.Repo, cfg *config.BridgeConfig) (*Monitor, error) {
+func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo *repository.Repo, cfg *config.BridgeConfig) (*Monitor, error) {
 	homeMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "home"), repo, cfg.Home)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize home side monitor: %w", err)
@@ -88,6 +91,10 @@ func NewMonitor(ctx context.Context, logger logging.Logger, repo *repository.Rep
 	foreignMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "foreign"), repo, cfg.Foreign)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize foreign side monitor: %w", err)
+	}
+	alertManager, err := alerts.NewAlertManager(logger, dbConn, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize alert manager: %w", err)
 	}
 	handlers := NewBridgeEventHandler(repo, cfg.ID)
 	homeMonitor.eventHandlers["UserRequestForSignature"] = handlers.HandleUserRequestForSignature
@@ -107,6 +114,7 @@ func NewMonitor(ctx context.Context, logger logging.Logger, repo *repository.Rep
 		repo:           repo,
 		homeMonitor:    homeMonitor,
 		foreignMonitor: foreignMonitor,
+		alertManager:   alertManager,
 	}, nil
 }
 
@@ -114,6 +122,7 @@ func (m *Monitor) Start(ctx context.Context) {
 	m.logger.Info("starting bridge monitor")
 	go m.homeMonitor.Start(ctx)
 	go m.foreignMonitor.Start(ctx)
+	go m.alertManager.Start(ctx)
 }
 
 func (m *ContractMonitor) Start(ctx context.Context) {
@@ -143,7 +152,7 @@ func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, to
 		break
 	}
 
-	m.submitLogs(logs)
+	m.submitLogs(logs, toBlock)
 }
 
 func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
@@ -201,13 +210,14 @@ func (m *ContractMonitor) StartLogsFetcher(ctx context.Context) {
 		case blocksRange := <-m.blocksRangeChan:
 			for {
 				err := m.tryToFetchLogs(ctx, blocksRange)
-				if err == nil {
-					break
+				if err != nil {
+					m.logger.WithError(err).WithFields(logrus.Fields{
+						"from_block": blocksRange.From,
+						"to_block":   blocksRange.To,
+					}).Error("failed logs fetching, retrying")
+					continue
 				}
-				m.logger.WithError(err).WithFields(logrus.Fields{
-					"from_block": blocksRange.From,
-					"to_block":   blocksRange.To,
-				}).Error("failed logs fetching, retrying")
+				break
 			}
 		}
 	}
@@ -227,42 +237,40 @@ func (m *ContractMonitor) tryToFetchLogs(ctx context.Context, blocksRange *Block
 		"from_block": blocksRange.From,
 		"to_block":   blocksRange.To,
 	}).Info("fetched logs in range")
-	if len(logs) == 0 {
-		return nil
-	}
-	sort.Slice(logs, func(i, j int) bool {
-		a, b := &logs[i], &logs[j]
-		return a.BlockNumber < b.BlockNumber || (a.BlockNumber == b.BlockNumber && a.Index < b.Index)
-	})
 	entities := make([]*entity.Log, len(logs))
-	for i, log := range logs {
-		entities[i] = m.logToEntity(log)
-	}
-	err = m.repo.Logs.Ensure(ctx, entities...)
-	if err != nil {
-		return err
-	}
+	if len(logs) > 0 {
+		sort.Slice(logs, func(i, j int) bool {
+			a, b := &logs[i], &logs[j]
+			return a.BlockNumber < b.BlockNumber || (a.BlockNumber == b.BlockNumber && a.Index < b.Index)
+		})
+		for i, log := range logs {
+			entities[i] = m.logToEntity(log)
+		}
+		err = m.repo.Logs.Ensure(ctx, entities...)
+		if err != nil {
+			return err
+		}
 
-	indexes := make([]uint, len(entities))
-	for i, x := range entities {
-		indexes[i] = x.ID
+		indexes := make([]uint, len(entities))
+		for i, x := range entities {
+			indexes[i] = x.ID
+		}
+		m.logger.WithFields(logrus.Fields{
+			"count":      len(logs),
+			"from_block": blocksRange.From,
+			"to_block":   blocksRange.To,
+		}).Info("saved logs")
 	}
-	m.logger.WithFields(logrus.Fields{
-		"count":      len(logs),
-		"from_block": blocksRange.From,
-		"to_block":   blocksRange.To,
-	}).Info("saved logs")
-
-	m.logsCursor.LastFetchedBlock = entities[len(logs)-1].BlockNumber
+	m.logsCursor.LastFetchedBlock = blocksRange.To
 	if err = m.repo.LogsCursors.Ensure(ctx, m.logsCursor); err != nil {
 		return err
 	}
 
-	m.submitLogs(entities)
+	m.submitLogs(entities, blocksRange.To)
 	return nil
 }
 
-func (m *ContractMonitor) submitLogs(logs []*entity.Log) {
+func (m *ContractMonitor) submitLogs(logs []*entity.Log, endBlock uint) {
 	jobs, lastBlock := 0, uint(0)
 	for _, log := range logs {
 		if log.BlockNumber > lastBlock {
@@ -288,6 +296,12 @@ func (m *ContractMonitor) submitLogs(logs []*entity.Log) {
 				Logs:        logs[batchStartIndex:i],
 			}
 			batchStartIndex = i
+		}
+	}
+	if lastBlock < endBlock {
+		m.logsChan <- &LogsBatch{
+			BlockNumber: endBlock,
+			Logs:        nil,
 		}
 	}
 }
@@ -326,29 +340,31 @@ func (m *ContractMonitor) StartLogsProcessor(ctx context.Context) {
 			wg := new(sync.WaitGroup)
 			wg.Add(2)
 			go func() {
+				defer wg.Done()
 				for {
 					err := m.tryToGetBlockTimestamp(ctx, logs.BlockNumber)
-					if err == nil {
-						wg.Done()
-						return
+					if err != nil {
+						m.logger.WithError(err).WithFields(logrus.Fields{
+							"block_number": logs.BlockNumber,
+						}).Error("failed to get block timestamp, retrying")
+						continue
 					}
-					m.logger.WithError(err).WithFields(logrus.Fields{
-						"block_number": logs.BlockNumber,
-					}).Error("failed to get block timestamp, retrying")
+					return
 				}
 			}()
 
 			go func() {
+				defer wg.Done()
 				for {
 					err := m.tryToProcessLogsBatch(ctx, logs)
-					if err == nil {
-						wg.Done()
-						return
+					if err != nil {
+						m.logger.WithError(err).WithFields(logrus.Fields{
+							"block_number": logs.BlockNumber,
+							"count":        len(logs.Logs),
+						}).Error("failed to process logs batch, retrying")
+						continue
 					}
-					m.logger.WithError(err).WithFields(logrus.Fields{
-						"block_number": logs.BlockNumber,
-						"count":        len(logs.Logs),
-					}).Error("failed to process logs batch, retrying")
+					return
 				}
 			}()
 			wg.Wait()
@@ -410,6 +426,14 @@ func (m *ContractMonitor) tryToProcessLogsBatch(ctx context.Context, logs *LogsB
 		}
 	}
 
-	m.logsCursor.LastProcessedBlock = logs.BlockNumber
+	return m.recordProcessedBlockNumber(ctx, logs.BlockNumber)
+}
+
+func (m *ContractMonitor) recordProcessedBlockNumber(ctx context.Context, blockNumber uint) error {
+	if blockNumber < m.logsCursor.LastProcessedBlock {
+		return nil
+	}
+
+	m.logsCursor.LastProcessedBlock = blockNumber
 	return m.repo.LogsCursors.Ensure(ctx, m.logsCursor)
 }

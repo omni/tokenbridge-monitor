@@ -1,0 +1,44 @@
+{{ define "slack.default.username" }}AMB monitor{{ end }}
+
+{{ define "slack.stuck_message.title" -}}
+Stuck AMB message confirmation
+{{- end }}
+{{ define "slack.stuck_message.text" -}}
+*Bridge:* {{ .CommonLabels.bridge }}
+*Chain ID*: {{ .CommonLabels.chain_id }}
+*Stuck for:* {{ .CommonAnnotations.wait_time }}
+*Collected confirmations:* {{ .CommonLabels.count }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}
+
+{{ define "slack.unknown_confirmation.title" -}}
+Validator signed for unknown AMB message
+{{- end }}
+{{ define "slack.unknown_confirmation.text" -}}
+*Bridge:* {{ .CommonLabels.bridge }}
+*Chain ID*: {{ .CommonLabels.chain_id }}
+*Validator:* {{ .CommonLabels.signer }}
+*Message hash:* {{ .CommonLabels.msg_hash }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}
+
+{{ define "slack.unknown_execution.title" -}}
+Bridged executed unknown AMB message
+{{- end }}
+{{ define "slack.unknown_execution.text" -}}
+*Bridge:* {{ .CommonLabels.bridge }}
+*Chain ID*: {{ .CommonLabels.chain_id }}
+*Message id:* {{ .CommonLabels.message_id }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}
+
+{{ define "slack.failed_execution.title" -}}
+Failed AMB message execution
+{{- end }}
+{{ define "slack.failed_execution.text" -}}
+*Bridge:* {{ .CommonLabels.bridge }}
+*Chain ID*: {{ .CommonLabels.chain_id }}
+*Sender:* {{ .CommonLabels.sender }}
+*Executor:* {{ .CommonLabels.executor }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}

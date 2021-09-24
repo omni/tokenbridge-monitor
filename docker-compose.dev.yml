@@ -8,7 +8,7 @@ services:
       POSTGRES_DB: db
       POSTGRES_PASSWORD: pass
     ports:
-      - 5432:5432
+      - "5432:5432"
     shm_size: 256mb
   monitor:
     build: .
@@ -17,8 +17,29 @@ services:
     volumes:
       - ./config.yml:/app/config.yml
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:8.1.5
+    volumes:
+      - grafana-storage:/var/lib/grafana
     ports:
-      - 3000:3000
+      - "3000:3000"
+  prometheus:
+    image: prom/prometheus:v2.30.0
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prom-storage:/prometheus
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--web.enable-lifecycle"]
+    ports:
+      - "9090:9090"
+  alertmanager:
+    image: prom/alertmanager:v0.23.0
+    command: ["--config.file=/etc/prometheus/alertmanager.yml", "--storage.path=/alertmanager", "--web.external-url=http://localhost:9093"]
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - alertmanager-storage:/alertmanager
+    ports:
+      - "9093:9093"
 volumes:
   db:
+  grafana-storage:
+  prom-storage:
+  alertmanager-storage:
