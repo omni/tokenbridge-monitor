@@ -1,6 +1,7 @@
 version: '3.8'
 services:
   postgres:
+    container_name: postgres
     image: postgres:13-alpine
     volumes:
       - db:/var/lib/postgresql/data
@@ -8,13 +9,67 @@ services:
       POSTGRES_DB: db
       POSTGRES_PASSWORD: pass
     ports:
-      - 5432:5432
+      - '127.0.0.1:5432:5432'
     shm_size: 256mb
+  traefik:
+    container_name: traefik
+    image: traefik:v2.5.3
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      #- "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.myresolver.acme.email=fedoseev.llirik@gmail.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "443:443"
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:8.1.5
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`grafana.kirill-fedoseev.me`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls.certresolver=myresolver"
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v2.30.0
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prom-storage:/prometheus
+    command: [ "--config.file=/etc/prometheus/prometheus.yml", "--web.enable-lifecycle" ]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`prometheus.kirill-fedoseev.me`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls.certresolver=myresolver"
+  alertmanager:
+    container_name: alertmanager
+    image: prom/alertmanager:v0.23.0
+    command: [ "--config.file=/etc/prometheus/alertmanager.yml", "--storage.path=/alertmanager", "--web.external-url=http://localhost:9093" ]
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - alertmanager-storage:/alertmanager
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`alertmanager.kirill-fedoseev.me`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls.certresolver=myresolver"
   monitor:
-    build: .
+    container_name: monitor
+    image: ghcr.io/k1rill-fedoseev/amb-monitor:v0.0.1
     env_file:
       - .env
     volumes:
       - ./config.yml:/app/config.yml
 volumes:
   db:
+  grafana-storage:
+  prom-storage:
+  alertmanager-storage:
