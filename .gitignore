@@ -1,3 +1,7 @@
 .env
 .idea/
 prometheus/slack_api_url.txt
+terraform/gcp_credentials.json
+terraform/ssh_key.pub
+terraform/.terraform*
+terraform/terraform.tfstate*
