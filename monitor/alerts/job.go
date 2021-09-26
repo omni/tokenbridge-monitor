@@ -23,13 +23,13 @@ type AlertJobParams struct {
 }
 
 type Job struct {
-	logger   logging.Logger
-	Metric   *prometheus.GaugeVec
-	Interval time.Duration
-	Timeout  time.Duration
-	Labels   []string
-	Func     func(ctx context.Context, params *AlertJobParams) ([]AlertValues, error)
-	Params   *AlertJobParams
+	logger      logging.Logger
+	Metric      *prometheus.GaugeVec
+	Interval    time.Duration
+	Timeout     time.Duration
+	Func        func(ctx context.Context, params *AlertJobParams) ([]AlertValues, error)
+	ResetMetric func()
+	Params      *AlertJobParams
 }
 
 func (j *Job) Start(ctx context.Context) {
@@ -42,8 +42,7 @@ func (j *Job) Start(ctx context.Context) {
 		if err != nil {
 			j.logger.WithError(err).Error("failed to process alert job")
 		} else {
-			// TODO scrape only active up-to-date bridges
-			j.Metric.Reset()
+			j.ResetMetric()
 
 			if len(values) > 0 {
 				j.logger.WithFields(logrus.Fields{

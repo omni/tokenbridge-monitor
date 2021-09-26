@@ -16,30 +16,31 @@ var (
 		Namespace: "monitor",
 		Subsystem: "rpc",
 		Name:      "request_results_total",
-	}, []string{"url", "query", "status"})
+		Help:      "Shows counter for different RPC query results.",
+	}, []string{"chain_id", "url", "query", "status"})
 
 	RequestDurations = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "monitor",
 		Subsystem: "rpc",
 		Name:      "request_duration_seconds",
+		Help:      "Shows RPC query durations.",
 		Buckets:   []float64{0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20},
-	}, []string{"url", "query"})
+	}, []string{"chain_id", "url", "query"})
 )
 
-func ObserveError(url, query string, err error) {
+func ObserveError(chainID, url, query string, err error) {
+	result := "ok"
 	if err != nil {
+		result = "error"
 		if errors.Is(err, context.DeadlineExceeded) {
-			RequestResults.WithLabelValues(url, query, "timeout").Inc()
+			result = "timeout"
 		} else if err, ok := err.(rpc.Error); ok {
-			RequestResults.WithLabelValues(url, query, fmt.Sprintf("error-%d-%s", err.ErrorCode(), err.Error())).Inc()
-		} else {
-			RequestResults.WithLabelValues(url, query, "error").Inc()
+			result = fmt.Sprintf("error-%d-%s", err.ErrorCode(), err.Error())
 		}
-	} else {
-		RequestResults.WithLabelValues(url, query, "ok").Inc()
 	}
+	RequestResults.WithLabelValues(chainID, url, query, result).Inc()
 }
 
-func ObserveDuration(url, query string) func() time.Duration {
-	return prometheus.NewTimer(RequestDurations.WithLabelValues(url, query)).ObserveDuration
+func ObserveDuration(chainID, url, query string) func() time.Duration {
+	return prometheus.NewTimer(RequestDurations.WithLabelValues(chainID, url, query)).ObserveDuration
 }

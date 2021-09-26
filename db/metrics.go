@@ -11,7 +11,8 @@ var QueryDurations = promauto.NewHistogramVec(prometheus.HistogramOpts{
 	Namespace: "monitor",
 	Subsystem: "db",
 	Name:      "query_duration_seconds",
-	Buckets:   []float64{0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5},
+	Help:      "Shows database query durations.",
+	Buckets:   []float64{0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 20},
 }, []string{"query"})
 
 func ObserveDuration(query string) func() time.Duration {

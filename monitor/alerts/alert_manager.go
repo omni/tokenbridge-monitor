@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 type AlertManager struct {
@@ -21,6 +20,9 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 	provider := NewDBAlertsProvider(db)
 	jobs := make(map[string]*Job, len(cfg.Alerts))
 
+	bridgeLabel := prometheus.Labels{
+		"bridge_id": cfg.ID,
+	}
 	for name, alertCfg := range cfg.Alerts {
 		switch name {
 		case "unknown_message_confirmation":
@@ -28,40 +30,33 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 				Interval: time.Minute,
 				Timeout:  time.Second * 10,
 				Func:     provider.FindUnknownConfirmations,
-				Labels:   []string{"chain_id", "block_number", "tx_hash", "signer", "msg_hash"},
+				Metric:   AlertUnknownMessageConfirmation.MustCurryWith(bridgeLabel),
 			}
 		case "unknown_message_execution":
 			jobs[name] = &Job{
 				Interval: time.Minute,
 				Timeout:  time.Second * 10,
 				Func:     provider.FindUnknownExecutions,
-				Labels:   []string{"chain_id", "block_number", "tx_hash", "message_id"},
+				Metric:   AlertUnknownMessageExecution.MustCurryWith(bridgeLabel),
 			}
 		case "stuck_message_confirmation":
 			jobs[name] = &Job{
 				Interval: time.Minute * 2,
 				Timeout:  time.Second * 20,
 				Func:     provider.FindStuckMessages,
-				Labels:   []string{"chain_id", "block_number", "tx_hash", "msg_hash", "count"},
+				Metric:   AlertStuckMessageConfirmation.MustCurryWith(bridgeLabel),
 			}
 		case "failed_message_execution":
 			jobs[name] = &Job{
 				Interval: time.Minute * 5,
 				Timeout:  time.Second * 20,
 				Func:     provider.FindFailedExecutions,
-				Labels:   []string{"chain_id", "block_number", "tx_hash", "sender", "executor"},
+				Metric:   AlertFailedMessageExecution.MustCurryWith(bridgeLabel),
 			}
 		default:
 			return nil, fmt.Errorf("unknown alert type %q", name)
 		}
-		jobs[name].Metric = promauto.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: "alert",
-			Subsystem: "monitor",
-			Name:      name,
-			ConstLabels: map[string]string{
-				"bridge": cfg.ID,
-			},
-		}, jobs[name].Labels)
+		jobs[name].ResetMetric = func() { jobs[name].Metric.Delete(bridgeLabel) }
 		jobs[name].Params = &AlertJobParams{
 			Bridge:                  cfg.ID,
 			HomeChainID:             cfg.Home.Chain.ChainID,

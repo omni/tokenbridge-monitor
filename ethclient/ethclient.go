@@ -46,31 +46,31 @@ func NewClient(url string, timeout time.Duration, chainID string) (*Client, erro
 }
 
 func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
-	defer ObserveDuration(c.url, "eth_blockNumber")()
+	defer ObserveDuration(c.ChainID, c.url, "eth_blockNumber")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	n, err := c.client.BlockNumber(ctx)
-	ObserveError(c.url, "eth_getBlockByNumber", err)
+	ObserveError(c.ChainID, c.url, "eth_getBlockByNumber", err)
 	return n, err
 }
 
 func (c *Client) HeaderByNumber(ctx context.Context, n uint) (*types.Header, error) {
-	defer ObserveDuration(c.url, "eth_getBlockByNumber")()
+	defer ObserveDuration(c.ChainID, c.url, "eth_getBlockByNumber")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	header, err := c.client.HeaderByNumber(ctx, big.NewInt(int64(n)))
-	ObserveError(c.url, "eth_getBlockByNumber", err)
+	ObserveError(c.ChainID, c.url, "eth_getBlockByNumber", err)
 	return header, err
 }
 
 func (c *Client) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
-	defer ObserveDuration(c.url, "eth_getLogs")()
+	defer ObserveDuration(c.ChainID, c.url, "eth_getLogs")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	logs, err := c.client.FilterLogs(ctx, q)
-	ObserveError(c.url, "eth_getLogs", err)
+	ObserveError(c.ChainID, c.url, "eth_getLogs", err)
 	return logs, err
 }

@@ -10,6 +10,7 @@ import (
 	"amb-monitor/logging"
 	"amb-monitor/monitor/alerts"
 	"amb-monitor/repository"
+	"amb-monitor/utils"
 	"context"
 	"database/sql"
 	"errors"
@@ -23,19 +24,26 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
 type ContractMonitor struct {
-	cfg             *config.BridgeSideConfig
-	logger          logging.Logger
-	repo            *repository.Repo
-	client          *ethclient.Client
-	logsCursor      *entity.LogsCursor
-	blocksRangeChan chan *BlocksRange
-	logsChan        chan *LogsBatch
-	contract        *contract.Contract
-	eventHandlers   map[string]EventHandler
+	cfg                  *config.BridgeSideConfig
+	logger               logging.Logger
+	repo                 *repository.Repo
+	client               *ethclient.Client
+	logsCursor           *entity.LogsCursor
+	blocksRangeChan      chan *BlocksRange
+	logsChan             chan *LogsBatch
+	contract             *contract.Contract
+	eventHandlers        map[string]EventHandler
+	synced               bool
+	headBlock            uint
+	syncedMetric         prometheus.Gauge
+	headBlockMetric      prometheus.Gauge
+	fetchedBlockMetric   prometheus.Gauge
+	processedBlockMetric prometheus.Gauge
 }
 
 type Monitor struct {
@@ -47,7 +55,7 @@ type Monitor struct {
 	alertManager   *alerts.AlertManager
 }
 
-func newContractMonitor(ctx context.Context, logger logging.Logger, repo *repository.Repo, cfg *config.BridgeSideConfig) (*ContractMonitor, error) {
+func newContractMonitor(ctx context.Context, logger logging.Logger, repo *repository.Repo, bridge string, cfg *config.BridgeSideConfig) (*ContractMonitor, error) {
 	client, err := ethclient.NewClient(cfg.Chain.RPC.Host, cfg.Chain.RPC.Timeout, cfg.Chain.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start eth client: %w", err)
@@ -70,25 +78,35 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 			return nil, fmt.Errorf("failed to read home logs cursor: %w", err)
 		}
 	}
+	commonLabels := prometheus.Labels{
+		"bridge_id": bridge,
+		"chain_id":  client.ChainID,
+		"address":   cfg.Address.String(),
+	}
 	return &ContractMonitor{
-		logger:          logger,
-		cfg:             cfg,
-		repo:            repo,
-		client:          client,
-		logsCursor:      logsCursor,
-		blocksRangeChan: make(chan *BlocksRange, 10),
-		logsChan:        make(chan *LogsBatch, 200),
-		contract:        contract.NewContract(client, cfg.Address, constants.AMB),
-		eventHandlers:   make(map[string]EventHandler, 7),
+		logger:               logger,
+		cfg:                  cfg,
+		repo:                 repo,
+		client:               client,
+		logsCursor:           logsCursor,
+		blocksRangeChan:      make(chan *BlocksRange, 10),
+		logsChan:             make(chan *LogsBatch, 200),
+		contract:             contract.NewContract(client, cfg.Address, constants.AMB),
+		eventHandlers:        make(map[string]EventHandler, 7),
+		synced:               false,
+		syncedMetric:         SyncedContract.With(commonLabels),
+		headBlockMetric:      LatestHeadBlock.With(commonLabels),
+		fetchedBlockMetric:   LatestFetchedBlock.With(commonLabels),
+		processedBlockMetric: LatestProcessedBlock.With(commonLabels),
 	}, nil
 }
 
 func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo *repository.Repo, cfg *config.BridgeConfig) (*Monitor, error) {
-	homeMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "home"), repo, cfg.Home)
+	homeMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "home"), repo, cfg.ID, cfg.Home)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize home side monitor: %w", err)
 	}
-	foreignMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "foreign"), repo, cfg.Foreign)
+	foreignMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "foreign"), repo, cfg.ID, cfg.Foreign)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize foreign side monitor: %w", err)
 	}
@@ -122,7 +140,23 @@ func (m *Monitor) Start(ctx context.Context) {
 	m.logger.Info("starting bridge monitor")
 	go m.homeMonitor.Start(ctx)
 	go m.foreignMonitor.Start(ctx)
-	go m.alertManager.Start(ctx)
+	go func() {
+		t := time.NewTicker(10 * time.Second)
+		for {
+			select {
+			case <-ctx.Done():
+				t.Stop()
+				return
+			case <-t.C:
+			}
+
+			if m.homeMonitor.synced && m.foreignMonitor.synced {
+				t.Stop()
+				m.logger.Info("both sides of the monitor are synced, starting alert manager")
+				go m.alertManager.Start(ctx)
+			}
+		}
+	}()
 }
 
 func (m *ContractMonitor) Start(ctx context.Context) {
@@ -146,7 +180,9 @@ func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, to
 		logs, err = m.repo.Logs.FindByBlockRange(ctx, m.client.ChainID, m.cfg.Address, fromBlock, toBlock)
 		if err != nil {
 			m.logger.WithError(err).Error("can't find unprocessed logs in block")
-			time.Sleep(time.Second) // TODO fix
+			if utils.ContextSleep(ctx, 10*time.Second) == nil {
+				return
+			}
 			continue
 		}
 		break
@@ -163,20 +199,21 @@ func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
 		if err != nil {
 			m.logger.WithError(err).Error("can't fetch latest block number")
 		} else {
-			target := uint(head) - m.cfg.BlockConfirmations
+			m.headBlock = uint(head) - m.cfg.BlockConfirmations
 
-			if start > target {
+			if start > m.headBlock {
 				m.logger.WithFields(logrus.Fields{
-					"head_block":                   head,
+					"head_block":                   m.headBlock,
 					"required_block_confirmations": m.cfg.BlockConfirmations,
 					"current_block":                start,
 				}).Warn("latest block is behind processed block in the database, skipping")
 			}
+			m.headBlockMetric.Set(float64(m.headBlock))
 
-			for start <= target {
+			for start <= m.headBlock {
 				end := start + m.cfg.MaxBlockRangeSize - 1
-				if end > target {
-					end = target
+				if end > m.headBlock {
+					end = m.headBlock
 				}
 				m.logger.WithFields(logrus.Fields{
 					"from_block": start,
@@ -190,12 +227,7 @@ func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
 			}
 		}
 
-		t := time.NewTimer(m.cfg.Chain.BlockIndexInterval)
-		select {
-		case <-t.C:
-			continue
-		case <-ctx.Done():
-			t.Stop()
+		if utils.ContextSleep(ctx, m.cfg.Chain.BlockIndexInterval) == nil {
 			return
 		}
 	}
@@ -261,8 +293,7 @@ func (m *ContractMonitor) tryToFetchLogs(ctx context.Context, blocksRange *Block
 			"to_block":   blocksRange.To,
 		}).Info("saved logs")
 	}
-	m.logsCursor.LastFetchedBlock = blocksRange.To
-	if err = m.repo.LogsCursors.Ensure(ctx, m.logsCursor); err != nil {
+	if err = m.recordFetchedBlockNumber(ctx, blocksRange.To); err != nil {
 		return err
 	}
 
@@ -368,6 +399,19 @@ func (m *ContractMonitor) StartLogsProcessor(ctx context.Context) {
 				}
 			}()
 			wg.Wait()
+
+			for {
+				err := m.recordProcessedBlockNumber(ctx, logs.BlockNumber)
+				if err != nil {
+					m.logger.WithError(err).WithField("block_number", logs.BlockNumber).
+						Error("failed to update latest processed block number, retrying")
+					if utils.ContextSleep(ctx, 10*time.Second) == nil {
+						return
+					}
+					continue
+				}
+				break
+			}
 		}
 	}
 }
@@ -425,8 +469,21 @@ func (m *ContractMonitor) tryToProcessLogsBatch(ctx context.Context, logs *LogsB
 			return err
 		}
 	}
+	return nil
+}
 
-	return m.recordProcessedBlockNumber(ctx, logs.BlockNumber)
+func (m *ContractMonitor) recordFetchedBlockNumber(ctx context.Context, blockNumber uint) error {
+	if blockNumber < m.logsCursor.LastFetchedBlock {
+		return nil
+	}
+
+	m.logsCursor.LastFetchedBlock = blockNumber
+	err := m.repo.LogsCursors.Ensure(ctx, m.logsCursor)
+	if err != nil {
+		return err
+	}
+	m.fetchedBlockMetric.Set(float64(blockNumber))
+	return nil
 }
 
 func (m *ContractMonitor) recordProcessedBlockNumber(ctx context.Context, blockNumber uint) error {
@@ -434,6 +491,21 @@ func (m *ContractMonitor) recordProcessedBlockNumber(ctx context.Context, blockN
 		return nil
 	}
 
+	if !m.synced && m.headBlock > 0 && blockNumber+10 > m.headBlock {
+		m.logger.WithFields(logrus.Fields{
+			"head_block":                   m.headBlock,
+			"required_block_confirmations": m.cfg.BlockConfirmations,
+			"latest_processed_block":       blockNumber,
+		}).Info("synced to the chain head")
+		m.synced = true
+		m.syncedMetric.Set(1)
+	}
+
 	m.logsCursor.LastProcessedBlock = blockNumber
-	return m.repo.LogsCursors.Ensure(ctx, m.logsCursor)
+	err := m.repo.LogsCursors.Ensure(ctx, m.logsCursor)
+	if err != nil {
+		return err
+	}
+	m.processedBlockMetric.Set(float64(blockNumber))
+	return nil
 }
