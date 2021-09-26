@@ -34,9 +34,9 @@ services:
       - grafana-storage:/var/lib/grafana
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`grafana.kirill-fedoseev.me`)"
-      - "traefik.http.routers.whoami.entrypoints=websecure"
-      - "traefik.http.routers.whoami.tls.certresolver=myresolver"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.kirill-fedoseev.me`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=myresolver"
   prometheus:
     container_name: prometheus
     image: prom/prometheus:v2.30.0
@@ -46,9 +46,9 @@ services:
     command: [ "--config.file=/etc/prometheus/prometheus.yml", "--web.enable-lifecycle" ]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`prometheus.kirill-fedoseev.me`)"
-      - "traefik.http.routers.whoami.entrypoints=websecure"
-      - "traefik.http.routers.whoami.tls.certresolver=myresolver"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.kirill-fedoseev.me`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=myresolver"
   alertmanager:
     container_name: alertmanager
     image: prom/alertmanager:v0.23.0
@@ -58,9 +58,9 @@ services:
       - alertmanager-storage:/alertmanager
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`alertmanager.kirill-fedoseev.me`)"
-      - "traefik.http.routers.whoami.entrypoints=websecure"
-      - "traefik.http.routers.whoami.tls.certresolver=myresolver"
+      - "traefik.http.routers.alertmanager.rule=Host(`alertmanager.kirill-fedoseev.me`)"
+      - "traefik.http.routers.alertmanager.entrypoints=websecure"
+      - "traefik.http.routers.alertmanager.tls.certresolver=myresolver"
   monitor:
     container_name: monitor
     image: ghcr.io/k1rill-fedoseev/amb-monitor:v0.0.1
