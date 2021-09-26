@@ -154,7 +154,7 @@ func (p *DBAlertsProvider) FindStuckMessages(ctx context.Context, params *AlertJ
 		         JOIN messages m on sm.bridge_id = m.bridge_id AND m.msg_hash = sm.msg_hash AND data_type = 0
 		         LEFT JOIN signed_messages s on s.bridge_id = m.bridge_id AND m.msg_hash = s.msg_hash
 		         LEFT JOIN collected_messages cm on m.bridge_id = cm.bridge_id AND cm.msg_hash = m.msg_hash
-		WHERE m.direction::text='home_to_foreign' AND cm.log_id IS NULL AND sm.bridge_id = $1 AND l.block_number >= $2 GROUP BY sm.log_id, l.id, ts.timestamp
+		WHERE m.direction::direction_enum='home_to_foreign' AND cm.log_id IS NULL AND sm.bridge_id = $1 AND l.block_number >= $2 GROUP BY sm.log_id, l.id, ts.timestamp
 		UNION
 		SELECT l.chain_id,
                l.block_number,
@@ -168,7 +168,7 @@ func (p *DBAlertsProvider) FindStuckMessages(ctx context.Context, params *AlertJ
 		         JOIN messages m on sm.bridge_id = m.bridge_id AND m.msg_hash = sm.msg_hash AND data_type = 0
 				 LEFT JOIN signed_messages s on s.bridge_id = m.bridge_id AND m.msg_hash = s.msg_hash
 		         LEFT JOIN executed_messages em on m.bridge_id = em.bridge_id AND em.message_id = m.message_id
-		WHERE m.direction::text='foreign_to_home' AND em.log_id IS NULL AND sm.bridge_id = $1 AND l.block_number >= $3 GROUP BY sm.log_id, l.id, ts.timestamp`
+		WHERE m.direction::direction_enum='foreign_to_home' AND em.log_id IS NULL AND sm.bridge_id = $1 AND l.block_number >= $3 GROUP BY sm.log_id, l.id, ts.timestamp`
 	res := make([]StuckMessage, 0, 5)
 	err := p.db.SelectContext(ctx, &res, query, params.Bridge, params.HomeStartBlockNumber, params.ForeignStartBlockNumber)
 	if err != nil {
