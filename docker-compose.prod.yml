@@ -63,7 +63,7 @@ services:
       - "traefik.http.routers.alertmanager.tls.certresolver=myresolver"
   monitor:
     container_name: monitor
-    image: ghcr.io/k1rill-fedoseev/amb-monitor:v0.0.2
+    image: ghcr.io/k1rill-fedoseev/amb-monitor:v0.0.3
     env_file:
       - .env
     volumes:
