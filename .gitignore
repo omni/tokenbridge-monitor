@@ -1,6 +1,7 @@
 .env
 .idea/
 prometheus/slack_api_url.txt
+prometheus/admin_password.txt
 terraform/gcp_credentials.json
 terraform/ssh_key.pub
 terraform/.terraform*

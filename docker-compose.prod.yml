@@ -43,7 +43,7 @@ services:
     volumes:
       - ./prometheus:/etc/prometheus
       - prom-storage:/prometheus
-    command: [ "--config.file=/etc/prometheus/prometheus.yml", "--web.enable-lifecycle" ]
+    command: [ "--config.file=/etc/prometheus/prometheus.yml", "--web.enable-lifecycle", "--web.config.file=/etc/prometheus/web.yml" ]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.kirill-fedoseev.me`)"
@@ -52,7 +52,7 @@ services:
   alertmanager:
     container_name: alertmanager
     image: prom/alertmanager:v0.23.0
-    command: [ "--config.file=/etc/prometheus/alertmanager.yml", "--storage.path=/alertmanager", "--web.external-url=http://localhost:9093" ]
+    command: [ "--config.file=/etc/prometheus/alertmanager.yml", "--storage.path=/alertmanager", "--web.external-url=https://alertmanager.kirill-fedoseev.me", "--web.config.file=/etc/prometheus/web.yml" ]
     volumes:
       - ./prometheus:/etc/prometheus
       - alertmanager-storage:/alertmanager

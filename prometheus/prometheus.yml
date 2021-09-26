@@ -6,6 +6,9 @@ alerting:
   alertmanagers:
     - static_configs:
       - targets: ['alertmanager:9093']
+      basic_auth:
+        username: admin
+        password_file: /etc/prometheus/admin_password.txt
 
 rule_files:
   - "/etc/prometheus/rules.yml"
