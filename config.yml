@@ -123,8 +123,8 @@ bridges:
         home_start_block: 14496725
         foreign_start_block: 4792263
       failed_message_execution:
-        home_start_block: 14496725
-        foreign_start_block: 4792263
+        home_start_block: 15650488
+        foreign_start_block: 6984913
       unknown_message_confirmation:
         home_start_block: 14496725
         foreign_start_block: 4792263
