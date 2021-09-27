@@ -5,8 +5,8 @@ Stuck AMB message confirmation
 {{- end }}
 {{ define "slack.stuck_message.text" -}}
 *Bridge:* {{ .CommonLabels.bridge_id }}
-*Chain ID*: {{ .CommonLabels.chain_id }}
-*Block number: {{ .CommonLabels.block_number }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
 *Age:* {{ .CommonAnnotations.age }}
 *Collected confirmations:* {{ .CommonLabels.count }}
 *Tx:* {{ template "explorer.tx.link" .CommonLabels }}
@@ -17,8 +17,8 @@ Validator signed for unknown AMB message
 {{- end }}
 {{ define "slack.unknown_confirmation.text" -}}
 *Bridge:* {{ .CommonLabels.bridge_id }}
-*Chain ID*: {{ .CommonLabels.chain_id }}
-*Block number: {{ .CommonLabels.block_number }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
 *Age:* {{ .CommonAnnotations.age }}
 *Validator:* {{ .CommonLabels.signer }}
 *Message hash:* {{ .CommonLabels.msg_hash }}
@@ -30,8 +30,8 @@ Bridged executed unknown AMB message
 {{- end }}
 {{ define "slack.unknown_execution.text" -}}
 *Bridge:* {{ .CommonLabels.bridge_id }}
-*Chain ID*: {{ .CommonLabels.chain_id }}
-*Block number: {{ .CommonLabels.block_number }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
 *Age:* {{ .CommonAnnotations.age }}
 *Message id:* {{ .CommonLabels.message_id }}
 *Tx:* {{ template "explorer.tx.link" .CommonLabels }}
@@ -42,8 +42,8 @@ Failed AMB message execution
 {{- end }}
 {{ define "slack.failed_execution.text" -}}
 *Bridge:* {{ .CommonLabels.bridge_id }}
-*Chain ID*: {{ .CommonLabels.chain_id }}
-*Block number: {{ .CommonLabels.block_number }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
 *Age:* {{ .CommonAnnotations.age }}
 *Sender:* {{ .CommonLabels.sender }}
 *Executor:* {{ .CommonLabels.executor }}
