@@ -38,7 +38,6 @@ type ContractMonitor struct {
 	logsChan             chan *LogsBatch
 	contract             *contract.Contract
 	eventHandlers        map[string]EventHandler
-	synced               bool
 	headBlock            uint
 	syncedMetric         prometheus.Gauge
 	headBlockMetric      prometheus.Gauge
@@ -54,6 +53,8 @@ type Monitor struct {
 	foreignMonitor *ContractMonitor
 	alertManager   *alerts.AlertManager
 }
+
+const defaultSyncedThreshold = 10
 
 func newContractMonitor(ctx context.Context, logger logging.Logger, repo *repository.Repo, bridge string, cfg *config.BridgeSideConfig) (*ContractMonitor, error) {
 	client, err := ethclient.NewClient(cfg.Chain.RPC.Host, cfg.Chain.RPC.Timeout, cfg.Chain.ChainID)
@@ -93,7 +94,6 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 		logsChan:             make(chan *LogsBatch, 200),
 		contract:             contract.NewContract(client, cfg.Address, constants.AMB),
 		eventHandlers:        make(map[string]EventHandler, 7),
-		synced:               false,
 		syncedMetric:         SyncedContract.With(commonLabels),
 		headBlockMetric:      LatestHeadBlock.With(commonLabels),
 		fetchedBlockMetric:   LatestFetchedBlock.With(commonLabels),
@@ -140,23 +140,20 @@ func (m *Monitor) Start(ctx context.Context) {
 	m.logger.Info("starting bridge monitor")
 	go m.homeMonitor.Start(ctx)
 	go m.foreignMonitor.Start(ctx)
-	go func() {
-		t := time.NewTicker(10 * time.Second)
-		for {
-			select {
-			case <-ctx.Done():
-				t.Stop()
-				return
-			case <-t.C:
-			}
+	go m.alertManager.Start(ctx, m.IsSynced)
+}
 
-			if m.homeMonitor.synced && m.foreignMonitor.synced {
-				t.Stop()
-				m.logger.Info("both sides of the monitor are synced, starting alert manager")
-				go m.alertManager.Start(ctx)
-			}
-		}
-	}()
+func (m *Monitor) IsSynced() bool {
+	return m.homeMonitor.IsSynced() && m.foreignMonitor.IsSynced()
+}
+
+func (m *ContractMonitor) IsSynced() bool {
+	if m.headBlock > 0 && m.logsCursor.LastProcessedBlock+defaultSyncedThreshold > m.headBlock {
+		m.syncedMetric.Set(1)
+		return true
+	}
+	m.syncedMetric.Set(0)
+	return false
 }
 
 func (m *ContractMonitor) Start(ctx context.Context) {
@@ -489,16 +486,6 @@ func (m *ContractMonitor) recordFetchedBlockNumber(ctx context.Context, blockNum
 func (m *ContractMonitor) recordProcessedBlockNumber(ctx context.Context, blockNumber uint) error {
 	if blockNumber < m.logsCursor.LastProcessedBlock {
 		return nil
-	}
-
-	if !m.synced && m.headBlock > 0 && blockNumber+10 > m.headBlock {
-		m.logger.WithFields(logrus.Fields{
-			"head_block":                   m.headBlock,
-			"required_block_confirmations": m.cfg.BlockConfirmations,
-			"latest_processed_block":       blockNumber,
-		}).Info("synced to the chain head")
-		m.synced = true
-		m.syncedMetric.Set(1)
 	}
 
 	m.logsCursor.LastProcessedBlock = blockNumber
