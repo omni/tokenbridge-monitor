@@ -24,6 +24,7 @@ func NewDBAlertsProvider(db *db.DB) *DBAlertsProvider {
 type UnknownConfirmation struct {
 	ChainID         string         `db:"chain_id"`
 	BlockNumber     uint64         `db:"block_number"`
+	Age             time.Duration  `db:"age"`
 	TransactionHash common.Hash    `db:"transaction_hash"`
 	Signer          common.Address `db:"signer"`
 	MsgHash         common.Hash    `db:"msg_hash"`
@@ -38,14 +39,15 @@ func (c *UnknownConfirmation) AlertValues() AlertValues {
 			"signer":       c.Signer.String(),
 			"msg_hash":     c.MsgHash.String(),
 		},
-		Value: 1,
+		Value: float64(c.Age),
 	}
 }
 
 func (p *DBAlertsProvider) FindUnknownConfirmations(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
-	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "sm.signer", "sm.msg_hash").
+	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "sm.signer", "sm.msg_hash", "EXTRACT(EPOCH FROM now() - bt.timestamp)::int as age").
 		From("signed_messages sm").
 		Join("logs l ON l.id = sm.log_id").
+		Join("block_timestamps bt on bt.chain_id = l.chain_id AND bt.block_number = l.block_number").
 		LeftJoin("messages m ON sm.bridge_id = m.bridge_id AND m.msg_hash = sm.msg_hash").
 		Where(sq.Eq{"m.id": nil, "sm.bridge_id": params.Bridge, "l.chain_id": params.HomeChainID}).
 		Where(sq.GtOrEq{"l.block_number": params.HomeStartBlockNumber}).
@@ -67,10 +69,11 @@ func (p *DBAlertsProvider) FindUnknownConfirmations(ctx context.Context, params 
 }
 
 type UnknownExecution struct {
-	ChainID         string      `db:"chain_id"`
-	BlockNumber     uint64      `db:"block_number"`
-	TransactionHash common.Hash `db:"transaction_hash"`
-	MessageID       common.Hash `db:"message_id"`
+	ChainID         string        `db:"chain_id"`
+	BlockNumber     uint64        `db:"block_number"`
+	Age             time.Duration `db:"age"`
+	TransactionHash common.Hash   `db:"transaction_hash"`
+	MessageID       common.Hash   `db:"message_id"`
 }
 
 func (c *UnknownExecution) AlertValues() AlertValues {
@@ -81,14 +84,15 @@ func (c *UnknownExecution) AlertValues() AlertValues {
 			"tx_hash":      c.TransactionHash.String(),
 			"message_id":   c.MessageID.String(),
 		},
-		Value: 1,
+		Value: float64(c.Age),
 	}
 }
 
 func (p *DBAlertsProvider) FindUnknownExecutions(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
-	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "em.message_id").
+	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "em.message_id", "EXTRACT(EPOCH FROM now() - bt.timestamp)::int as age").
 		From("executed_messages em").
 		Join("logs l ON l.id = em.log_id").
+		Join("block_timestamps bt on bt.chain_id = l.chain_id AND bt.block_number = l.block_number").
 		LeftJoin("messages m ON em.bridge_id = m.bridge_id AND em.message_id = m.message_id").
 		Where(sq.Eq{"m.id": nil, "em.bridge_id": params.Bridge}).
 		Where(sq.Or{
@@ -121,10 +125,10 @@ func (p *DBAlertsProvider) FindUnknownExecutions(ctx context.Context, params *Al
 type StuckMessage struct {
 	ChainID         string        `db:"chain_id"`
 	BlockNumber     uint64        `db:"block_number"`
+	Age             time.Duration `db:"age"`
 	TransactionHash common.Hash   `db:"transaction_hash"`
 	MsgHash         common.Hash   `db:"msg_hash"`
 	Count           uint64        `db:"count"`
-	WaitTime        time.Duration `db:"wait_time"`
 }
 
 func (c *StuckMessage) AlertValues() AlertValues {
@@ -136,7 +140,7 @@ func (c *StuckMessage) AlertValues() AlertValues {
 			"msg_hash":     c.MsgHash.String(),
 			"count":        strconv.FormatUint(c.Count, 10),
 		},
-		Value: float64(c.WaitTime),
+		Value: float64(c.Age),
 	}
 }
 
@@ -147,7 +151,7 @@ func (p *DBAlertsProvider) FindStuckMessages(ctx context.Context, params *AlertJ
 		       l.transaction_hash,
 		       sm.msg_hash,
 		       count(s.log_id) as count,
-	           EXTRACT(EPOCH FROM now() - ts.timestamp)::int as wait_time
+	           EXTRACT(EPOCH FROM now() - ts.timestamp)::int as age
 		FROM sent_messages sm
 		         JOIN logs l on l.id = sm.log_id
 	             JOIN block_timestamps ts on ts.chain_id = l.chain_id AND ts.block_number = l.block_number
@@ -161,7 +165,7 @@ func (p *DBAlertsProvider) FindStuckMessages(ctx context.Context, params *AlertJ
 		       l.transaction_hash,
 		       sm.msg_hash,
 		       count(s.log_id) as count,
-	           EXTRACT(EPOCH FROM now() - ts.timestamp)::int as wait_time
+	           EXTRACT(EPOCH FROM now() - ts.timestamp)::int as age
 		FROM sent_messages sm
 		         JOIN logs l on l.id = sm.log_id
 				 JOIN block_timestamps ts on ts.chain_id = l.chain_id AND ts.block_number = l.block_number
@@ -184,6 +188,7 @@ func (p *DBAlertsProvider) FindStuckMessages(ctx context.Context, params *AlertJ
 type FailedExecution struct {
 	ChainID         string         `db:"chain_id"`
 	BlockNumber     uint64         `db:"block_number"`
+	Age             time.Duration  `db:"age"`
 	TransactionHash common.Hash    `db:"transaction_hash"`
 	Sender          common.Address `db:"sender"`
 	Executor        common.Address `db:"executor"`
@@ -192,18 +197,18 @@ type FailedExecution struct {
 func (c *FailedExecution) AlertValues() AlertValues {
 	return AlertValues{
 		Labels: map[string]string{
-			"chain_id": c.ChainID,
+			"chain_id":     c.ChainID,
 			"block_number": strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":  c.TransactionHash.String(),
-			"sender":   c.Sender.String(),
-			"executor": c.Executor.String(),
+			"tx_hash":      c.TransactionHash.String(),
+			"sender":       c.Sender.String(),
+			"executor":     c.Executor.String(),
 		},
-		Value: 1,
+		Value: float64(c.Age),
 	}
 }
 
 func (p *DBAlertsProvider) FindFailedExecutions(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
-	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "m.sender", "m.executor").
+	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "m.sender", "m.executor", "EXTRACT(EPOCH FROM now() - bt.timestamp)::int as age").
 		From("sent_messages sm").
 		Join("messages m on sm.bridge_id = m.bridge_id AND m.msg_hash = sm.msg_hash").
 		Join("executed_messages em on m.bridge_id = em.bridge_id AND em.message_id = m.message_id").

@@ -2,27 +2,29 @@ groups:
   - name: StuckMessage
     rules:
       - alert: StuckMessage
-        expr: alert_monitor_stuck_message_confirmation > 3600
-        for: 3m
+        expr: max_over_time(alert_monitor_stuck_message_confirmation[5m]) > 3600
         annotations:
-          wait_time: '{{ humanizeDuration $value }}'
+          age: '{{ humanizeDuration $value }}'
   - name: UnknownMessageConfirmation
     rules:
       - alert: UnknownMessageConfirmation
-        expr: alert_monitor_unknown_message_confirmation > 0
-        for: 3m
+        expr: max_over_time(alert_monitor_unknown_message_confirmation[5m]) > 0
+        annotations:
+          age: '{{ humanizeDuration $value }}'
   - name: UnknownMessageExecution
     rules:
       - alert: UnknownMessageExecution
-        expr: alert_monitor_unknown_message_execution > 0
-        for: 3m
+        expr: max_over_time(alert_monitor_unknown_message_execution[5m]) > 0
+        annotations:
+          age: '{{ humanizeDuration $value }}'
   - name: FailedMessageExecution
     rules:
       - alert: FailedMessageExecution
-        expr: alert_monitor_failed_message_execution > 0
-        for: 3m
+        expr: max_over_time(alert_monitor_failed_message_execution[5m]) > 0
+        annotations:
+          age: '{{ humanizeDuration $value }}'
   - name: InstanceIsDown
     rules:
       - alert: InstanceIsDown
         expr: up < 1
-        for: 1m
+        for: 2m
