@@ -72,7 +72,7 @@ services:
     restart: unless-stopped
   monitor:
     container_name: monitor
-    image: ghcr.io/k1rill-fedoseev/amb-monitor:v0.0.5
+    image: ghcr.io/k1rill-fedoseev/amb-monitor:v0.0.6
     env_file:
       - .env
     volumes:
