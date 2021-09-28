@@ -28,7 +28,6 @@ type Job struct {
 	Interval    time.Duration
 	Timeout     time.Duration
 	Func        func(ctx context.Context, params *AlertJobParams) ([]AlertValues, error)
-	ResetMetric func()
 	Params      *AlertJobParams
 }
 
@@ -43,7 +42,7 @@ func (j *Job) Start(ctx context.Context, isSynced func() bool) {
 			if err != nil {
 				j.logger.WithError(err).Error("failed to process alert job")
 			} else {
-				j.ResetMetric()
+				j.Metric.Reset()
 
 				if len(values) > 0 {
 					j.logger.WithFields(logrus.Fields{

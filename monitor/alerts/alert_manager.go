@@ -7,8 +7,6 @@ import (
 	"context"
 	"fmt"
 	"time"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 type AlertManager struct {
@@ -20,9 +18,6 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 	provider := NewDBAlertsProvider(db)
 	jobs := make(map[string]*Job, len(cfg.Alerts))
 
-	bridgeLabel := prometheus.Labels{
-		"bridge_id": cfg.ID,
-	}
 	for name, alertCfg := range cfg.Alerts {
 		switch name {
 		case "unknown_message_confirmation":
@@ -30,33 +25,32 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 				Interval: time.Minute,
 				Timeout:  time.Second * 10,
 				Func:     provider.FindUnknownConfirmations,
-				Metric:   AlertUnknownMessageConfirmation.MustCurryWith(bridgeLabel),
+				Metric:   NewAlertUnknownMessageConfirmation(cfg.ID),
 			}
 		case "unknown_message_execution":
 			jobs[name] = &Job{
 				Interval: time.Minute,
 				Timeout:  time.Second * 10,
 				Func:     provider.FindUnknownExecutions,
-				Metric:   AlertUnknownMessageExecution.MustCurryWith(bridgeLabel),
+				Metric:   NewAlertUnknownMessageExecution(cfg.ID),
 			}
 		case "stuck_message_confirmation":
 			jobs[name] = &Job{
 				Interval: time.Minute * 2,
 				Timeout:  time.Second * 20,
 				Func:     provider.FindStuckMessages,
-				Metric:   AlertStuckMessageConfirmation.MustCurryWith(bridgeLabel),
+				Metric:   NewAlertStuckMessageConfirmation(cfg.ID),
 			}
 		case "failed_message_execution":
 			jobs[name] = &Job{
 				Interval: time.Minute * 5,
 				Timeout:  time.Second * 20,
 				Func:     provider.FindFailedExecutions,
-				Metric:   AlertFailedMessageExecution.MustCurryWith(bridgeLabel),
+				Metric:   NewAlertFailedMessageExecution(cfg.ID),
 			}
 		default:
 			return nil, fmt.Errorf("unknown alert type %q", name)
 		}
-		jobs[name].ResetMetric = func() { jobs[name].Metric.Delete(bridgeLabel) }
 		jobs[name].Params = &AlertJobParams{
 			Bridge:                  cfg.ID,
 			HomeChainID:             cfg.Home.Chain.ChainID,
