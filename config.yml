@@ -142,7 +142,7 @@ bridges:
       chain: rinkeby
       address: 0xD4075FB57fCf038bFc702c915Ef9592534bED5c1
       start_block: 6529875
-      required_block_confirmations: 12
+      required_block_confirmations: 4
       max_block_range_size: 20000
     alerts:
       stuck_message_confirmation:

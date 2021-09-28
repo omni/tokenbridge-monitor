@@ -209,8 +209,7 @@ func (c *FailedExecution) AlertValues() AlertValues {
 
 func (p *DBAlertsProvider) FindFailedExecutions(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
 	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "m.sender", "m.executor", "EXTRACT(EPOCH FROM now() - bt.timestamp)::int as age").
-		From("sent_messages sm").
-		Join("messages m on sm.bridge_id = m.bridge_id AND m.msg_hash = sm.msg_hash").
+		From("messages m").
 		Join("executed_messages em on m.bridge_id = em.bridge_id AND em.message_id = m.message_id").
 		Join("logs l ON l.id = em.log_id").
 		Join("block_timestamps bt on bt.chain_id = l.chain_id AND bt.block_number = l.block_number").
