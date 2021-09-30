@@ -55,8 +55,10 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 			Bridge:                  cfg.ID,
 			HomeChainID:             cfg.Home.Chain.ChainID,
 			HomeStartBlockNumber:    alertCfg.HomeStartBlock,
+			HomeBridgeAddress:       cfg.Home.Address,
 			ForeignChainID:          cfg.Foreign.Chain.ChainID,
 			ForeignStartBlockNumber: alertCfg.ForeignStartBlock,
+			ForeignBridgeAddress:    cfg.Foreign.Address,
 		}
 	}
 
@@ -66,7 +68,7 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 	}, nil
 }
 
-func (m *AlertManager) Start(ctx context.Context, isSynced func () bool) {
+func (m *AlertManager) Start(ctx context.Context, isSynced func() bool) {
 	t := time.NewTicker(10 * time.Second)
 	for !isSynced() {
 		select {

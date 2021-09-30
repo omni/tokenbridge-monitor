@@ -61,7 +61,7 @@ route:
   group_by: [ "..." ]
   routes:
     - receiver: slack-stuck-message
-      group_by: [ "bridge", "chain_id", "block_number", "tx_hash" ]
+      group_by: [ "bridge_id", "chain_id", "block_number", "tx_hash" ]
       matchers:
         - alertname = StuckMessage
     - receiver: slack-unknown-confirmation

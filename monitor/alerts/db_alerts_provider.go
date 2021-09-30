@@ -43,7 +43,38 @@ func (c *UnknownConfirmation) AlertValues() AlertValues {
 	}
 }
 
+func (p *DBAlertsProvider) findMinProcessedTime(ctx context.Context, params *AlertJobParams) (*time.Time, error) {
+	q, args, err := sq.Select("MIN(lcb.timestamp)").
+		From("logs_cursors lc").
+		Where(sq.Or{
+			sq.And{
+				sq.Eq{"lc.chain_id": params.HomeChainID},
+				sq.GtOrEq{"lc.address": params.HomeBridgeAddress},
+			},
+			sq.And{
+				sq.Eq{"lc.chain_id": params.ForeignChainID},
+				sq.GtOrEq{"lc.address": params.ForeignBridgeAddress},
+			},
+		}).
+		Join("block_timestamps lcb ON lc.chain_id = lcb.chain_id AND lcb.block_number = lc.last_processed_block").
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	res := new(time.Time)
+	err = p.db.GetContext(ctx, res, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("can't select last processed timestamp: %w", err)
+	}
+	return res, nil
+}
+
 func (p *DBAlertsProvider) FindUnknownConfirmations(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+	minProcessedTS, err := p.findMinProcessedTime(ctx, params)
+	if err != nil {
+		return nil, err
+	}
 	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "sm.signer", "sm.msg_hash", "EXTRACT(EPOCH FROM now() - bt.timestamp)::int as age").
 		From("signed_messages sm").
 		Join("logs l ON l.id = sm.log_id").
@@ -51,6 +82,7 @@ func (p *DBAlertsProvider) FindUnknownConfirmations(ctx context.Context, params 
 		LeftJoin("messages m ON sm.bridge_id = m.bridge_id AND m.msg_hash = sm.msg_hash").
 		Where(sq.Eq{"m.id": nil, "sm.bridge_id": params.Bridge, "l.chain_id": params.HomeChainID}).
 		Where(sq.GtOrEq{"l.block_number": params.HomeStartBlockNumber}).
+		Where(sq.LtOrEq{"bt.timestamp": minProcessedTS}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
@@ -89,6 +121,10 @@ func (c *UnknownExecution) AlertValues() AlertValues {
 }
 
 func (p *DBAlertsProvider) FindUnknownExecutions(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+	minProcessedTS, err := p.findMinProcessedTime(ctx, params)
+	if err != nil {
+		return nil, err
+	}
 	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "em.message_id", "EXTRACT(EPOCH FROM now() - bt.timestamp)::int as age").
 		From("executed_messages em").
 		Join("logs l ON l.id = em.log_id").
@@ -105,6 +141,7 @@ func (p *DBAlertsProvider) FindUnknownExecutions(ctx context.Context, params *Al
 				sq.GtOrEq{"l.block_number": params.ForeignStartBlockNumber},
 			},
 		}).
+		Where(sq.LtOrEq{"bt.timestamp": minProcessedTS}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {

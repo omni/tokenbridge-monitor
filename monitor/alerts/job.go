@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
@@ -18,17 +19,19 @@ type AlertJobParams struct {
 	Bridge                  string
 	HomeChainID             string
 	HomeStartBlockNumber    uint
+	HomeBridgeAddress       common.Address
 	ForeignChainID          string
 	ForeignStartBlockNumber uint
+	ForeignBridgeAddress    common.Address
 }
 
 type Job struct {
-	logger      logging.Logger
-	Metric      *prometheus.GaugeVec
-	Interval    time.Duration
-	Timeout     time.Duration
-	Func        func(ctx context.Context, params *AlertJobParams) ([]AlertValues, error)
-	Params      *AlertJobParams
+	logger   logging.Logger
+	Metric   *prometheus.GaugeVec
+	Interval time.Duration
+	Timeout  time.Duration
+	Func     func(ctx context.Context, params *AlertJobParams) ([]AlertValues, error)
+	Params   *AlertJobParams
 }
 
 func (j *Job) Start(ctx context.Context, isSynced func() bool) {
