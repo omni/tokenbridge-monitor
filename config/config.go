@@ -31,6 +31,7 @@ type BridgeSideConfig struct {
 	StartBlock         uint           `yaml:"start_block"`
 	BlockConfirmations uint           `yaml:"required_block_confirmations"`
 	MaxBlockRangeSize  uint           `yaml:"max_block_range_size"`
+	ReloadEvents       []string       `yaml:"reload_events"`
 }
 
 type BridgeAlertConfig struct {

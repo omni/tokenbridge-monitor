@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
@@ -93,7 +94,7 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 		blocksRangeChan:      make(chan *BlocksRange, 10),
 		logsChan:             make(chan *LogsBatch, 200),
 		contract:             contract.NewContract(client, cfg.Address, constants.AMB),
-		eventHandlers:        make(map[string]EventHandler, 7),
+		eventHandlers:        make(map[string]EventHandler, 10),
 		syncedMetric:         SyncedContract.With(commonLabels),
 		headBlockMetric:      LatestHeadBlock.With(commonLabels),
 		fetchedBlockMetric:   LatestFetchedBlock.With(commonLabels),
@@ -114,7 +115,7 @@ func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo 
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize alert manager: %w", err)
 	}
-	handlers := NewBridgeEventHandler(repo, cfg.ID)
+	handlers := NewBridgeEventHandler(repo, cfg.ID, homeMonitor.client)
 	homeMonitor.eventHandlers["UserRequestForSignature"] = handlers.HandleUserRequestForSignature
 	homeMonitor.eventHandlers["UserRequestForSignature0"] = handlers.HandleLegacyUserRequestForSignature
 	homeMonitor.eventHandlers["SignedForUserRequest"] = handlers.HandleSignedForUserRequest
@@ -122,6 +123,9 @@ func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo 
 	homeMonitor.eventHandlers["AffirmationCompleted"] = handlers.HandleAffirmationCompleted
 	homeMonitor.eventHandlers["AffirmationCompleted0"] = handlers.HandleAffirmationCompleted
 	homeMonitor.eventHandlers["CollectedSignatures"] = handlers.HandleCollectedSignatures
+	homeMonitor.eventHandlers["UserRequestForInformation"] = handlers.HandleUserRequestForInformation
+	homeMonitor.eventHandlers["SignedForInformation"] = handlers.HandleSignedForInformation
+	homeMonitor.eventHandlers["InformationRetrieved"] = handlers.HandleInformationRetrieved
 	foreignMonitor.eventHandlers["UserRequestForAffirmation"] = handlers.HandleUserRequestForAffirmation
 	foreignMonitor.eventHandlers["UserRequestForAffirmation0"] = handlers.HandleLegacyUserRequestForAffirmation
 	foreignMonitor.eventHandlers["RelayedMessage"] = handlers.HandleRelayedMessage
@@ -161,22 +165,47 @@ func (m *ContractMonitor) Start(ctx context.Context) {
 	lastFetchedBlock := m.logsCursor.LastFetchedBlock
 	go m.StartBlockFetcher(ctx, lastFetchedBlock+1)
 	go m.StartLogsProcessor(ctx)
-	m.LoadUnprocessedLogs(ctx, lastProcessedBlock+1, lastFetchedBlock)
+	m.LoadUnprocessedLogs(ctx, m.cfg.ReloadEvents, lastProcessedBlock+1, lastFetchedBlock)
 	go m.StartLogsFetcher(ctx)
 }
 
-func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, toBlock uint) {
+func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, reloadEvents []string, fromBlock, toBlock uint) {
 	m.logger.WithFields(logrus.Fields{
-		"from_block": fromBlock,
-		"to_block":   toBlock,
+		"from_block":          fromBlock,
+		"to_block":            toBlock,
+		"manual_reload_count": len(reloadEvents),
 	}).Info("loading fetched but not yet processed blocks")
+
+	for _, event := range reloadEvents {
+		topic := crypto.Keccak256Hash([]byte(event))
+
+		m.logger.WithFields(logrus.Fields{
+			"from_block": m.cfg.StartBlock,
+			"to_block":   fromBlock,
+			"event":      event,
+			"topic":      topic,
+		}).Info("manually reloading events")
+		for {
+			logs, err := m.repo.Logs.FindByTopicAndBlockRange(ctx, m.client.ChainID, m.cfg.Address, m.cfg.StartBlock, fromBlock, topic)
+			if err != nil {
+				m.logger.WithError(err).Error("can't find manually reloaded logs in block range")
+				if utils.ContextSleep(ctx, 10*time.Second) == nil {
+					return
+				}
+				continue
+			}
+
+			m.submitLogs(logs, toBlock)
+			break
+		}
+	}
 
 	var logs []*entity.Log
 	for {
 		var err error
 		logs, err = m.repo.Logs.FindByBlockRange(ctx, m.client.ChainID, m.cfg.Address, fromBlock, toBlock)
 		if err != nil {
-			m.logger.WithError(err).Error("can't find unprocessed logs in block")
+			m.logger.WithError(err).Error("can't find unprocessed logs in block range")
 			if utils.ContextSleep(ctx, 10*time.Second) == nil {
 				return
 			}

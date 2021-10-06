@@ -10,9 +10,8 @@ import (
 type Direction string
 
 const (
-	DirectionForeignToHome    Direction = "foreign_to_home"
-	DirectionHomeToForeign    Direction = "home_to_foreign"
-	DirectionForeignAsyncCall Direction = "foreign_async_call"
+	DirectionForeignToHome Direction = "foreign_to_home"
+	DirectionHomeToForeign Direction = "home_to_foreign"
 )
 
 type Message struct {

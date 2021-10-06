@@ -2,8 +2,10 @@ package monitor
 
 import (
 	"amb-monitor/entity"
+	"amb-monitor/ethclient"
 	"amb-monitor/repository"
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -12,14 +14,16 @@ import (
 type EventHandler func(ctx context.Context, log *entity.Log, data map[string]interface{}) error
 
 type BridgeEventHandler struct {
-	repo     *repository.Repo
-	bridgeID string
+	repo       *repository.Repo
+	bridgeID   string
+	homeClient *ethclient.Client
 }
 
-func NewBridgeEventHandler(repo *repository.Repo, bridgeID string) *BridgeEventHandler {
+func NewBridgeEventHandler(repo *repository.Repo, bridgeID string, homeClient *ethclient.Client) *BridgeEventHandler {
 	return &BridgeEventHandler{
-		repo:     repo,
-		bridgeID: bridgeID,
+		repo:       repo,
+		bridgeID:   bridgeID,
+		homeClient: homeClient,
 	}
 }
 
@@ -86,10 +90,10 @@ func (p *BridgeEventHandler) HandleSignedForUserRequest(ctx context.Context, log
 	validator := data["signer"].(common.Address)
 
 	return p.repo.SignedMessages.Ensure(ctx, &entity.SignedMessage{
-		LogID:         log.ID,
-		BridgeID:      p.bridgeID,
-		MsgHash:       msgHash,
-		Signer:        validator,
+		LogID:    log.ID,
+		BridgeID: p.bridgeID,
+		MsgHash:  msgHash,
+		Signer:   validator,
 	})
 }
 
@@ -98,10 +102,10 @@ func (p *BridgeEventHandler) HandleSignedForAffirmation(ctx context.Context, log
 	validator := data["signer"].(common.Address)
 
 	return p.repo.SignedMessages.Ensure(ctx, &entity.SignedMessage{
-		LogID:         log.ID,
-		BridgeID:      p.bridgeID,
-		MsgHash:       msgHash,
-		Signer:        validator,
+		LogID:    log.ID,
+		BridgeID: p.bridgeID,
+		MsgHash:  msgHash,
+		Signer:   validator,
 	})
 }
 
@@ -140,5 +144,68 @@ func (p *BridgeEventHandler) HandleCollectedSignatures(ctx context.Context, log 
 		MsgHash:           msgHash,
 		ResponsibleSigner: relayer,
 		NumSignatures:     uint(numSignatures.Uint64()),
+	})
+}
+
+func (p *BridgeEventHandler) HandleUserRequestForInformation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	messageID := data["messageId"].([32]byte)
+	requestSelector := data["requestSelector"].([32]byte)
+	sender := data["sender"].(common.Address)
+	requestData := data["data"].([]byte)
+
+	err := p.repo.InformationRequests.Ensure(ctx, &entity.InformationRequest{
+		BridgeID:        p.bridgeID,
+		MessageID:       messageID,
+		Direction:       entity.DirectionHomeToForeign,
+		RequestSelector: requestSelector,
+		Sender:          sender,
+		Executor:        sender,
+		Data:            requestData,
+	})
+	if err != nil {
+		return err
+	}
+	return p.repo.SentInformationRequests.Ensure(ctx, &entity.SentInformationRequest{
+		LogID:     log.ID,
+		BridgeID:  p.bridgeID,
+		MessageID: messageID,
+	})
+}
+
+func (p *BridgeEventHandler) HandleSignedForInformation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	messageID := data["messageId"].([32]byte)
+	validator := data["signer"].(common.Address)
+
+	tx, err := p.homeClient.TransactionByHash(ctx, log.TransactionHash)
+	if err != nil {
+		return fmt.Errorf("failed to get transaction by hash %s: %w", log.TransactionHash, err)
+	}
+
+	return p.repo.SignedInformationRequests.Ensure(ctx, &entity.SignedInformationRequest{
+		LogID:     log.ID,
+		BridgeID:  p.bridgeID,
+		MessageID: messageID,
+		Data:      unmarshalConfirmInformationResult(tx.Data()),
+		Signer:    validator,
+	})
+}
+
+func (p *BridgeEventHandler) HandleInformationRetrieved(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	messageID := data["messageId"].([32]byte)
+	status := data["status"].(bool)
+	callbackStatus := data["callbackStatus"].(bool)
+
+	tx, err := p.homeClient.TransactionByHash(ctx, log.TransactionHash)
+	if err != nil {
+		return fmt.Errorf("failed to get transaction by hash %s: %w", log.TransactionHash, err)
+	}
+
+	return p.repo.ExecutedInformationRequests.Ensure(ctx, &entity.ExecutedInformationRequest{
+		LogID:          log.ID,
+		BridgeID:       p.bridgeID,
+		MessageID:      messageID,
+		Status:         status,
+		CallbackStatus: callbackStatus,
+		Data:           unmarshalConfirmInformationResult(tx.Data()),
 	})
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -73,4 +74,14 @@ func (c *Client) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]type
 	logs, err := c.client.FilterLogs(ctx, q)
 	ObserveError(c.ChainID, c.url, "eth_getLogs", err)
 	return logs, err
+}
+
+func (c *Client) TransactionByHash(ctx context.Context, txHash common.Hash) (*types.Transaction, error) {
+	defer ObserveDuration(c.ChainID, c.url, "eth_getTransactionByHash")()
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	tx, _, err := c.client.TransactionByHash(ctx, txHash)
+	ObserveError(c.ChainID, c.url, "eth_getTransactionByHash", err)
+	return tx, err
 }
