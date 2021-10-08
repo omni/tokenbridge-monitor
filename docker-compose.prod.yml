@@ -72,11 +72,16 @@ services:
     restart: unless-stopped
   monitor:
     container_name: monitor
-    image: ghcr.io/k1rill-fedoseev/amb-monitor:v0.0.9
+    image: ghcr.io/k1rill-fedoseev/amb-monitor:v0.0.10
     env_file:
       - .env
     volumes:
       - ./config.yml:/app/config.yml
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.alertmanager.rule=Host(`monitor.kirill-fedoseev.me`)"
+      - "traefik.http.routers.alertmanager.entrypoints=websecure"
+      - "traefik.http.routers.alertmanager.tls.certresolver=myresolver"
     restart: unless-stopped
 volumes:
   db:

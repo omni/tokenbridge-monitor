@@ -15,4 +15,6 @@ RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificat
 COPY db/migrations ./db/migrations/
 COPY --from=build /app/amb-monitor ./
 
+EXPOSE 3333
+
 ENTRYPOINT ./amb-monitor
