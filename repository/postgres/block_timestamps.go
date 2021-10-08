@@ -11,16 +11,10 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
-type blockTimestampsRepo struct {
-	table string
-	db    *db.DB
-}
+type blockTimestampsRepo basePostgresRepo
 
 func NewBlockTimestampsRepo(table string, db *db.DB) entity.BlockTimestampsRepo {
-	return &blockTimestampsRepo{
-		table: table,
-		db:    db,
-	}
+	return (*blockTimestampsRepo)(newBasePostgresRepo(table, db))
 }
 
 func (r *blockTimestampsRepo) Ensure(ctx context.Context, ts *entity.BlockTimestamp) error {

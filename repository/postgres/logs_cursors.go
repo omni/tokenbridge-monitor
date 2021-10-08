@@ -10,16 +10,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type logsCursorsRepo struct {
-	table string
-	db    *db.DB
-}
+type logsCursorsRepo basePostgresRepo
 
 func NewLogsCursorRepo(table string, db *db.DB) entity.LogsCursorsRepo {
-	return &logsCursorsRepo{
-		table: table,
-		db:    db,
-	}
+	return (*logsCursorsRepo)(newBasePostgresRepo(table, db))
 }
 
 func (r *logsCursorsRepo) Ensure(ctx context.Context, cursor *entity.LogsCursor) error {

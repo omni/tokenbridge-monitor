@@ -9,16 +9,10 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
-type informationRequestsRepo struct {
-	table string
-	db    *db.DB
-}
+type informationRequestsRepo basePostgresRepo
 
 func NewInformationRequestsRepo(table string, db *db.DB) entity.InformationRequestsRepo {
-	return &informationRequestsRepo{
-		table: table,
-		db:    db,
-	}
+	return (*informationRequestsRepo)(newBasePostgresRepo(table, db))
 }
 
 func (r *informationRequestsRepo) Ensure(ctx context.Context, msg *entity.InformationRequest) error {

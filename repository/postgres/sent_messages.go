@@ -9,16 +9,10 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
-type sentMessagesRepo struct {
-	table string
-	db    *db.DB
-}
+type sentMessagesRepo basePostgresRepo
 
 func NewSentMessagesRepo(table string, db *db.DB) entity.SentMessagesRepo {
-	return &sentMessagesRepo{
-		table: table,
-		db:    db,
-	}
+	return (*sentMessagesRepo)(newBasePostgresRepo(table, db))
 }
 
 func (r *sentMessagesRepo) Ensure(ctx context.Context, msg *entity.SentMessage) error {

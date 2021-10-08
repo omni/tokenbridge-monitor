@@ -9,10 +9,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
-type signedInformationRequestsRepo struct {
-	table string
-	db    *db.DB
-}
+type signedInformationRequestsRepo basePostgresRepo
 
 func NewSignedInformationRequestsRepo(table string, db *db.DB) entity.SignedInformationRequestsRepo {
 	return &signedInformationRequestsRepo{
