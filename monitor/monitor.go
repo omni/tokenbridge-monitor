@@ -103,6 +103,7 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 }
 
 func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo *repository.Repo, cfg *config.BridgeConfig) (*Monitor, error) {
+	logger.Info("initializing bridge monitor")
 	homeMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "home"), repo, cfg.ID, cfg.Home)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize home side monitor: %w", err)

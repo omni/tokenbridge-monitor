@@ -18,4 +18,6 @@ type ExecutedMessage struct {
 
 type ExecutedMessagesRepo interface {
 	Ensure(ctx context.Context, msg *ExecutedMessage) error
+	FindByLogID(ctx context.Context, logID uint) (*ExecutedMessage, error)
+	FindByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*ExecutedMessage, error)
 }

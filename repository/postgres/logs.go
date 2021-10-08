@@ -100,3 +100,21 @@ func (r *logsRepo) FindByTopicAndBlockRange(ctx context.Context, chainID string,
 	}
 	return logs, nil
 }
+
+func (r *logsRepo) FindByTxHash(ctx context.Context, txHash common.Hash) ([]*entity.Log, error) {
+	q, args, err := sq.Select("*").
+		From(r.table).
+		Where(sq.Eq{"transaction_hash": txHash}).
+		OrderBy("chain_id", "block_number", "log_index").
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	logs := make([]*entity.Log, 0, 2)
+	err = r.db.SelectContext(ctx, &logs, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("can't get logs by tx hash: %w", err)
+	}
+	return logs, nil
+}

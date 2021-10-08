@@ -31,4 +31,6 @@ type Message struct {
 
 type MessagesRepo interface {
 	Ensure(ctx context.Context, msg *Message) error
+	FindByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*Message, error)
+	FindByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*Message, error)
 }

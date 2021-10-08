@@ -4,9 +4,12 @@ import (
 	"amb-monitor/db"
 	"amb-monitor/entity"
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type messagesRepo basePostgresRepo
@@ -30,4 +33,44 @@ func (r *messagesRepo) Ensure(ctx context.Context, msg *entity.Message) error {
 		return fmt.Errorf("can't insert message: %w", err)
 	}
 	return nil
+}
+
+func (r *messagesRepo) FindByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*entity.Message, error) {
+	q, args, err := sq.Select("*").
+		From(r.table).
+		Where(sq.Eq{"bridge_id": bridgeID, "msg_hash": msgHash}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	msg := new(entity.Message)
+	err = r.db.GetContext(ctx, msg, q, args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("can't get message: %w", err)
+	}
+	return msg, nil
+}
+
+func (r *messagesRepo) FindByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*entity.Message, error) {
+	q, args, err := sq.Select("*").
+		From(r.table).
+		Where(sq.Eq{"bridge_id": bridgeID, "message_id": messageID}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	msg := new(entity.Message)
+	err = r.db.GetContext(ctx, msg, q, args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("can't get message: %w", err)
+	}
+	return msg, nil
 }

@@ -17,4 +17,6 @@ type SentMessage struct {
 
 type SentMessagesRepo interface {
 	Ensure(ctx context.Context, msg *SentMessage) error
+	FindByLogID(ctx context.Context, logID uint) (*SentMessage, error)
+	FindByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*SentMessage, error)
 }

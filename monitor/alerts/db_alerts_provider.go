@@ -250,7 +250,7 @@ func (p *DBAlertsProvider) FindFailedExecutions(ctx context.Context, params *Ale
 		Join("executed_messages em on m.bridge_id = em.bridge_id AND em.message_id = m.message_id").
 		Join("logs l ON l.id = em.log_id").
 		Join("block_timestamps bt on bt.chain_id = l.chain_id AND bt.block_number = l.block_number").
-		Where(sq.Eq{"em.status": false, "m.data_type": 0, "em.bridge_id": params.Bridge}).
+		Where(sq.Eq{"em.status": false, "m.data_type": []int{0, 128}, "em.bridge_id": params.Bridge}).
 		Where(sq.Or{
 			sq.And{
 				sq.Eq{"l.chain_id": params.HomeChainID},

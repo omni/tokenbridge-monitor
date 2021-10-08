@@ -54,6 +54,10 @@ type DBConfig struct {
 	DB       string `yaml:"database"`
 }
 
+type PresenterConfig struct {
+	Host string `yaml:"host"`
+}
+
 type Config struct {
 	Chains          map[string]*ChainConfig  `yaml:"chains"`
 	Bridges         map[string]*BridgeConfig `yaml:"bridges"`
@@ -61,6 +65,7 @@ type Config struct {
 	LogLevel        logrus.Level             `yaml:"log_level"`
 	DisabledBridges []string                 `yaml:"disabled_bridges"`
 	EnabledBridges  []string                 `yaml:"enabled_bridges"`
+	Presenter       *PresenterConfig         `yaml:"presenter"`
 }
 
 func readYamlConfig(cfg *Config) error {

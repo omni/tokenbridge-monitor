@@ -5,6 +5,7 @@ import (
 	"amb-monitor/db"
 	"amb-monitor/logging"
 	"amb-monitor/monitor"
+	"amb-monitor/presenter"
 	"amb-monitor/repository"
 	"context"
 	"net/http"
@@ -42,6 +43,15 @@ func main() {
 	}()
 
 	repo := repository.NewRepo(dbConn)
+	if cfg.Presenter != nil {
+		pr := presenter.NewPresenter(logger.WithField("service", "presenter"), repo)
+		go func() {
+			err := pr.Serve(cfg.Presenter.Host)
+			if err != nil {
+				logger.WithError(err).Fatal("can't serve presenter")
+			}
+		}()
+	}
 
 	monitors := make([]*monitor.Monitor, 0, len(cfg.Bridges))
 	ctx, cancel := context.WithCancel(context.Background())

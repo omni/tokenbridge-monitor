@@ -19,4 +19,5 @@ type CollectedMessage struct {
 
 type CollectedMessagesRepo interface {
 	Ensure(ctx context.Context, msg *CollectedMessage) error
+	FindByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*CollectedMessage, error)
 }

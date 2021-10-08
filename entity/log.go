@@ -28,4 +28,5 @@ type LogsRepo interface {
 	GetByID(ctx context.Context, id uint) (*Log, error)
 	FindByBlockRange(ctx context.Context, chainID string, addr common.Address, fromBlock, toBlock uint) ([]*Log, error)
 	FindByTopicAndBlockRange(ctx context.Context, chainID string, addr common.Address, fromBlock, toBlock uint, topic common.Hash) ([]*Log, error)
+	FindByTxHash(ctx context.Context, txHash common.Hash) ([]*Log, error)
 }
