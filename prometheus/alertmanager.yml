@@ -97,6 +97,16 @@ receivers:
           - type: button
             text: 'Silence :no_bell:'
             url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-stuck-contract
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: '{{ template "slack.stuck_contract.title" . }}'
+        text: '{{ template "slack.stuck_contract.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
   - name: slack-dm
     slack_configs:
       - send_resolved: true
@@ -148,6 +158,10 @@ route:
       group_by: [ "..." ]
       matchers:
         - alertname = DifferentInformationSignatures
+    - receiver: slack-stuck-contract
+      group_by: [ "..." ]
+      matchers:
+        - alertname = StuckContractProgress
     - receiver: slack-dm
       group_by: [ "..." ]
       matchers:

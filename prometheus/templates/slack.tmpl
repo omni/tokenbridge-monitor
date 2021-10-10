@@ -114,3 +114,12 @@ Validators signed different AMB information request results
 *Distinct information signatures:* {{ .CommonLabels.count }}
 *Tx:* {{ template "explorer.tx.link" .CommonLabels }}
 {{- end }}
+
+{{ define "slack.stuck_contract.title" -}}
+Monitoring of contract is stuck
+{{- end }}
+{{ define "slack.stuck_contract.text" -}}
+*Bridge:* {{ .CommonLabels.bridge_id }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Address:* {{ .CommonLabels.address }}
+{{- end }}

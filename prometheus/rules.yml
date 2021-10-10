@@ -53,6 +53,10 @@ groups:
       expr: max_over_time(alert_monitor_different_information_signatures[5m]) > 0
       annotations:
         age: '{{ humanizeDuration $value }}'
+  - name: StuckContractProgress
+    rules:
+    - alert: StuckContractProgress
+      expr: increase(monitor_contract_latest_processed_block[10m]) < 10
   - name: InstanceIsDown
     rules:
       - alert: InstanceIsDown
