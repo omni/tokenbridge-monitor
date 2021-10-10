@@ -71,17 +71,17 @@ bridges:
       max_block_range_size: 1000
     alerts:
       unknown_message_confirmation:
-        home_start_block: 7408640
-        foreign_start_block: 9130277
       unknown_message_execution:
-        home_start_block: 7408640
-        foreign_start_block: 9130277
       stuck_message_confirmation:
-        home_start_block: 7408640
         foreign_start_block: 11907302
       failed_message_execution:
         home_start_block: 17518126
         foreign_start_block: 13026966
+      unknown_information_signature:
+      unknown_information_execution:
+      stuck_information_request:
+      failed_information_request:
+      different_information_signatures:
   test-amb:
     home:
       chain: sokol
@@ -97,14 +97,17 @@ bridges:
       max_block_range_size: 10000
     alerts:
       stuck_message_confirmation:
-        home_start_block: 9849619
         foreign_start_block: 25437689
       unknown_message_confirmation:
         home_start_block: 10666885
-        foreign_start_block: 12372929
       unknown_message_execution:
-        home_start_block: 9849619
         foreign_start_block: 13603170
+      unknown_information_signature:
+      unknown_information_execution:
+      stuck_information_request:
+      failed_information_request:
+        home_start_block: 21822099
+      different_information_signatures:
   bsc-xdai-amb:
     home:
       chain: xdai
@@ -120,17 +123,16 @@ bridges:
       max_block_range_size: 1000
     alerts:
       stuck_message_confirmation:
-        home_start_block: 14496725
-        foreign_start_block: 4792263
       failed_message_execution:
         home_start_block: 15650488
         foreign_start_block: 6984913
       unknown_message_confirmation:
-        home_start_block: 14496725
-        foreign_start_block: 4792263
       unknown_message_execution:
-        home_start_block: 14496725
-        foreign_start_block: 4792263
+      unknown_information_signature:
+      unknown_information_execution:
+      stuck_information_request:
+      failed_information_request:
+      different_information_signatures:
   rinkeby-xdai-amb:
     home:
       chain: xdai
@@ -146,14 +148,14 @@ bridges:
       max_block_range_size: 20000
     alerts:
       stuck_message_confirmation:
-        home_start_block: 10030211
         foreign_start_block: 8360609
       unknown_message_confirmation:
-        home_start_block: 10030211
-        foreign_start_block: 6529875
       unknown_message_execution:
-        home_start_block: 10030211
-        foreign_start_block: 6529875
+      unknown_information_signature:
+      unknown_information_execution:
+      stuck_information_request:
+      failed_information_request:
+      different_information_signatures:
   poa-xdai-amb:
     home:
       chain: xdai
@@ -169,17 +171,14 @@ bridges:
       max_block_range_size: 10000
     alerts:
       stuck_message_confirmation:
-        home_start_block: 17976497
-        foreign_start_block: 23152190
       failed_message_execution:
-        home_start_block: 17976497
-        foreign_start_block: 23152190
       unknown_message_confirmation:
-        home_start_block: 17976497
-        foreign_start_block: 23152190
       unknown_message_execution:
-        home_start_block: 17976497
-        foreign_start_block: 23152190
+      unknown_information_signature:
+      unknown_information_execution:
+      stuck_information_request:
+      failed_information_request:
+      different_information_signatures:
   eth-bsc-amb:
     home:
       chain: bsc
@@ -195,17 +194,14 @@ bridges:
       max_block_range_size: 10000
     alerts:
       stuck_message_confirmation:
-        home_start_block: 2756521
-        foreign_start_block: 11375619
       failed_message_execution:
-        home_start_block: 2756521
-        foreign_start_block: 11375619
       unknown_message_confirmation:
-        home_start_block: 2756521
-        foreign_start_block: 11375619
       unknown_message_execution:
-        home_start_block: 2756521
-        foreign_start_block: 11375619
+      unknown_information_signature:
+      unknown_information_execution:
+      stuck_information_request:
+      failed_information_request:
+      different_information_signatures:
 postgres:
   user: postgres
   password: pass

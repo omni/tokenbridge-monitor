@@ -29,7 +29,7 @@ var (
 			Namespace:   "alert",
 			Subsystem:   "monitor",
 			Name:        "stuck_message_confirmation",
-			Help:        "Shows AMB message for which signatures are still in the pending. Value is set to the seconds passed since message was sent.",
+			Help:        "Shows AMB message for which signatures are still in the pending state.",
 			ConstLabels: prometheus.Labels{"bridge_id": bridge},
 		}, []string{"chain_id", "block_number", "tx_hash", "msg_hash", "count"})
 	}
@@ -41,5 +41,50 @@ var (
 			Help:        "Shows AMB message which execution has failed.",
 			ConstLabels: prometheus.Labels{"bridge_id": bridge},
 		}, []string{"chain_id", "block_number", "tx_hash", "sender", "executor"})
+	}
+	NewAlertUnknownInformationSignature = func(bridge string) *prometheus.GaugeVec {
+		return promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace:   "alert",
+			Subsystem:   "monitor",
+			Name:        "unknown_information_signature",
+			Help:        "Shows unknown AMB information request signatures sent by some validator.",
+			ConstLabels: prometheus.Labels{"bridge_id": bridge},
+		}, []string{"chain_id", "block_number", "tx_hash", "signer", "message_id"})
+	}
+	NewAlertUnknownInformationExecution = func(bridge string) *prometheus.GaugeVec {
+		return promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace:   "alert",
+			Subsystem:   "monitor",
+			Name:        "unknown_information_execution",
+			Help:        "Shows unknown AMB information request executions.",
+			ConstLabels: prometheus.Labels{"bridge_id": bridge},
+		}, []string{"chain_id", "block_number", "tx_hash", "message_id"})
+	}
+	NewAlertStuckInformationRequest = func(bridge string) *prometheus.GaugeVec {
+		return promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace:   "alert",
+			Subsystem:   "monitor",
+			Name:        "stuck_information_request",
+			Help:        "Shows AMB information requests for which signatures are still in the pending state.",
+			ConstLabels: prometheus.Labels{"bridge_id": bridge},
+		}, []string{"chain_id", "block_number", "tx_hash", "message_id", "count"})
+	}
+	NewAlertFailedInformationRequest = func(bridge string) *prometheus.GaugeVec {
+		return promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace:   "alert",
+			Subsystem:   "monitor",
+			Name:        "failed_information_request",
+			Help:        "Shows AMB information requests which execution or callback has failed.",
+			ConstLabels: prometheus.Labels{"bridge_id": bridge},
+		}, []string{"chain_id", "block_number", "tx_hash", "sender", "executor", "status", "callback_status"})
+	}
+	NewAlertDifferentInformationSignatures = func(bridge string) *prometheus.GaugeVec {
+		return promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace:   "alert",
+			Subsystem:   "monitor",
+			Name:        "different_information_signatures",
+			Help:        "Shows AMB information request signatures for which different validators submitted different results.",
+			ConstLabels: prometheus.Labels{"bridge_id": bridge},
+		}, []string{"chain_id", "block_number", "tx_hash", "message_id", "count"})
 	}
 )

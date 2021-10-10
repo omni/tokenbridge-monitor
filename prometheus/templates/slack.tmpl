@@ -26,7 +26,7 @@ Validator signed for unknown AMB message
 {{- end }}
 
 {{ define "slack.unknown_execution.title" -}}
-Bridged executed unknown AMB message
+Bridge executed unknown AMB message
 {{- end }}
 {{ define "slack.unknown_execution.text" -}}
 *Bridge:* {{ .CommonLabels.bridge_id }}
@@ -47,5 +47,70 @@ Failed AMB message execution
 *Age:* {{ .CommonAnnotations.age }}
 *Sender:* {{ .CommonLabels.sender }}
 *Executor:* {{ .CommonLabels.executor }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}
+
+{{ define "slack.stuck_information_request.title" -}}
+Stuck AMB information request
+{{- end }}
+{{ define "slack.stuck_information_request.text" -}}
+*Bridge:* {{ .CommonLabels.bridge_id }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
+*Age:* {{ .CommonAnnotations.age }}
+*Collected confirmations:* {{ .CommonLabels.count }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}
+
+{{ define "slack.unknown_information_signature.title" -}}
+Validator signed for unknown AMB information request
+{{- end }}
+{{ define "slack.unknown_information_signature.text" -}}
+*Bridge:* {{ .CommonLabels.bridge_id }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
+*Age:* {{ .CommonAnnotations.age }}
+*Validator:* {{ .CommonLabels.signer }}
+*Message ID:* {{ .CommonLabels.message_id }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}
+
+{{ define "slack.unknown_information_execution.title" -}}
+Bridge executed unknown AMB information request
+{{- end }}
+{{ define "slack.unknown_information_execution.text" -}}
+*Bridge:* {{ .CommonLabels.bridge_id }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
+*Age:* {{ .CommonAnnotations.age }}
+*Message id:* {{ .CommonLabels.message_id }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}
+
+{{ define "slack.failed_information_request.title" -}}
+Failed AMB information request execution
+{{- end }}
+{{ define "slack.failed_information_request.text" -}}
+*Bridge:* {{ .CommonLabels.bridge_id }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
+*Age:* {{ .CommonAnnotations.age }}
+*Sender:* {{ .CommonLabels.sender }}
+*Executor:* {{ .CommonLabels.executor }}
+*Status:* {{ .CommonLabels.status }}
+*Callback Status:* {{ .CommonLabels.callback_status }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}
+
+{{ define "slack.different_information_signatures.title" -}}
+Validators signed different AMB information request results
+{{- end }}
+{{ define "slack.different_information_signatures.text" -}}
+*Bridge:* {{ .CommonLabels.bridge_id }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
+*Age:* {{ .CommonAnnotations.age }}
+*Message id:* {{ .CommonLabels.message_id }}
+*Distinct information signatures:* {{ .CommonLabels.count }}
 *Tx:* {{ template "explorer.tx.link" .CommonLabels }}
 {{- end }}

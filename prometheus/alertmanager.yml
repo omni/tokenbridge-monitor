@@ -47,6 +47,56 @@ receivers:
           - type: button
             text: 'Silence :no_bell:'
             url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-stuck-information-request
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: '{{ template "slack.stuck_information_request.title" . }}'
+        text: '{{ template "slack.stuck_information_request.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-unknown-information-signature
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: '{{ template "slack.unknown_information_signature.title" . }}'
+        text: '{{ template "slack.unknown_information_signature.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-unknown-information-execution
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: '{{ template "slack.unknown_information_execution.title" . }}'
+        text: '{{ template "slack.unknown_information_execution.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-failed-information-request
+    slack_configs:
+      - send_resolved: false
+        channel: '#amb-alerts'
+        title: '{{ template "slack.failed_information_request.title" . }}'
+        text: '{{ template "slack.failed_information_request.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-different-information-signatures
+    slack_configs:
+      - send_resolved: false
+        channel: '#amb-alerts'
+        title: '{{ template "slack.different_information_signatures.title" . }}'
+        text: '{{ template "slack.different_information_signatures.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
   - name: slack-dm
     slack_configs:
       - send_resolved: true
@@ -74,9 +124,30 @@ route:
         - alertname = UnknownMessageExecution
     - receiver: slack-failed-execution
       group_by: [ "..." ]
-      repeat_interval: 10000d
+      repeat_interval: 24h
       matchers:
         - alertname = FailedMessageExecution
+    - receiver: slack-stuck-information-request
+      group_by: [ "bridge_id", "chain_id", "block_number", "tx_hash" ]
+      matchers:
+        - alertname = StuckInformationRequest
+    - receiver: slack-unknown-information-signature
+      group_by: [ "..." ]
+      matchers:
+        - alertname = UnknownInformationSignature
+    - receiver: slack-unknown-information-execution
+      group_by: [ "..." ]
+      matchers:
+        - alertname = UnknownInformationExecution
+    - receiver: slack-failed-information-request
+      group_by: [ "..." ]
+      repeat_interval: 24h
+      matchers:
+        - alertname = FailedInformationRequest
+    - receiver: slack-different-information-signatures
+      group_by: [ "..." ]
+      matchers:
+        - alertname = DifferentInformationSignatures
     - receiver: slack-dm
       group_by: [ "..." ]
       matchers:

@@ -23,6 +23,36 @@ groups:
         expr: max_over_time(alert_monitor_failed_message_execution[5m]) > 0
         annotations:
           age: '{{ humanizeDuration $value }}'
+  - name: StuckInformationRequest
+    rules:
+      - alert: StuckInformationRequest
+        expr: max_over_time(alert_monitor_stuck_information_request[5m]) > 3600
+        annotations:
+          age: '{{ humanizeDuration $value }}'
+  - name: UnknownInformationSignature
+    rules:
+      - alert: UnknownInformationSignature
+        expr: max_over_time(alert_monitor_unknown_information_signature[5m]) > 0
+        annotations:
+          age: '{{ humanizeDuration $value }}'
+  - name: UnknownInformationExecution
+    rules:
+      - alert: UnknownInformationExecution
+        expr: max_over_time(alert_monitor_unknown_information_execution[5m]) > 0
+        annotations:
+          age: '{{ humanizeDuration $value }}'
+  - name: FailedInformationRequest
+    rules:
+      - alert: FailedInformationRequest
+        expr: max_over_time(alert_monitor_failed_information_request[5m]) > 0
+        annotations:
+          age: '{{ humanizeDuration $value }}'
+  - name: DifferentInformationSignatures
+    rules:
+    - alert: DifferentInformationSignatures
+      expr: max_over_time(alert_monitor_different_information_signatures[5m]) > 0
+      annotations:
+        age: '{{ humanizeDuration $value }}'
   - name: InstanceIsDown
     rules:
       - alert: InstanceIsDown

@@ -36,7 +36,7 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 			}
 		case "stuck_message_confirmation":
 			jobs[name] = &Job{
-				Interval: time.Minute * 2,
+				Interval: time.Minute * 5,
 				Timeout:  time.Second * 20,
 				Func:     provider.FindStuckMessages,
 				Metric:   NewAlertStuckMessageConfirmation(cfg.ID),
@@ -48,17 +48,60 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 				Func:     provider.FindFailedExecutions,
 				Metric:   NewAlertFailedMessageExecution(cfg.ID),
 			}
+		case "unknown_information_signature":
+			jobs[name] = &Job{
+				Interval: time.Minute,
+				Timeout:  time.Second * 10,
+				Func:     provider.FindUnknownInformationSignatures,
+				Metric:   NewAlertUnknownInformationSignature(cfg.ID),
+			}
+		case "unknown_information_execution":
+			jobs[name] = &Job{
+				Interval: time.Minute,
+				Timeout:  time.Second * 10,
+				Func:     provider.FindUnknownInformationExecutions,
+				Metric:   NewAlertUnknownInformationExecution(cfg.ID),
+			}
+		case "stuck_information_request":
+			jobs[name] = &Job{
+				Interval: time.Minute * 5,
+				Timeout:  time.Second * 20,
+				Func:     provider.FindStuckInformationRequests,
+				Metric:   NewAlertStuckInformationRequest(cfg.ID),
+			}
+		case "failed_information_request":
+			jobs[name] = &Job{
+				Interval: time.Minute * 5,
+				Timeout:  time.Second * 20,
+				Func:     provider.FindFailedInformationRequests,
+				Metric:   NewAlertFailedInformationRequest(cfg.ID),
+			}
+		case "different_information_signatures":
+			jobs[name] = &Job{
+				Interval: time.Minute * 5,
+				Timeout:  time.Second * 10,
+				Func:     provider.FindDifferentInformationSignatures,
+				Metric:   NewAlertDifferentInformationSignatures(cfg.ID),
+			}
 		default:
 			return nil, fmt.Errorf("unknown alert type %q", name)
 		}
 		jobs[name].Params = &AlertJobParams{
 			Bridge:                  cfg.ID,
 			HomeChainID:             cfg.Home.Chain.ChainID,
-			HomeStartBlockNumber:    alertCfg.HomeStartBlock,
+			HomeStartBlockNumber:    cfg.Home.StartBlock,
 			HomeBridgeAddress:       cfg.Home.Address,
 			ForeignChainID:          cfg.Foreign.Chain.ChainID,
-			ForeignStartBlockNumber: alertCfg.ForeignStartBlock,
+			ForeignStartBlockNumber: cfg.Foreign.StartBlock,
 			ForeignBridgeAddress:    cfg.Foreign.Address,
+		}
+		if alertCfg != nil {
+			if alertCfg.HomeStartBlock > 0 {
+				jobs[name].Params.HomeStartBlockNumber = alertCfg.HomeStartBlock
+			}
+			if alertCfg.ForeignStartBlock > 0 {
+				jobs[name].Params.ForeignStartBlockNumber = alertCfg.ForeignStartBlock
+			}
 		}
 	}
 
