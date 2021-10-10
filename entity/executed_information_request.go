@@ -20,4 +20,6 @@ type ExecutedInformationRequest struct {
 
 type ExecutedInformationRequestsRepo interface {
 	Ensure(ctx context.Context, msg *ExecutedInformationRequest) error
+	FindByLogID(ctx context.Context, logID uint) (*ExecutedInformationRequest, error)
+	FindByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*ExecutedInformationRequest, error)
 }

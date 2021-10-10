@@ -22,4 +22,5 @@ type InformationRequest struct {
 
 type InformationRequestsRepo interface {
 	Ensure(ctx context.Context, msg *InformationRequest) error
+	FindByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*InformationRequest, error)
 }

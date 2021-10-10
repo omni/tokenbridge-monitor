@@ -4,9 +4,12 @@ import (
 	"amb-monitor/db"
 	"amb-monitor/entity"
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type sentInformationRequestsRepo basePostgresRepo
@@ -30,4 +33,44 @@ func (r *sentInformationRequestsRepo) Ensure(ctx context.Context, msg *entity.Se
 		return fmt.Errorf("can't insert sent information request: %w", err)
 	}
 	return nil
+}
+
+func (r *sentInformationRequestsRepo) FindByLogID(ctx context.Context, logID uint) (*entity.SentInformationRequest, error) {
+	q, args, err := sq.Select("*").
+		From(r.table).
+		Where(sq.Eq{"log_id": logID}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	req := new(entity.SentInformationRequest)
+	err = r.db.GetContext(ctx, req, q, args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("can't get sent information requesst: %w", err)
+	}
+	return req, nil
+}
+
+func (r *sentInformationRequestsRepo) FindByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*entity.SentInformationRequest, error) {
+	q, args, err := sq.Select("*").
+		From(r.table).
+		Where(sq.Eq{"bridge_id": bridgeID, "message_id": messageID}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	req := new(entity.SentInformationRequest)
+	err = r.db.GetContext(ctx, req, q, args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("can't get sent information request: %w", err)
+	}
+	return req, nil
 }

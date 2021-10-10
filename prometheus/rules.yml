@@ -57,6 +57,7 @@ groups:
     rules:
     - alert: StuckContractProgress
       expr: increase(monitor_contract_latest_processed_block[10m]) < 10
+      for: 5m
   - name: InstanceIsDown
     rules:
       - alert: InstanceIsDown

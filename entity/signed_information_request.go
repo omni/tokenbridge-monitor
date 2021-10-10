@@ -19,4 +19,6 @@ type SignedInformationRequest struct {
 
 type SignedInformationRequestsRepo interface {
 	Ensure(ctx context.Context, msg *SignedInformationRequest) error
+	FindByLogID(ctx context.Context, logID uint) (*SignedInformationRequest, error)
+	FindByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) ([]*SignedInformationRequest, error)
 }

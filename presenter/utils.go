@@ -22,7 +22,7 @@ func logToTxLink(log *entity.Log) string {
 	return log.TransactionHash.String()
 }
 
-func messageToMessageInfo(msg *entity.Message) *MessageInfo {
+func messageToInfo(msg *entity.Message) *MessageInfo {
 	return &MessageInfo{
 		MsgHash:   msg.MsgHash,
 		MessageID: msg.MessageID,
@@ -30,5 +30,14 @@ func messageToMessageInfo(msg *entity.Message) *MessageInfo {
 		Sender:    msg.Sender,
 		Executor:  msg.Executor,
 		DataType:  msg.DataType,
+	}
+}
+
+func informationRequestToInfo(req *entity.InformationRequest) *InformationRequestInfo {
+	return &InformationRequestInfo{
+		MessageID: req.MessageID,
+		Direction: req.Direction,
+		Sender:    req.Sender,
+		Executor:  req.Executor,
 	}
 }

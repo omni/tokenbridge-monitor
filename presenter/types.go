@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type MessageInfo struct {
@@ -16,6 +17,13 @@ type MessageInfo struct {
 	DataType  uint
 }
 
+type InformationRequestInfo struct {
+	MessageID common.Hash
+	Direction entity.Direction
+	Sender    common.Address
+	Executor  common.Address
+}
+
 type TxInfo struct {
 	BlockNumber uint
 	Timestamp   time.Time
@@ -23,11 +31,13 @@ type TxInfo struct {
 }
 
 type EventInfo struct {
-	Event  string
-	LogID  uint            `json:"-"`
-	Signer *common.Address `json:",omitempty"`
-	Count  uint            `json:",omitempty"`
-	Status bool            `json:",omitempty"`
+	Event          string
+	LogID          uint            `json:"-"`
+	Signer         *common.Address `json:",omitempty"`
+	Data           hexutil.Bytes   `json:",omitempty"`
+	Count          uint            `json:",omitempty"`
+	Status         bool            `json:",omitempty"`
+	CallbackStatus bool            `json:",omitempty"`
 	*TxInfo
 }
 
@@ -35,6 +45,6 @@ type SearchResult struct {
 	Bridge  string
 	Event   string
 	TxHash  common.Hash
-	Message *MessageInfo
+	Message interface{} `json:",omitempty"`
 	Events  []*EventInfo
 }
