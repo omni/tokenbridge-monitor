@@ -76,6 +76,24 @@ func (r *logsRepo) FindByBlockRange(ctx context.Context, chainID string, addr co
 	logs := make([]*entity.Log, 0, 10)
 	err = r.db.SelectContext(ctx, &logs, q, args...)
 	if err != nil {
+		return nil, fmt.Errorf("can't get logs by block number range: %w", err)
+	}
+	return logs, nil
+}
+
+func (r *logsRepo) FindByBlockNumber(ctx context.Context, chainID string, block uint) ([]*entity.Log, error) {
+	q, args, err := sq.Select("*").
+		From(r.table).
+		Where(sq.Eq{"chain_id": chainID, "block_number": block}).
+		OrderBy("log_index").
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	logs := make([]*entity.Log, 0, 10)
+	err = r.db.SelectContext(ctx, &logs, q, args...)
+	if err != nil {
 		return nil, fmt.Errorf("can't get logs by block number: %w", err)
 	}
 	return logs, nil
