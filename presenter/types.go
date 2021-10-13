@@ -9,6 +9,7 @@ import (
 )
 
 type MessageInfo struct {
+	BridgeID  string
 	MsgHash   common.Hash
 	MessageID common.Hash
 	Direction entity.Direction
@@ -18,6 +19,7 @@ type MessageInfo struct {
 }
 
 type InformationRequestInfo struct {
+	BridgeID  string
 	MessageID common.Hash
 	Direction entity.Direction
 	Sender    common.Address
@@ -31,7 +33,7 @@ type TxInfo struct {
 }
 
 type EventInfo struct {
-	Event          string
+	Action         string
 	LogID          uint            `json:"-"`
 	Signer         *common.Address `json:",omitempty"`
 	Data           hexutil.Bytes   `json:",omitempty"`
@@ -42,9 +44,7 @@ type EventInfo struct {
 }
 
 type SearchResult struct {
-	Bridge  string
-	Event   string
-	TxHash  common.Hash
-	Message interface{} `json:",omitempty"`
-	Events  []*EventInfo
+	Event         *EventInfo
+	Message       interface{}
+	RelatedEvents []*EventInfo
 }

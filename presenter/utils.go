@@ -24,6 +24,7 @@ func logToTxLink(log *entity.Log) string {
 
 func messageToInfo(msg *entity.Message) *MessageInfo {
 	return &MessageInfo{
+		BridgeID:  msg.BridgeID,
 		MsgHash:   msg.MsgHash,
 		MessageID: msg.MessageID,
 		Direction: msg.Direction,
@@ -35,6 +36,7 @@ func messageToInfo(msg *entity.Message) *MessageInfo {
 
 func informationRequestToInfo(req *entity.InformationRequest) *InformationRequestInfo {
 	return &InformationRequestInfo{
+		BridgeID:  req.BridgeID,
 		MessageID: req.MessageID,
 		Direction: req.Direction,
 		Sender:    req.Sender,
