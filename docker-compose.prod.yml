@@ -72,7 +72,7 @@ services:
     restart: unless-stopped
   monitor:
     container_name: monitor
-    image: ghcr.io/poanetwork/amb-monitor:v0.0.12
+    image: ghcr.io/poanetwork/amb-monitor:v0.0.13
     env_file:
       - .env
     volumes:
