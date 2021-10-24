@@ -125,7 +125,7 @@ func (p *Presenter) searchSentMessage(ctx context.Context, log *entity.Log) (*Se
 	}
 
 	msg, err := p.repo.Messages.FindByMsgHash(ctx, sent.BridgeID, sent.MsgHash)
-	if err != nil {
+	if err != nil || msg == nil {
 		return nil, err
 	}
 	events, err := p.buildMessageEvents(ctx, msg)
@@ -148,7 +148,7 @@ func (p *Presenter) searchSignedMessage(ctx context.Context, log *entity.Log) (*
 	}
 
 	msg, err := p.repo.Messages.FindByMsgHash(ctx, sig.BridgeID, sig.MsgHash)
-	if err != nil {
+	if err != nil || msg == nil {
 		return nil, err
 	}
 	events, err := p.buildMessageEvents(ctx, msg)
@@ -171,7 +171,7 @@ func (p *Presenter) searchExecutedMessage(ctx context.Context, log *entity.Log) 
 	}
 
 	msg, err := p.repo.Messages.FindByMessageID(ctx, executed.BridgeID, executed.MessageID)
-	if err != nil {
+	if err != nil || msg == nil {
 		return nil, err
 	}
 	events, err := p.buildMessageEvents(ctx, msg)
@@ -194,7 +194,7 @@ func (p *Presenter) searchSentInformationRequest(ctx context.Context, log *entit
 	}
 
 	req, err := p.repo.InformationRequests.FindByMessageID(ctx, sent.BridgeID, sent.MessageID)
-	if err != nil {
+	if err != nil || req == nil {
 		return nil, err
 	}
 	events, err := p.buildInformationRequestEvents(ctx, req)
@@ -217,7 +217,7 @@ func (p *Presenter) searchSignedInformationRequest(ctx context.Context, log *ent
 	}
 
 	req, err := p.repo.InformationRequests.FindByMessageID(ctx, signed.BridgeID, signed.MessageID)
-	if err != nil {
+	if err != nil || req == nil {
 		return nil, err
 	}
 	events, err := p.buildInformationRequestEvents(ctx, req)
@@ -240,7 +240,7 @@ func (p *Presenter) searchExecutedInformationRequest(ctx context.Context, log *e
 	}
 
 	req, err := p.repo.InformationRequests.FindByMessageID(ctx, executed.BridgeID, executed.MessageID)
-	if err != nil {
+	if err != nil || req == nil {
 		return nil, err
 	}
 	events, err := p.buildInformationRequestEvents(ctx, req)

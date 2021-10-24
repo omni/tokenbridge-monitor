@@ -52,7 +52,7 @@ func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
 	defer cancel()
 
 	n, err := c.client.BlockNumber(ctx)
-	ObserveError(c.ChainID, c.url, "eth_getBlockByNumber", err)
+	ObserveError(c.ChainID, c.url, "eth_blockNumber", err)
 	return n, err
 }
 
