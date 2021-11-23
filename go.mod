@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/Masterminds/squirrel v1.5.0
-	github.com/ethereum/go-ethereum v1.10.8
+	github.com/ethereum/go-ethereum v1.10.10
 	github.com/go-chi/chi/v5 v5.0.4
 	github.com/golang-migrate/migrate/v4 v4.15.0-beta.3
 	github.com/jackc/pgx/v4 v4.13.0
