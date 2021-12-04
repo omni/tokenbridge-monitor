@@ -76,8 +76,8 @@ bridges:
       stuck_message_confirmation:
         foreign_start_block: 11907302
       failed_message_execution:
-        home_start_block: 17518126
-        foreign_start_block: 13026966
+        home_start_block: 18770035
+        foreign_start_block: 13407270
       unknown_information_signature:
       unknown_information_execution:
       stuck_information_request:
@@ -125,7 +125,7 @@ bridges:
     alerts:
       stuck_message_confirmation:
       failed_message_execution:
-        home_start_block: 15650488
+        home_start_block: 18534657
         foreign_start_block: 6984913
       unknown_message_confirmation:
       unknown_message_execution:
@@ -196,6 +196,7 @@ bridges:
     alerts:
       stuck_message_confirmation:
       failed_message_execution:
+        foreign_start_block: 12694404
       unknown_message_confirmation:
       unknown_message_execution:
       unknown_information_signature:
