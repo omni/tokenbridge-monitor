@@ -66,9 +66,10 @@ func main() {
 		cfg.Bridges = newBridgeCfg
 	}
 	for _, bridgeCfg := range cfg.Bridges {
-		m, err2 := monitor.NewMonitor(ctx, logger.WithField("bridge_id", bridgeCfg.ID), dbConn, repo, bridgeCfg)
+		bridgeLogger := logger.WithField("bridge_id", bridgeCfg.ID)
+		m, err2 := monitor.NewMonitor(ctx, bridgeLogger, dbConn, repo, bridgeCfg)
 		if err2 != nil {
-			logger.WithError(err2).Fatal("can't initialize bridge monitor")
+			bridgeLogger.WithError(err2).Fatal("can't initialize bridge monitor")
 		}
 
 		monitors = append(monitors, m)

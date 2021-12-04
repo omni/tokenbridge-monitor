@@ -8,16 +8,18 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
 type Client struct {
-	ChainID string
-	url     string
-	timeout time.Duration
-	client  *ethclient.Client
+	ChainID   string
+	url       string
+	timeout   time.Duration
+	rawClient *rpc.Client
+	client    *ethclient.Client
 }
 
 func NewClient(url string, timeout time.Duration, chainID string) (*Client, error) {
@@ -29,10 +31,11 @@ func NewClient(url string, timeout time.Duration, chainID string) (*Client, erro
 		return nil, fmt.Errorf("can't dial JSON rpc url: %w", err)
 	}
 	client := &Client{
-		ChainID: chainID,
-		url:     url,
-		timeout: timeout,
-		client:  ethclient.NewClient(rawClient),
+		ChainID:   chainID,
+		url:       url,
+		timeout:   timeout,
+		rawClient: rawClient,
+		client:    ethclient.NewClient(rawClient),
 	}
 	ctx2, cancel2 := context.WithTimeout(context.Background(), timeout)
 	defer cancel2()
@@ -76,6 +79,52 @@ func (c *Client) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]type
 	return logs, err
 }
 
+// FilterLogsSafe is the same as FilterLogs, but makes an additional eth_blockNumber
+// request to ensure that the node behind RPC is synced to the needed point.
+func (c *Client) FilterLogsSafe(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
+	defer ObserveDuration(c.ChainID, c.url, "eth_getLogsSafe")()
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	var err error
+	defer func() {
+		ObserveError(c.ChainID, c.url, "eth_getLogsSafe", err)
+	}()
+
+	var arg interface{}
+	arg, err = toFilterArg(q)
+	if err != nil {
+		return nil, fmt.Errorf("can't encode filter argument: %w", err)
+	}
+	var logs []types.Log
+	var blockNumber hexutil.Uint64
+	batches := []rpc.BatchElem{
+		{
+			Method: "eth_getLogs",
+			Args:   []interface{}{arg},
+			Result: &logs,
+		},
+		{
+			Method: "eth_blockNumber",
+			Result: &blockNumber,
+		},
+	}
+	err = c.rawClient.BatchCallContext(ctx, batches)
+	if err != nil {
+		return nil, fmt.Errorf("can't make batch request: %w", err)
+	}
+	if err = batches[0].Error; err != nil {
+		return nil, fmt.Errorf("can't request logs: %w", err)
+	}
+	if err = batches[1].Error; err != nil {
+		return nil, fmt.Errorf("can't request block number: %w", err)
+	}
+	if uint64(blockNumber) < q.ToBlock.Uint64() {
+		return nil, fmt.Errorf("node is not synced, current block %d is older than toBlock %d in the query", blockNumber, q.ToBlock.Uint64())
+	}
+	return logs, nil
+}
+
 func (c *Client) TransactionByHash(ctx context.Context, txHash common.Hash) (*types.Transaction, error) {
 	defer ObserveDuration(c.ChainID, c.url, "eth_getTransactionByHash")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
@@ -84,4 +133,25 @@ func (c *Client) TransactionByHash(ctx context.Context, txHash common.Hash) (*ty
 	tx, _, err := c.client.TransactionByHash(ctx, txHash)
 	ObserveError(c.ChainID, c.url, "eth_getTransactionByHash", err)
 	return tx, err
+}
+
+func toFilterArg(q ethereum.FilterQuery) (interface{}, error) {
+	arg := map[string]interface{}{
+		"address": q.Addresses,
+		"topics":  q.Topics,
+	}
+	if q.BlockHash != nil {
+		return nil, fmt.Errorf("logs query from BlockHash is not supported")
+	} else {
+		if q.FromBlock == nil {
+			arg["fromBlock"] = "0x0"
+		} else {
+			arg["fromBlock"] = hexutil.EncodeBig(q.FromBlock)
+		}
+		if q.ToBlock == nil || q.ToBlock.Int64() <= 0 {
+			return nil, fmt.Errorf("only positive toBlock is supported")
+		}
+		arg["toBlock"] = hexutil.EncodeBig(q.ToBlock)
+	}
+	return arg, nil
 }

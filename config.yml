@@ -9,12 +9,13 @@ chains:
     block_index_interval: 60s
   bsc:
     rpc:
-      host: https://bsc-dataseed1.defibit.io/
+      host: https://bsc-dataseed4.ninicoin.io/
       timeout: 20s
       rps: 10
     chain_id: 56
     block_time: 3s
     block_index_interval: 60s
+    safe_logs_request: true
   kovan:
     rpc:
       host: https://kovan.poa.network

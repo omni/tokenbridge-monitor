@@ -1,8 +1,8 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -22,6 +22,7 @@ type ChainConfig struct {
 	ChainID            string        `yaml:"chain_id"`
 	BlockTime          time.Duration `yaml:"block_time"`
 	BlockIndexInterval time.Duration `yaml:"block_index_interval"`
+	SafeLogsRequest    bool          `yaml:"safe_logs_request"`
 }
 
 type BridgeSideConfig struct {
@@ -69,13 +70,15 @@ type Config struct {
 }
 
 func readYamlConfig(cfg *Config) error {
-	f, err := ioutil.ReadFile("config.yml")
+	f, err := os.ReadFile("config.yml")
 	if err != nil {
 		return fmt.Errorf("can't access config file: %w", err)
 	}
 	f = []byte(os.ExpandEnv(string(f)))
 
-	err = yaml.Unmarshal(f, cfg)
+	dec := yaml.NewDecoder(bytes.NewReader(f))
+	dec.KnownFields(true)
+	err = dec.Decode(cfg)
 	if err != nil {
 		return fmt.Errorf("can't parse yaml config: %w", err)
 	}

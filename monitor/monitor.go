@@ -274,6 +274,9 @@ func (m *ContractMonitor) StartLogsFetcher(ctx context.Context) {
 						"from_block": blocksRange.From,
 						"to_block":   blocksRange.To,
 					}).Error("failed logs fetching, retrying")
+					if utils.ContextSleep(ctx, 10*time.Second) == nil {
+						return
+					}
 					continue
 				}
 				break
@@ -283,11 +286,18 @@ func (m *ContractMonitor) StartLogsFetcher(ctx context.Context) {
 }
 
 func (m *ContractMonitor) tryToFetchLogs(ctx context.Context, blocksRange *BlocksRange) error {
-	logs, err := m.client.FilterLogs(ctx, ethereum.FilterQuery{
+	q := ethereum.FilterQuery{
 		FromBlock: big.NewInt(int64(blocksRange.From)),
 		ToBlock:   big.NewInt(int64(blocksRange.To)),
 		Addresses: []common.Address{m.cfg.Address},
-	})
+	}
+	var logs []types.Log
+	var err error
+	if m.cfg.Chain.SafeLogsRequest {
+		logs, err = m.client.FilterLogsSafe(ctx, q)
+	} else {
+		logs, err = m.client.FilterLogs(ctx, q)
+	}
 	if err != nil {
 		return err
 	}
