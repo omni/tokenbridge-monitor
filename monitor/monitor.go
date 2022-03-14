@@ -62,6 +62,19 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 	if err != nil {
 		return nil, fmt.Errorf("failed to start eth client: %w", err)
 	}
+	bridgeContract := contract.NewContract(client, cfg.Address, constants.AMB)
+	if cfg.ValidatorContractAddress == (common.Address{}) {
+		cfg.ValidatorContractAddress, err = bridgeContract.ValidatorContractAddress(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get validator contract address: %w", err)
+		}
+		logger.WithFields(logrus.Fields{
+			"chain_id":                   client.ChainID,
+			"bridge_address":             cfg.Address,
+			"validator_contract_address": cfg.ValidatorContractAddress,
+			"start_block":                cfg.StartBlock,
+		}).Info("obtained validator contract address")
+	}
 	logsCursor, err := repo.LogsCursors.GetByChainIDAndAddress(ctx, client.ChainID, cfg.Address)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -93,8 +106,8 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 		logsCursor:           logsCursor,
 		blocksRangeChan:      make(chan *BlocksRange, 10),
 		logsChan:             make(chan *LogsBatch, 200),
-		contract:             contract.NewContract(client, cfg.Address, constants.AMB),
-		eventHandlers:        make(map[string]EventHandler, 10),
+		contract:             bridgeContract,
+		eventHandlers:        make(map[string]EventHandler, 12),
 		syncedMetric:         SyncedContract.With(commonLabels),
 		headBlockMetric:      LatestHeadBlock.With(commonLabels),
 		fetchedBlockMetric:   LatestFetchedBlock.With(commonLabels),
@@ -127,10 +140,14 @@ func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo 
 	homeMonitor.eventHandlers["UserRequestForInformation"] = handlers.HandleUserRequestForInformation
 	homeMonitor.eventHandlers["SignedForInformation"] = handlers.HandleSignedForInformation
 	homeMonitor.eventHandlers["InformationRetrieved"] = handlers.HandleInformationRetrieved
+	homeMonitor.eventHandlers["ValidatorAdded"] = handlers.HandleValidatorAdded
+	homeMonitor.eventHandlers["ValidatorRemoved"] = handlers.HandleValidatorRemoved
 	foreignMonitor.eventHandlers["UserRequestForAffirmation"] = handlers.HandleUserRequestForAffirmation
 	foreignMonitor.eventHandlers["UserRequestForAffirmation0"] = handlers.HandleLegacyUserRequestForAffirmation
 	foreignMonitor.eventHandlers["RelayedMessage"] = handlers.HandleRelayedMessage
 	foreignMonitor.eventHandlers["RelayedMessage0"] = handlers.HandleRelayedMessage
+	foreignMonitor.eventHandlers["ValidatorAdded"] = handlers.HandleValidatorAdded
+	foreignMonitor.eventHandlers["ValidatorRemoved"] = handlers.HandleValidatorRemoved
 	return &Monitor{
 		cfg:            cfg,
 		logger:         logger,
@@ -166,40 +183,15 @@ func (m *ContractMonitor) Start(ctx context.Context) {
 	lastFetchedBlock := m.logsCursor.LastFetchedBlock
 	go m.StartBlockFetcher(ctx, lastFetchedBlock+1)
 	go m.StartLogsProcessor(ctx)
-	m.LoadUnprocessedLogs(ctx, m.cfg.ReloadEvents, lastProcessedBlock+1, lastFetchedBlock)
+	m.LoadUnprocessedLogs(ctx, lastProcessedBlock+1, lastFetchedBlock)
 	go m.StartLogsFetcher(ctx)
 }
 
-func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, reloadEvents []string, fromBlock, toBlock uint) {
+func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, toBlock uint) {
 	m.logger.WithFields(logrus.Fields{
-		"from_block":          fromBlock,
-		"to_block":            toBlock,
-		"manual_reload_count": len(reloadEvents),
+		"from_block": fromBlock,
+		"to_block":   toBlock,
 	}).Info("loading fetched but not yet processed blocks")
-
-	for _, event := range reloadEvents {
-		topic := crypto.Keccak256Hash([]byte(event))
-
-		m.logger.WithFields(logrus.Fields{
-			"from_block": m.cfg.StartBlock,
-			"to_block":   fromBlock,
-			"event":      event,
-			"topic":      topic,
-		}).Info("manually reloading events")
-		for {
-			logs, err := m.repo.Logs.FindByTopicAndBlockRange(ctx, m.client.ChainID, m.cfg.Address, m.cfg.StartBlock, fromBlock, topic)
-			if err != nil {
-				m.logger.WithError(err).Error("can't find manually reloaded logs in block range")
-				if utils.ContextSleep(ctx, 10*time.Second) == nil {
-					return
-				}
-				continue
-			}
-
-			m.submitLogs(logs, toBlock)
-			break
-		}
-	}
 
 	var logs []*entity.Log
 	for {
@@ -237,6 +229,11 @@ func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
 			}
 			m.headBlockMetric.Set(float64(m.headBlock))
 
+			if len(m.cfg.RefetchEvents) > 0 {
+				m.RefetchEvents(start - 1)
+				m.cfg.RefetchEvents = nil
+			}
+
 			for start <= m.headBlock {
 				end := start + m.cfg.MaxBlockRangeSize - 1
 				if end > m.headBlock {
@@ -256,6 +253,39 @@ func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
 
 		if utils.ContextSleep(ctx, m.cfg.Chain.BlockIndexInterval) == nil {
 			return
+		}
+	}
+}
+
+func (m *ContractMonitor) RefetchEvents(lastFetchedBlock uint) {
+	m.logger.Info("refetching old events")
+	for _, job := range m.cfg.RefetchEvents {
+		topic := crypto.Keccak256Hash([]byte(job.Event))
+
+		fromBlock := job.StartBlock
+		if fromBlock < m.cfg.StartBlock {
+			fromBlock = m.cfg.StartBlock
+		}
+		toBlock := job.EndBlock
+		if toBlock == 0 || toBlock > lastFetchedBlock {
+			toBlock = lastFetchedBlock
+		}
+
+		for fromBlock <= toBlock {
+			end := fromBlock + m.cfg.MaxBlockRangeSize - 1
+			if end > toBlock {
+				end = toBlock
+			}
+			m.logger.WithFields(logrus.Fields{
+				"from_block": fromBlock,
+				"to_block":   toBlock,
+			}).Info("scheduling new block range logs search")
+			m.blocksRangeChan <- &BlocksRange{
+				From:  fromBlock,
+				To:    end,
+				Topic: &topic,
+			}
+			fromBlock = end + 1
 		}
 	}
 }
@@ -289,7 +319,10 @@ func (m *ContractMonitor) tryToFetchLogs(ctx context.Context, blocksRange *Block
 	q := ethereum.FilterQuery{
 		FromBlock: big.NewInt(int64(blocksRange.From)),
 		ToBlock:   big.NewInt(int64(blocksRange.To)),
-		Addresses: []common.Address{m.cfg.Address},
+		Addresses: []common.Address{m.cfg.Address, m.cfg.ValidatorContractAddress},
+	}
+	if blocksRange.Topic != nil {
+		q.Topics = [][]common.Hash{{*blocksRange.Topic}}
 	}
 	var logs []types.Log
 	var err error

@@ -25,14 +25,21 @@ type ChainConfig struct {
 	SafeLogsRequest    bool          `yaml:"safe_logs_request"`
 }
 
+type ReloadJobConfig struct {
+	Event      string `yaml:"event"`
+	StartBlock uint   `yaml:"start_block"`
+	EndBlock   uint   `yaml:"end_block"`
+}
+
 type BridgeSideConfig struct {
-	ChainName          string         `yaml:"chain"`
-	Chain              *ChainConfig   `yaml:"-"`
-	Address            common.Address `yaml:"address"`
-	StartBlock         uint           `yaml:"start_block"`
-	BlockConfirmations uint           `yaml:"required_block_confirmations"`
-	MaxBlockRangeSize  uint           `yaml:"max_block_range_size"`
-	ReloadEvents       []string       `yaml:"reload_events"`
+	ChainName                string             `yaml:"chain"`
+	Chain                    *ChainConfig       `yaml:"-"`
+	Address                  common.Address     `yaml:"address"`
+	ValidatorContractAddress common.Address     `yaml:"validator_contract_address"`
+	StartBlock               uint               `yaml:"start_block"`
+	BlockConfirmations       uint               `yaml:"required_block_confirmations"`
+	MaxBlockRangeSize        uint               `yaml:"max_block_range_size"`
+	RefetchEvents            []*ReloadJobConfig `yaml:"refetch_events"`
 }
 
 type BridgeAlertConfig struct {

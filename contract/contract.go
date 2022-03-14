@@ -4,8 +4,10 @@ import (
 	"amb-monitor/entity"
 	"amb-monitor/ethclient"
 	"bytes"
+	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -23,6 +25,21 @@ func NewContract(client *ethclient.Client, addr common.Address, abi abi.ABI) *Co
 func (c *Contract) HasEvent(event string) bool {
 	_, ok := c.abi.Events[event]
 	return ok
+}
+
+func (c *Contract) ValidatorContractAddress(ctx context.Context) (common.Address, error) {
+	data, err := c.abi.Pack("validatorContract")
+	if err != nil {
+		return common.Address{}, fmt.Errorf("cannot encode abi calldata: %w", err)
+	}
+	res, err := c.client.CallContract(ctx, ethereum.CallMsg{
+		To:   &c.Address,
+		Data: data,
+	})
+	if err != nil {
+		return common.Address{}, fmt.Errorf("cannot call validatorContract(): %w", err)
+	}
+	return common.BytesToAddress(res), nil
 }
 
 func (c *Contract) ParseLog(log *entity.Log) (string, map[string]interface{}, error) {

@@ -1,0 +1,2 @@
+DROP TABLE bridge_validators;
+DROP INDEX signed_messages_bridge_id_signer_idx;

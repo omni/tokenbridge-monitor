@@ -74,3 +74,26 @@ func (r *signedMessagesRepo) FindByMsgHash(ctx context.Context, bridgeID string,
 	}
 	return msgs, nil
 }
+
+func (r *signedMessagesRepo) FindLatest(ctx context.Context, bridgeID, chainID string, signer common.Address) (*entity.SignedMessage, error) {
+	q, args, err := sq.Select(r.table + ".*").
+		From(r.table).
+		Join("logs l ON l.id = log_id").
+		Where(sq.Eq{"bridge_id": bridgeID, "signer": signer, "l.chain_id": chainID}).
+		OrderBy("l.block_number DESC").
+		Limit(1).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	msg := new(entity.SignedMessage)
+	err = r.db.GetContext(ctx, msg, q, args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("can't get latest signed message: %w", err)
+	}
+	return msg, nil
+}

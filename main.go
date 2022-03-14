@@ -44,7 +44,7 @@ func main() {
 
 	repo := repository.NewRepo(dbConn)
 	if cfg.Presenter != nil {
-		pr := presenter.NewPresenter(logger.WithField("service", "presenter"), repo)
+		pr := presenter.NewPresenter(logger.WithField("service", "presenter"), repo, cfg.Bridges)
 		go func() {
 			err := pr.Serve(cfg.Presenter.Host)
 			if err != nil {

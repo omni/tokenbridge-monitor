@@ -6,7 +6,7 @@ COPY . .
 
 RUN go build
 
-FROM ubuntu:20.10
+FROM ubuntu:20.04
 
 WORKDIR /app
 

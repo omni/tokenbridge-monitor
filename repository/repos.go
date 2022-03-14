@@ -19,6 +19,7 @@ type Repo struct {
 	SentInformationRequests     entity.SentInformationRequestsRepo
 	SignedInformationRequests   entity.SignedInformationRequestsRepo
 	ExecutedInformationRequests entity.ExecutedInformationRequestsRepo
+	BridgeValidators            entity.BridgeValidatorsRepo
 }
 
 func NewRepo(db *db.DB) *Repo {
@@ -35,5 +36,6 @@ func NewRepo(db *db.DB) *Repo {
 		SentInformationRequests:     postgres.NewSentInformationRequestsRepo("sent_information_requests", db),
 		SignedInformationRequests:   postgres.NewSignedInformationRequestsRepo("signed_information_requests", db),
 		ExecutedInformationRequests: postgres.NewExecutedInformationRequestsRepo("executed_information_requests", db),
+		BridgeValidators:            postgres.NewBridgeValidatorsRepo("bridge_validators", db),
 	}
 }

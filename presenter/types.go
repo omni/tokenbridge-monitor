@@ -48,3 +48,20 @@ type SearchResult struct {
 	Message       interface{}
 	RelatedEvents []*EventInfo
 }
+
+type ValidatorInfo struct {
+	Signer           common.Address
+	LastConfirmation *TxInfo
+}
+
+type ValidatorSideResult struct {
+	ChainID     string
+	BlockNumber uint
+}
+
+type ValidatorsResult struct {
+	BridgeID   string
+	Home       *ValidatorSideResult
+	Foreign    *ValidatorSideResult
+	Validators []*ValidatorInfo
+}

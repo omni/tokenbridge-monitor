@@ -209,3 +209,26 @@ func (p *BridgeEventHandler) HandleInformationRetrieved(ctx context.Context, log
 		Data:           unmarshalConfirmInformationResult(tx.Data()),
 	})
 }
+
+func (p *BridgeEventHandler) HandleValidatorAdded(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	validator := data["validator"].(common.Address)
+	return p.repo.BridgeValidators.Ensure(ctx, &entity.BridgeValidator{
+		LogID:    log.ID,
+		BridgeID: p.bridgeID,
+		ChainID:  log.ChainID,
+		Address:  validator,
+	})
+}
+
+func (p *BridgeEventHandler) HandleValidatorRemoved(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	validator := data["validator"].(common.Address)
+	val, err := p.repo.BridgeValidators.FindActiveValidator(ctx, p.bridgeID, log.ChainID, validator)
+	if err != nil {
+		return err
+	}
+	if val == nil {
+		return nil
+	}
+	val.RemovedLogID = &log.ID
+	return p.repo.BridgeValidators.Ensure(ctx, val)
+}

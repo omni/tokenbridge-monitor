@@ -135,6 +135,16 @@ func (c *Client) TransactionByHash(ctx context.Context, txHash common.Hash) (*ty
 	return tx, err
 }
 
+func (c *Client) CallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error) {
+	defer ObserveDuration(c.ChainID, c.url, "eth_call")()
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	res, err := c.client.CallContract(ctx, msg, nil)
+	ObserveError(c.ChainID, c.url, "eth_call", err)
+	return res, err
+}
+
 func toFilterArg(q ethereum.FilterQuery) (interface{}, error) {
 	arg := map[string]interface{}{
 		"address": q.Addresses,

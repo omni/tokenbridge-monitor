@@ -1,11 +1,13 @@
 package presenter
 
 import (
+	"amb-monitor/config"
 	"amb-monitor/entity"
 	"amb-monitor/logging"
 	"amb-monitor/repository"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -15,16 +17,18 @@ import (
 )
 
 type Presenter struct {
-	logger logging.Logger
-	repo   *repository.Repo
-	root   chi.Router
+	logger  logging.Logger
+	repo    *repository.Repo
+	bridges map[string]*config.BridgeConfig
+	root    chi.Router
 }
 
-func NewPresenter(logger logging.Logger, repo *repository.Repo) *Presenter {
+func NewPresenter(logger logging.Logger, repo *repository.Repo, bridges map[string]*config.BridgeConfig) *Presenter {
 	return &Presenter{
-		logger: logger,
-		repo:   repo,
-		root:   chi.NewMux(),
+		logger:  logger,
+		repo:    repo,
+		bridges: bridges,
+		root:    chi.NewMux(),
 	}
 }
 
@@ -35,6 +39,7 @@ func (p *Presenter) Serve(addr string) error {
 	p.root.Use(NewRequestLogger(p.logger))
 	p.root.Get("/tx/{txHash:0x[0-9a-fA-F]{64}}", p.wrapJSONHandler(p.SearchTx))
 	p.root.Get("/block/{chainID:[0-9]+}/{blockNumber:[0-9]+}", p.wrapJSONHandler(p.SearchBlock))
+	p.root.Get("/bridge/{bridgeID:[0-9a-zA-Z_\\-]+}/validators", p.wrapJSONHandler(p.SearchValidators))
 	return http.ListenAndServe(addr, p.root)
 }
 
@@ -82,6 +87,72 @@ func (p *Presenter) SearchBlock(ctx context.Context) (interface{}, error) {
 	}
 
 	return p.searchInLogs(ctx, logs), nil
+}
+
+func (p *Presenter) SearchValidators(ctx context.Context) (interface{}, error) {
+	bridgeID := chi.URLParamFromCtx(ctx, "bridgeID")
+
+	if p.bridges[bridgeID] == nil {
+		return nil, fmt.Errorf("bridge %q not found", bridgeID)
+	}
+
+	cfg := p.bridges[bridgeID]
+	res := ValidatorsResult{
+		BridgeID: bridgeID,
+		Home: &ValidatorSideResult{
+			ChainID: cfg.Home.Chain.ChainID,
+		},
+		Foreign: &ValidatorSideResult{
+			ChainID: cfg.Foreign.Chain.ChainID,
+		},
+	}
+
+	homeCursor, err := p.repo.LogsCursors.GetByChainIDAndAddress(ctx, res.Home.ChainID, cfg.Home.Address)
+	if err != nil {
+		p.logger.WithError(err).Error("failed to get home bridge cursor")
+		return nil, err
+	}
+	foreignCursor, err := p.repo.LogsCursors.GetByChainIDAndAddress(ctx, res.Foreign.ChainID, cfg.Foreign.Address)
+	if err != nil {
+		p.logger.WithError(err).Error("failed to get foreign bridge cursor")
+		return nil, err
+	}
+
+	res.Home.BlockNumber = homeCursor.LastProcessedBlock
+	res.Foreign.BlockNumber = foreignCursor.LastProcessedBlock
+
+	validators, err := p.repo.BridgeValidators.FindActiveValidators(ctx, bridgeID)
+	if err != nil {
+		p.logger.WithError(err).Error("failed to find validators for bridge id")
+		return nil, err
+	}
+
+	seenValidators := make(map[common.Address]bool, len(validators))
+	for _, val := range validators {
+		if seenValidators[val.Address] {
+			continue
+		}
+		seenValidators[val.Address] = true
+
+		confirmation, err := p.repo.SignedMessages.FindLatest(ctx, bridgeID, res.Home.ChainID, val.Address)
+		if err != nil {
+			p.logger.WithError(err).Error("failed to find latest validator confirmation")
+			return nil, err
+		}
+		valInfo := &ValidatorInfo{
+			Signer: val.Address,
+		}
+		if confirmation != nil {
+			valInfo.LastConfirmation, err = p.getTxInfo(ctx, confirmation.LogID)
+			if err != nil {
+				p.logger.WithError(err).Error("failed to get tx info")
+				return nil, err
+			}
+		}
+		res.Validators = append(res.Validators, valInfo)
+	}
+
+	return res, nil
 }
 
 func (p *Presenter) searchInLogs(ctx context.Context, logs []*entity.Log) []*SearchResult {

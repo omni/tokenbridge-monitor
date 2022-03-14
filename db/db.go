@@ -17,8 +17,8 @@ import (
 )
 
 type DB struct {
-	cfg     *config.DBConfig
-	db      *sqlx.DB
+	cfg *config.DBConfig
+	db  *sqlx.DB
 }
 
 func (db *DB) Migrate() error {
@@ -39,7 +39,7 @@ func (db *DB) dbURL(prefix string) string {
 
 func NewDB(cfg *config.DBConfig) (*DB, error) {
 	db := &DB{
-		cfg:     cfg,
+		cfg: cfg,
 	}
 	conn, err := sqlx.ConnectContext(context.Background(), "pgx", db.dbURL("postgres"))
 	if err != nil {
