@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/poanetwork/amb-monitor/blob/master/config.schema.json",
+  "title": "AMB monitor config",
+  "type": "object",
+  "properties": {
+    "chains": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "rpc": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string",
+                "format": "hostname"
+              },
+              "timeout": {
+                "type": "string",
+                "format": "duration"
+              },
+              "rps": {
+                "type": "number"
+              }
+            }
+          },
+          "chain_id": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "pattern": "^[0-9]+$"
+          },
+          "block_time": {
+            "type": "string",
+            "format": "duration"
+          },
+          "block_index_interval": {
+            "type": "string",
+            "format": "duration"
+          },
+          "safe_logs_request": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rpc",
+          "chain_id",
+          "block_time",
+          "block_index_interval"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "bridges": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "home": {
+            "$ref": "#/$defs/side_config"
+          },
+          "foreign": {
+            "$ref": "#/$defs/side_config"
+          },
+          "alerts": {
+            "type": "object",
+            "properties": {
+              "stuck_message_confirmation": {
+                "$ref": "#/$defs/alert_config"
+              },
+              "unknown_message_confirmation": {
+                "$ref": "#/$defs/alert_config"
+              },
+              "unknown_message_execution": {
+                "$ref": "#/$defs/alert_config"
+              },
+              "failed_message_execution": {
+                "$ref": "#/$defs/alert_config"
+              },
+              "unknown_information_signature": {
+                "$ref": "#/$defs/alert_config"
+              },
+              "unknown_information_execution": {
+                "$ref": "#/$defs/alert_config"
+              },
+              "stuck_information_request": {
+                "$ref": "#/$defs/alert_config"
+              },
+              "failed_information_request": {
+                "$ref": "#/$defs/alert_config"
+              },
+              "different_information_signatures": {
+                "$ref": "#/$defs/alert_config"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "home",
+          "foreign"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "postgres": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string",
+          "format": "hostname"
+        },
+        "port": {
+          "type": "number"
+        },
+        "database": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user",
+        "password",
+        "host",
+        "port",
+        "database"
+      ],
+      "additionalProperties": false
+    },
+    "log_level": {
+      "type": "string",
+      "enum": [
+        "panic",
+        "fatal",
+        "error",
+        "warn",
+        "info",
+        "debug",
+        "trace"
+      ]
+    },
+    "disabled_bridges": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "enabled_bridges": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "presenter": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string",
+          "format": "hostname"
+        }
+      },
+      "required": [
+        "host"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "chains",
+    "bridges",
+    "postgres"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "side_config": {
+      "type": "object",
+      "properties": {
+        "chain": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{40}$"
+        },
+        "validator_contract_address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^0x[a-fA-F0-9]{40}$"
+        },
+        "start_block": {
+          "type": "integer"
+        },
+        "required_block_confirmations": {
+          "type": "integer"
+        },
+        "max_block_range_size": {
+          "type": "integer"
+        },
+        "refetch_events": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "event": {
+                "type": "string"
+              },
+              "start_block": {
+                "type": "integer"
+              },
+              "end_block": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "event"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "chain",
+        "address",
+        "start_block"
+      ],
+      "additionalProperties": false
+    },
+    "alert_config": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "home_start_block": {
+          "type": "integer"
+        },
+        "foreign_start_block": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
