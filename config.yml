@@ -9,7 +9,7 @@ chains:
     block_index_interval: 60s
   bsc:
     rpc:
-      host: https://bsc-dataseed4.ninicoin.io/
+      host: https://bsc-dataseed2.defibit.io
       timeout: 20s
       rps: 10
     chain_id: 56
@@ -18,7 +18,7 @@ chains:
     safe_logs_request: true
   kovan:
     rpc:
-      host: https://kovan.poa.network
+      host: https://kovan.infura.io/v3/${INFURA_PROJECT_KEY}
       timeout: 30s
       rps: 10
     chain_id: 42
@@ -61,12 +61,16 @@ bridges:
     home:
       chain: xdai
       address: 0x75Df5AF045d91108662D8080fD1FEFAd6aA0bb59
+      validator_contract_address: 0xA280feD8D7CaD9a76C8b50cA5c33c2534fFa5008
       start_block: 7408640
       required_block_confirmations: 12
       max_block_range_size: 2000
+      whitelisted_senders:
+        - 0x73cA9C4e72fF109259cf7374F038faf950949C51
     foreign:
       chain: mainnet
       address: 0x4C36d2919e407f0Cc2Ee3c993ccF8ac26d9CE64e
+      validator_contract_address: 0xed84a648b3c51432ad0fD1C2cD2C45677E9d4064
       start_block: 9130277
       required_block_confirmations: 12
       max_block_range_size: 1000
@@ -74,10 +78,10 @@ bridges:
       unknown_message_confirmation:
       unknown_message_execution:
       stuck_message_confirmation:
-        foreign_start_block: 11907302
+        foreign_start_block: 12922477
       failed_message_execution:
-        home_start_block: 18770035
-        foreign_start_block: 13407270
+        home_start_block: 19979926
+        foreign_start_block: 13897393
       unknown_information_signature:
       unknown_information_execution:
       stuck_information_request:
@@ -87,17 +91,20 @@ bridges:
     home:
       chain: sokol
       address: 0xFe446bEF1DbF7AFE24E81e05BC8B271C1BA9a560
+      validator_contract_address: 0x0c7A04cc9B1fF1184c5bc7253869727f29593465
       start_block: 9849619
       required_block_confirmations: 12
       max_block_range_size: 10000
     foreign:
       chain: kovan
       address: 0xFe446bEF1DbF7AFE24E81e05BC8B271C1BA9a560
-      start_block: 12372929
+      validator_contract_address: 0x0c7A04cc9B1fF1184c5bc7253869727f29593465
+      start_block: 12372926
       required_block_confirmations: 12
       max_block_range_size: 10000
     alerts:
       stuck_message_confirmation:
+        home_start_block: 18031769
         foreign_start_block: 25437689
       unknown_message_confirmation:
         home_start_block: 10666885
@@ -113,19 +120,21 @@ bridges:
     home:
       chain: xdai
       address: 0x162E898bD0aacB578C8D5F8d6ca588c13d2A383F
-      start_block: 14496725
+      validator_contract_address: 0x6f00218e7D985FE1211f5d47B350708fF915A842
+      start_block: 14496719
       required_block_confirmations: 12
       max_block_range_size: 10000
     foreign:
       chain: bsc
       address: 0x05185872898b6f94AA600177EF41B9334B1FA48B
-      start_block: 4792263
+      validator_contract_address: 0xFCE050274760d7C1AB809271Fb753dCEdac811b8
+      start_block: 4792258
       required_block_confirmations: 12
       max_block_range_size: 1000
     alerts:
       stuck_message_confirmation:
       failed_message_execution:
-        home_start_block: 18534657
+        home_start_block: 20270493
         foreign_start_block: 6984913
       unknown_message_confirmation:
       unknown_message_execution:
@@ -138,18 +147,20 @@ bridges:
     home:
       chain: xdai
       address: 0xc38D4991c951fE8BCE1a12bEef2046eF36b0FA4A
-      start_block: 10030211
+      validator_contract_address: 0xAC91dfb485ED2B96381686D3d299e3D041dB4051
+      start_block: 10030209
       required_block_confirmations: 12
       max_block_range_size: 20000
     foreign:
       chain: rinkeby
       address: 0xD4075FB57fCf038bFc702c915Ef9592534bED5c1
-      start_block: 6529875
+      validator_contract_address: 0xb056BFEdc397D427697a75E3ff115a0954de4791
+      start_block: 6529873
       required_block_confirmations: 4
       max_block_range_size: 20000
     alerts:
       stuck_message_confirmation:
-        foreign_start_block: 8360609
+        foreign_start_block: 10145488
       unknown_message_confirmation:
       unknown_message_execution:
       unknown_information_signature:
@@ -161,13 +172,15 @@ bridges:
     home:
       chain: xdai
       address: 0xc2d77d118326c33BBe36EbeAbf4F7ED6BC2dda5c
-      start_block: 17976497
+      validator_contract_address: 0x72C5E5f2C905f9b57FD433a58d6215AC8109991C
+      start_block: 17976494
       required_block_confirmations: 12
       max_block_range_size: 10000
     foreign:
       chain: poa
       address: 0xB2218bdEbe8e90f80D04286772B0968ead666942
-      start_block: 23152190
+      validator_contract_address: 0x1C1BD2AaB755e545C13D19B76c116e97B736883E
+      start_block: 23152188
       required_block_confirmations: 12
       max_block_range_size: 10000
     alerts:
@@ -184,18 +197,21 @@ bridges:
     home:
       chain: bsc
       address: 0x6943A218d58135793F1FE619414eD476C37ad65a
-      start_block: 2756521
+      validator_contract_address: 0x72748535E7FDbF564D0AC4CD18C3EBd96f81e8e6
+      start_block: 2756516
       required_block_confirmations: 12
       max_block_range_size: 1000
     foreign:
       chain: mainnet
       address: 0x07955be2967B655Cf52751fCE7ccC8c61EA594e2
-      start_block: 11375619
+      validator_contract_address: 0xC7b4618d03a756f8345Bd1bF1cCCbe3681f823Ef
+      start_block: 11375612
       required_block_confirmations: 12
       max_block_range_size: 10000
     alerts:
       stuck_message_confirmation:
       failed_message_execution:
+        home_start_block: 16110370
         foreign_start_block: 12694404
       unknown_message_confirmation:
       unknown_message_execution:

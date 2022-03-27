@@ -62,6 +62,6 @@ func unmarshalLegacyMessage(bridgeID string, direction entity.Direction, encoded
 func unmarshalConfirmInformationResult(calldata []byte) []byte {
 	// selector(4 bytes) + message id (32 bytes) + status (32 bytes) + result calldata ptr (32 bytes)
 	resultPtr := 4 + binary.BigEndian.Uint32(calldata[96:100])
-	resultLen := binary.BigEndian.Uint32(calldata[resultPtr+28:resultPtr+32])
+	resultLen := binary.BigEndian.Uint32(calldata[resultPtr+28 : resultPtr+32])
 	return calldata[resultPtr+32 : resultPtr+32+resultLen]
 }

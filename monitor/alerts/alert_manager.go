@@ -91,6 +91,7 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 			HomeChainID:             cfg.Home.Chain.ChainID,
 			HomeStartBlockNumber:    cfg.Home.StartBlock,
 			HomeBridgeAddress:       cfg.Home.Address,
+			HomeWhitelistedSenders:  cfg.Home.WhitelistedSenders,
 			ForeignChainID:          cfg.Foreign.Chain.ChainID,
 			ForeignStartBlockNumber: cfg.Foreign.StartBlock,
 			ForeignBridgeAddress:    cfg.Foreign.Address,

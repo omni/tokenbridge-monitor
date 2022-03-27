@@ -9,6 +9,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/lib/pq"
 )
 
 type DBAlertsProvider struct {
@@ -184,34 +185,50 @@ func (c *StuckMessage) AlertValues() AlertValues {
 func (p *DBAlertsProvider) FindStuckMessages(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
 	query := `
 		SELECT l.chain_id,
-               l.block_number,
+		       l.block_number,
 		       l.transaction_hash,
 		       sm.msg_hash,
 		       count(s.log_id) as count,
-	           EXTRACT(EPOCH FROM now() - ts.timestamp)::int as age
+		       EXTRACT(EPOCH FROM now() - ts.timestamp)::int as age
 		FROM sent_messages sm
 		         JOIN logs l on l.id = sm.log_id
-	             JOIN block_timestamps ts on ts.chain_id = l.chain_id AND ts.block_number = l.block_number
-		         JOIN messages m on sm.bridge_id = m.bridge_id AND m.msg_hash = sm.msg_hash AND data_type = 0
+		         JOIN block_timestamps ts on ts.chain_id = l.chain_id AND ts.block_number = l.block_number
+		         JOIN messages m on sm.bridge_id = m.bridge_id AND m.msg_hash = sm.msg_hash
 		         LEFT JOIN signed_messages s on s.bridge_id = m.bridge_id AND m.msg_hash = s.msg_hash
 		         LEFT JOIN collected_messages cm on m.bridge_id = cm.bridge_id AND cm.msg_hash = m.msg_hash
-		WHERE m.direction::direction_enum='home_to_foreign' AND cm.log_id IS NULL AND sm.bridge_id = $1 AND l.block_number >= $2 GROUP BY sm.log_id, l.id, ts.timestamp
+		         LEFT JOIN executed_messages em on m.bridge_id = em.bridge_id AND em.message_id = m.message_id
+		WHERE m.direction::direction_enum = 'home_to_foreign'
+		  AND (
+		    cm.log_id IS NULL OR
+		    (em.log_id IS NULL AND m.data_type = 0 AND m.sender = ANY($4))
+		  )
+		  AND sm.bridge_id = $1
+		  AND l.block_number >= $2
+		GROUP BY sm.log_id, l.id, ts.timestamp
 		UNION
 		SELECT l.chain_id,
-               l.block_number,
+		       l.block_number,
 		       l.transaction_hash,
 		       sm.msg_hash,
 		       count(s.log_id) as count,
-	           EXTRACT(EPOCH FROM now() - ts.timestamp)::int as age
+		       EXTRACT(EPOCH FROM now() - ts.timestamp)::int as age
 		FROM sent_messages sm
 		         JOIN logs l on l.id = sm.log_id
-				 JOIN block_timestamps ts on ts.chain_id = l.chain_id AND ts.block_number = l.block_number
-		         JOIN messages m on sm.bridge_id = m.bridge_id AND m.msg_hash = sm.msg_hash AND data_type = 0
-				 LEFT JOIN signed_messages s on s.bridge_id = m.bridge_id AND m.msg_hash = s.msg_hash
+		         JOIN block_timestamps ts on ts.chain_id = l.chain_id AND ts.block_number = l.block_number
+		         JOIN messages m on sm.bridge_id = m.bridge_id AND m.msg_hash = sm.msg_hash
+		         LEFT JOIN signed_messages s on s.bridge_id = m.bridge_id AND m.msg_hash = s.msg_hash
 		         LEFT JOIN executed_messages em on m.bridge_id = em.bridge_id AND em.message_id = m.message_id
-		WHERE m.direction::direction_enum='foreign_to_home' AND em.log_id IS NULL AND sm.bridge_id = $1 AND l.block_number >= $3 GROUP BY sm.log_id, l.id, ts.timestamp`
+		WHERE m.direction::direction_enum = 'foreign_to_home'
+		  AND em.log_id IS NULL
+		  AND sm.bridge_id = $1
+		  AND l.block_number >= $3
+		GROUP BY sm.log_id, l.id, ts.timestamp`
 	res := make([]StuckMessage, 0, 5)
-	err := p.db.SelectContext(ctx, &res, query, params.Bridge, params.HomeStartBlockNumber, params.ForeignStartBlockNumber)
+	var whitelisted pq.ByteaArray
+	for _, addr := range params.HomeWhitelistedSenders {
+		whitelisted = append(whitelisted, addr.Bytes())
+	}
+	err := p.db.SelectContext(ctx, &res, query, params.Bridge, params.HomeStartBlockNumber, params.ForeignStartBlockNumber, whitelisted)
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}

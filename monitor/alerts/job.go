@@ -20,6 +20,7 @@ type AlertJobParams struct {
 	HomeChainID             string
 	HomeStartBlockNumber    uint
 	HomeBridgeAddress       common.Address
+	HomeWhitelistedSenders  []common.Address
 	ForeignChainID          string
 	ForeignStartBlockNumber uint
 	ForeignBridgeAddress    common.Address

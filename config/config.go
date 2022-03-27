@@ -40,6 +40,7 @@ type BridgeSideConfig struct {
 	BlockConfirmations       uint               `yaml:"required_block_confirmations"`
 	MaxBlockRangeSize        uint               `yaml:"max_block_range_size"`
 	RefetchEvents            []*ReloadJobConfig `yaml:"refetch_events"`
+	WhitelistedSenders       []common.Address   `yaml:"whitelisted_senders"`
 }
 
 type BridgeAlertConfig struct {
