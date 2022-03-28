@@ -37,6 +37,8 @@ services:
     container_name: grafana
     image: grafana/grafana:8.1.5
     volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
       - grafana-storage:/var/lib/grafana
     labels:
       - "traefik.enable=true"

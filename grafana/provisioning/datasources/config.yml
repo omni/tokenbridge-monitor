@@ -1,0 +1,41 @@
+apiVersion: 1
+datasources:
+- id: 1
+  uid: VrxXe4xnk
+  orgId: 1
+  name: PostgreSQL
+  type: postgres
+  typeName: PostgreSQL
+  typeLogoUrl: public/app/plugins/datasource/postgres/img/postgresql_logo.svg
+  access: proxy
+  url: 'postgres:5432'
+  password: 'pass'
+  user: postgres
+  database: db
+  basicAuth: false
+  isDefault: true
+  jsonData:
+    postgresVersion: 1200
+    sslmode: disable
+    tlsAuth: false
+    tlsAuthWithCACert: false
+    tlsConfigurationMethod: file-path
+    tlsSkipVerify: true
+  readOnly: false
+- id: 2
+  uid: Fa9964bnk
+  orgId: 1
+  name: Prometheus
+  type: prometheus
+  typeName: Prometheus
+  typeLogoUrl: public/app/plugins/datasource/prometheus/img/prometheus_logo.svg
+  access: proxy
+  url: 'http://prometheus:9090'
+  password: ''
+  user: ''
+  database: ''
+  basicAuth: true
+  isDefault: false
+  jsonData:
+    httpMethod: POST
+  readOnly: false
