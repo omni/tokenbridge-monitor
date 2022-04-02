@@ -26,6 +26,14 @@ type InformationRequestInfo struct {
 	Executor  common.Address
 }
 
+type ErcToNativeMessageInfo struct {
+	BridgeID  string
+	MsgHash   common.Hash
+	Direction entity.Direction
+	Receiver  common.Address
+	Value     string
+}
+
 type TxInfo struct {
 	BlockNumber uint
 	Timestamp   time.Time

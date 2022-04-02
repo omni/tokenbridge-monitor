@@ -87,4 +87,31 @@ var (
 			ConstLabels: prometheus.Labels{"bridge_id": bridge},
 		}, []string{"chain_id", "block_number", "tx_hash", "message_id", "count"})
 	}
+	NewAlertUnknownErcToNativeMessageConfirmation = func(bridge string) *prometheus.GaugeVec {
+		return promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace:   "alert",
+			Subsystem:   "monitor",
+			Name:        "unknown_erc_to_native_message_confirmation",
+			Help:        "Shows found unknown ERC_TO_NATIVE message confirmation sent by some validator.",
+			ConstLabels: prometheus.Labels{"bridge_id": bridge},
+		}, []string{"chain_id", "block_number", "tx_hash", "signer", "msg_hash"})
+	}
+	NewAlertUnknownErcToNativeMessageExecution = func(bridge string) *prometheus.GaugeVec {
+		return promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace:   "alert",
+			Subsystem:   "monitor",
+			Name:        "unknown_erc_to_native_message_execution",
+			Help:        "Shows found unknown ERC_TO_NATIVE message execution.",
+			ConstLabels: prometheus.Labels{"bridge_id": bridge},
+		}, []string{"chain_id", "block_number", "tx_hash", "msg_hash"})
+	}
+	NewAlertStuckErcToNativeMessageConfirmation = func(bridge string) *prometheus.GaugeVec {
+		return promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace:   "alert",
+			Subsystem:   "monitor",
+			Name:        "stuck_erc_to_native_message_confirmation",
+			Help:        "Shows ERC_TO_NATIVE message for which signatures are still in the pending state.",
+			ConstLabels: prometheus.Labels{"bridge_id": bridge},
+		}, []string{"chain_id", "block_number", "tx_hash", "msg_hash", "count", "receiver", "value"})
+	}
 )

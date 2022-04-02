@@ -1,6 +1,8 @@
 package monitor
 
 import (
+	"amb-monitor/config"
+	"amb-monitor/contract/constants"
 	"amb-monitor/entity"
 	"amb-monitor/ethclient"
 	"amb-monitor/repository"
@@ -9,21 +11,26 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type EventHandler func(ctx context.Context, log *entity.Log, data map[string]interface{}) error
 
 type BridgeEventHandler struct {
-	repo       *repository.Repo
-	bridgeID   string
-	homeClient *ethclient.Client
+	repo          *repository.Repo
+	bridgeID      string
+	homeClient    *ethclient.Client
+	foreignClient *ethclient.Client
+	cfg           *config.BridgeConfig
 }
 
-func NewBridgeEventHandler(repo *repository.Repo, bridgeID string, homeClient *ethclient.Client) *BridgeEventHandler {
+func NewBridgeEventHandler(repo *repository.Repo, bridgeID string, homeClient, foreignClient *ethclient.Client, cfg *config.BridgeConfig) *BridgeEventHandler {
 	return &BridgeEventHandler{
-		repo:       repo,
-		bridgeID:   bridgeID,
-		homeClient: homeClient,
+		repo:          repo,
+		bridgeID:      bridgeID,
+		homeClient:    homeClient,
+		foreignClient: foreignClient,
+		cfg:           cfg,
 	}
 }
 
@@ -56,6 +63,77 @@ func (p *BridgeEventHandler) HandleLegacyUserRequestForAffirmation(ctx context.C
 	})
 }
 
+func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	from := data["from"].(common.Address)
+	value := data["value"].(*big.Int)
+
+	for _, addr := range p.cfg.Foreign.ErcToNativeBlacklistedSenders {
+		if from == addr {
+			return nil
+		}
+	}
+	receipt, err := p.foreignClient.TransactionReceiptByHash(ctx, log.TransactionHash)
+	if err != nil {
+		return fmt.Errorf("failed to get transaction receipt by hash %s: %w", log.TransactionHash, err)
+	}
+	for _, l := range receipt.Logs {
+		if len(l.Topics) > 0 && l.Topics[0] == constants.ERC_TO_NATIVE.Events["UserRequestForAffirmation"].ID {
+			return nil
+		}
+	}
+
+	valueBytes := common.BigToHash(value)
+	msg := from[:]
+	msg = append(msg, valueBytes[:]...)
+	msg = append(msg, log.TransactionHash[:]...)
+	msgHash := crypto.Keccak256Hash(msg)
+
+	message := &entity.ErcToNativeMessage{
+		BridgeID:  p.bridgeID,
+		Direction: entity.DirectionForeignToHome,
+		MsgHash:   msgHash,
+		Receiver:  from,
+		Value:     value.String(),
+	}
+	err = p.repo.ErcToNativeMessages.Ensure(ctx, message)
+	if err != nil {
+		return err
+	}
+	return p.repo.SentMessages.Ensure(ctx, &entity.SentMessage{
+		LogID:    log.ID,
+		BridgeID: p.bridgeID,
+		MsgHash:  msgHash,
+	})
+}
+
+func (p *BridgeEventHandler) HandleErcToNativeUserRequestForAffirmation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	recipient := data["recipient"].(common.Address)
+	value := data["value"].(*big.Int)
+
+	valueBytes := common.BigToHash(value)
+	msg := recipient[:]
+	msg = append(msg, valueBytes[:]...)
+	msg = append(msg, log.TransactionHash[:]...)
+	msgHash := crypto.Keccak256Hash(msg)
+
+	message := &entity.ErcToNativeMessage{
+		BridgeID:  p.bridgeID,
+		Direction: entity.DirectionForeignToHome,
+		MsgHash:   msgHash,
+		Receiver:  recipient,
+		Value:     value.String(),
+	}
+	err := p.repo.ErcToNativeMessages.Ensure(ctx, message)
+	if err != nil {
+		return err
+	}
+	return p.repo.SentMessages.Ensure(ctx, &entity.SentMessage{
+		LogID:    log.ID,
+		BridgeID: p.bridgeID,
+		MsgHash:  msgHash,
+	})
+}
+
 func (p *BridgeEventHandler) HandleUserRequestForSignature(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
 	encodedData := data["encodedData"].([]byte)
 	message := unmarshalMessage(p.bridgeID, entity.DirectionHomeToForeign, encodedData)
@@ -85,6 +163,35 @@ func (p *BridgeEventHandler) HandleLegacyUserRequestForSignature(ctx context.Con
 	})
 }
 
+func (p *BridgeEventHandler) HandleErcToNativeUserRequestForSignature(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	recipient := data["recipient"].(common.Address)
+	value := data["value"].(*big.Int)
+
+	valueBytes := common.BigToHash(value)
+	msg := recipient[:]
+	msg = append(msg, valueBytes[:]...)
+	msg = append(msg, log.TransactionHash[:]...)
+	msg = append(msg, p.cfg.Foreign.Address[:]...)
+	msgHash := crypto.Keccak256Hash(msg)
+
+	message := &entity.ErcToNativeMessage{
+		BridgeID:  p.bridgeID,
+		Direction: entity.DirectionHomeToForeign,
+		MsgHash:   msgHash,
+		Receiver:  recipient,
+		Value:     value.String(),
+	}
+	err := p.repo.ErcToNativeMessages.Ensure(ctx, message)
+	if err != nil {
+		return err
+	}
+	return p.repo.SentMessages.Ensure(ctx, &entity.SentMessage{
+		LogID:    log.ID,
+		BridgeID: p.bridgeID,
+		MsgHash:  msgHash,
+	})
+}
+
 func (p *BridgeEventHandler) HandleSignedForUserRequest(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
 	msgHash := data["messageHash"].([32]byte)
 	validator := data["signer"].(common.Address)
@@ -97,14 +204,19 @@ func (p *BridgeEventHandler) HandleSignedForUserRequest(ctx context.Context, log
 	})
 }
 
-func (p *BridgeEventHandler) HandleSignedForAffirmation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	msgHash := data["messageHash"].([32]byte)
+func (p *BridgeEventHandler) HandleErcToNativeSignedForAffirmation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
 	validator := data["signer"].(common.Address)
+
+	tx, err := p.homeClient.TransactionByHash(ctx, log.TransactionHash)
+	if err != nil {
+		return fmt.Errorf("failed to get transaction by hash %s: %w", log.TransactionHash, err)
+	}
+	msg := tx.Data()[16:]
 
 	return p.repo.SignedMessages.Ensure(ctx, &entity.SignedMessage{
 		LogID:    log.ID,
 		BridgeID: p.bridgeID,
-		MsgHash:  msgHash,
+		MsgHash:  crypto.Keccak256Hash(msg),
 		Signer:   validator,
 	})
 }
@@ -121,6 +233,26 @@ func (p *BridgeEventHandler) HandleRelayedMessage(ctx context.Context, log *enti
 	})
 }
 
+func (p *BridgeEventHandler) HandleErcToNativeRelayedMessage(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	recipient := data["recipient"].(common.Address)
+	value := data["value"].(*big.Int)
+	transactionHash := data["transactionHash"].([32]byte)
+
+	valueBytes := common.BigToHash(value)
+
+	msg := recipient[:]
+	msg = append(msg, valueBytes[:]...)
+	msg = append(msg, transactionHash[:]...)
+	msg = append(msg, log.Address[:]...)
+
+	return p.repo.ExecutedMessages.Ensure(ctx, &entity.ExecutedMessage{
+		LogID:     log.ID,
+		BridgeID:  p.bridgeID,
+		MessageID: crypto.Keccak256Hash(msg),
+		Status:    true,
+	})
+}
+
 func (p *BridgeEventHandler) HandleAffirmationCompleted(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
 	messageID := data["messageId"].([32]byte)
 	status := data["status"].(bool)
@@ -130,6 +262,25 @@ func (p *BridgeEventHandler) HandleAffirmationCompleted(ctx context.Context, log
 		BridgeID:  p.bridgeID,
 		MessageID: messageID,
 		Status:    status,
+	})
+}
+
+func (p *BridgeEventHandler) HandleErcToNativeAffirmationCompleted(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
+	recipient := data["recipient"].(common.Address)
+	value := data["value"].(*big.Int)
+	transactionHash := data["transactionHash"].([32]byte)
+
+	valueBytes := common.BigToHash(value)
+
+	msg := recipient[:]
+	msg = append(msg, valueBytes[:]...)
+	msg = append(msg, transactionHash[:]...)
+
+	return p.repo.ExecutedMessages.Ensure(ctx, &entity.ExecutedMessage{
+		LogID:     log.ID,
+		BridgeID:  p.bridgeID,
+		MessageID: crypto.Keccak256Hash(msg),
+		Status:    true,
 	})
 }
 

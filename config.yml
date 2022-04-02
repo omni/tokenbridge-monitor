@@ -26,15 +26,16 @@ chains:
     block_index_interval: 60s
   xdai:
     rpc:
-      host: https://dai.poa.network/oe-only
+      host: https://rpc.xdaichain.com/oe-only
       timeout: 20s
       rps: 10
     chain_id: 100
     block_time: 5s
     block_index_interval: 30s
+    safe_logs_request: true
   poa:
     rpc:
-      host: https://core.poa.network
+      host: https://core.poanetwork.dev
       timeout: 20s
       rps: 10
     chain_id: 99
@@ -57,6 +58,35 @@ chains:
     block_time: 15s
     block_index_interval: 60s
 bridges:
+  xdai:
+    is_erc_to_native: true
+    home:
+      chain: xdai
+      address: 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6
+      validator_contract_address: 0xB289f0e6fBDFf8EEE340498a56e1787B303F1B6D
+      start_block: 756
+      required_block_confirmations: 12
+      max_block_range_size: 2000
+    foreign:
+      chain: mainnet
+      address: 0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016
+      validator_contract_address: 0xe1579dEbdD2DF16Ebdb9db8694391fa74EeA201E
+      start_block: 6478411
+      required_block_confirmations: 12
+      max_block_range_size: 1000
+      erc_to_native_tokens:
+        - address: 0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359
+          start_block: 6478411
+          end_block: 9884448
+        - address: 0x6B175474E89094C44Da98b954EedeAC495271d0F
+          start_block: 8928158
+      erc_to_native_blacklisted_senders:
+        - 0x0000000000000000000000000000000000000000
+        - 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643
+    alerts:
+      unknown_erc_to_native_message_confirmation:
+      unknown_erc_to_native_message_execution:
+      stuck_erc_to_native_message_confirmation:
   xdai-amb:
     home:
       chain: xdai
@@ -92,7 +122,7 @@ bridges:
       chain: sokol
       address: 0xFe446bEF1DbF7AFE24E81e05BC8B271C1BA9a560
       validator_contract_address: 0x0c7A04cc9B1fF1184c5bc7253869727f29593465
-      start_block: 9849619
+      start_block: 9849617
       required_block_confirmations: 12
       max_block_range_size: 10000
     foreign:

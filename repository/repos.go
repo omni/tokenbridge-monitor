@@ -11,6 +11,7 @@ type Repo struct {
 	Logs                        entity.LogsRepo
 	BlockTimestamps             entity.BlockTimestampsRepo
 	Messages                    entity.MessagesRepo
+	ErcToNativeMessages         entity.ErcToNativeMessagesRepo
 	SentMessages                entity.SentMessagesRepo
 	SignedMessages              entity.SignedMessagesRepo
 	CollectedMessages           entity.CollectedMessagesRepo
@@ -28,6 +29,7 @@ func NewRepo(db *db.DB) *Repo {
 		Logs:                        postgres.NewLogsRepo("logs", db),
 		BlockTimestamps:             postgres.NewBlockTimestampsRepo("block_timestamps", db),
 		Messages:                    postgres.NewMessagesRepo("messages", db),
+		ErcToNativeMessages:         postgres.NewErcToNativeMessagesRepo("erc_to_native_messages", db),
 		SentMessages:                postgres.NewSentMessagesRepo("sent_messages", db),
 		SignedMessages:              postgres.NewSignedMessagesRepo("signed_messages", db),
 		CollectedMessages:           postgres.NewCollectedMessagesRepo("collected_messages", db),

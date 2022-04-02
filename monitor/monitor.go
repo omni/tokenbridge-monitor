@@ -30,6 +30,7 @@ import (
 )
 
 type ContractMonitor struct {
+	bridgeCfg            *config.BridgeConfig
 	cfg                  *config.BridgeSideConfig
 	logger               logging.Logger
 	repo                 *repository.Repo
@@ -57,12 +58,16 @@ type Monitor struct {
 
 const defaultSyncedThreshold = 10
 
-func newContractMonitor(ctx context.Context, logger logging.Logger, repo *repository.Repo, bridge string, cfg *config.BridgeSideConfig) (*ContractMonitor, error) {
+func newContractMonitor(ctx context.Context, logger logging.Logger, repo *repository.Repo, bridgeCfg *config.BridgeConfig, cfg *config.BridgeSideConfig) (*ContractMonitor, error) {
 	client, err := ethclient.NewClient(cfg.Chain.RPC.Host, cfg.Chain.RPC.Timeout, cfg.Chain.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start eth client: %w", err)
 	}
-	bridgeContract := contract.NewContract(client, cfg.Address, constants.AMB)
+	abi := constants.AMB
+	if bridgeCfg.IsErcToNative {
+		abi = constants.ERC_TO_NATIVE
+	}
+	bridgeContract := contract.NewContract(client, cfg.Address, abi)
 	if cfg.ValidatorContractAddress == (common.Address{}) {
 		cfg.ValidatorContractAddress, err = bridgeContract.ValidatorContractAddress(ctx)
 		if err != nil {
@@ -94,12 +99,13 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 		}
 	}
 	commonLabels := prometheus.Labels{
-		"bridge_id": bridge,
+		"bridge_id": bridgeCfg.ID,
 		"chain_id":  client.ChainID,
 		"address":   cfg.Address.String(),
 	}
 	return &ContractMonitor{
 		logger:               logger,
+		bridgeCfg:            bridgeCfg,
 		cfg:                  cfg,
 		repo:                 repo,
 		client:               client,
@@ -117,11 +123,11 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 
 func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo *repository.Repo, cfg *config.BridgeConfig) (*Monitor, error) {
 	logger.Info("initializing bridge monitor")
-	homeMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "home"), repo, cfg.ID, cfg.Home)
+	homeMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "home"), repo, cfg, cfg.Home)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize home side monitor: %w", err)
 	}
-	foreignMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "foreign"), repo, cfg.ID, cfg.Foreign)
+	foreignMonitor, err := newContractMonitor(ctx, logger.WithField("contract", "foreign"), repo, cfg, cfg.Foreign)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize foreign side monitor: %w", err)
 	}
@@ -129,23 +135,32 @@ func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo 
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize alert manager: %w", err)
 	}
-	handlers := NewBridgeEventHandler(repo, cfg.ID, homeMonitor.client)
-	homeMonitor.eventHandlers["UserRequestForSignature"] = handlers.HandleUserRequestForSignature
-	homeMonitor.eventHandlers["UserRequestForSignature0"] = handlers.HandleLegacyUserRequestForSignature
+	handlers := NewBridgeEventHandler(repo, cfg.ID, homeMonitor.client, foreignMonitor.client, cfg)
+	if cfg.IsErcToNative {
+		homeMonitor.eventHandlers["UserRequestForSignature"] = handlers.HandleErcToNativeUserRequestForSignature
+		homeMonitor.eventHandlers["SignedForAffirmation"] = handlers.HandleErcToNativeSignedForAffirmation
+		homeMonitor.eventHandlers["AffirmationCompleted"] = handlers.HandleErcToNativeAffirmationCompleted
+		foreignMonitor.eventHandlers["UserRequestForAffirmation"] = handlers.HandleErcToNativeUserRequestForAffirmation
+		foreignMonitor.eventHandlers["Transfer"] = handlers.HandleErcToNativeTransfer
+		foreignMonitor.eventHandlers["RelayedMessage"] = handlers.HandleErcToNativeRelayedMessage
+	} else {
+		homeMonitor.eventHandlers["UserRequestForSignature"] = handlers.HandleUserRequestForSignature
+		homeMonitor.eventHandlers["UserRequestForSignature0"] = handlers.HandleLegacyUserRequestForSignature
+		homeMonitor.eventHandlers["SignedForAffirmation"] = handlers.HandleSignedForUserRequest
+		homeMonitor.eventHandlers["AffirmationCompleted"] = handlers.HandleAffirmationCompleted
+		homeMonitor.eventHandlers["AffirmationCompleted0"] = handlers.HandleAffirmationCompleted
+		homeMonitor.eventHandlers["UserRequestForInformation"] = handlers.HandleUserRequestForInformation
+		homeMonitor.eventHandlers["SignedForInformation"] = handlers.HandleSignedForInformation
+		homeMonitor.eventHandlers["InformationRetrieved"] = handlers.HandleInformationRetrieved
+		foreignMonitor.eventHandlers["UserRequestForAffirmation"] = handlers.HandleUserRequestForAffirmation
+		foreignMonitor.eventHandlers["UserRequestForAffirmation0"] = handlers.HandleLegacyUserRequestForAffirmation
+		foreignMonitor.eventHandlers["RelayedMessage"] = handlers.HandleRelayedMessage
+		foreignMonitor.eventHandlers["RelayedMessage0"] = handlers.HandleRelayedMessage
+	}
 	homeMonitor.eventHandlers["SignedForUserRequest"] = handlers.HandleSignedForUserRequest
-	homeMonitor.eventHandlers["SignedForAffirmation"] = handlers.HandleSignedForAffirmation
-	homeMonitor.eventHandlers["AffirmationCompleted"] = handlers.HandleAffirmationCompleted
-	homeMonitor.eventHandlers["AffirmationCompleted0"] = handlers.HandleAffirmationCompleted
 	homeMonitor.eventHandlers["CollectedSignatures"] = handlers.HandleCollectedSignatures
-	homeMonitor.eventHandlers["UserRequestForInformation"] = handlers.HandleUserRequestForInformation
-	homeMonitor.eventHandlers["SignedForInformation"] = handlers.HandleSignedForInformation
-	homeMonitor.eventHandlers["InformationRetrieved"] = handlers.HandleInformationRetrieved
 	homeMonitor.eventHandlers["ValidatorAdded"] = handlers.HandleValidatorAdded
 	homeMonitor.eventHandlers["ValidatorRemoved"] = handlers.HandleValidatorRemoved
-	foreignMonitor.eventHandlers["UserRequestForAffirmation"] = handlers.HandleUserRequestForAffirmation
-	foreignMonitor.eventHandlers["UserRequestForAffirmation0"] = handlers.HandleLegacyUserRequestForAffirmation
-	foreignMonitor.eventHandlers["RelayedMessage"] = handlers.HandleRelayedMessage
-	foreignMonitor.eventHandlers["RelayedMessage0"] = handlers.HandleRelayedMessage
 	foreignMonitor.eventHandlers["ValidatorAdded"] = handlers.HandleValidatorAdded
 	foreignMonitor.eventHandlers["ValidatorRemoved"] = handlers.HandleValidatorRemoved
 	return &Monitor{
@@ -196,7 +211,13 @@ func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, to
 	var logs []*entity.Log
 	for {
 		var err error
-		logs, err = m.repo.Logs.FindByBlockRange(ctx, m.client.ChainID, m.cfg.Address, fromBlock, toBlock)
+		addresses := []common.Address{m.cfg.Address, m.cfg.ValidatorContractAddress}
+		if m.bridgeCfg.IsErcToNative {
+			for _, token := range m.bridgeCfg.Foreign.ErcToNativeTokens {
+				addresses = append(addresses, token.Address)
+			}
+		}
+		logs, err = m.repo.Logs.FindByBlockRange(ctx, m.client.ChainID, addresses, fromBlock, toBlock)
 		if err != nil {
 			m.logger.WithError(err).Error("can't find unprocessed logs in block range")
 			if utils.ContextSleep(ctx, 10*time.Second) == nil {
@@ -213,6 +234,10 @@ func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, to
 func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
 	m.logger.Info("starting new blocks tracker")
 
+	if len(m.cfg.RefetchEvents) > 0 {
+		m.RefetchEvents(start - 1)
+	}
+
 	for {
 		head, err := m.client.BlockNumber(ctx)
 		if err != nil {
@@ -228,11 +253,6 @@ func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
 				}).Warn("latest block is behind processed block in the database, skipping")
 			}
 			m.headBlockMetric.Set(float64(m.headBlock))
-
-			if len(m.cfg.RefetchEvents) > 0 {
-				m.RefetchEvents(start - 1)
-				m.cfg.RefetchEvents = nil
-			}
 
 			for start <= m.headBlock {
 				end := start + m.cfg.MaxBlockRangeSize - 1
@@ -278,7 +298,7 @@ func (m *ContractMonitor) RefetchEvents(lastFetchedBlock uint) {
 			}
 			m.logger.WithFields(logrus.Fields{
 				"from_block": fromBlock,
-				"to_block":   toBlock,
+				"to_block":   end,
 			}).Info("scheduling new block range logs search")
 			m.blocksRangeChan <- &BlocksRange{
 				From:  fromBlock,
@@ -315,7 +335,8 @@ func (m *ContractMonitor) StartLogsFetcher(ctx context.Context) {
 	}
 }
 
-func (m *ContractMonitor) tryToFetchLogs(ctx context.Context, blocksRange *BlocksRange) error {
+func (m *ContractMonitor) buildFilterQueries(blocksRange *BlocksRange) []ethereum.FilterQuery {
+	var qs []ethereum.FilterQuery
 	q := ethereum.FilterQuery{
 		FromBlock: big.NewInt(int64(blocksRange.From)),
 		ToBlock:   big.NewInt(int64(blocksRange.To)),
@@ -324,15 +345,48 @@ func (m *ContractMonitor) tryToFetchLogs(ctx context.Context, blocksRange *Block
 	if blocksRange.Topic != nil {
 		q.Topics = [][]common.Hash{{*blocksRange.Topic}}
 	}
-	var logs []types.Log
-	var err error
-	if m.cfg.Chain.SafeLogsRequest {
-		logs, err = m.client.FilterLogsSafe(ctx, q)
-	} else {
-		logs, err = m.client.FilterLogs(ctx, q)
+	qs = append(qs, q)
+	if m.bridgeCfg.IsErcToNative {
+		for _, token := range m.cfg.ErcToNativeTokens {
+			if token.StartBlock > 0 && blocksRange.To < token.StartBlock {
+				continue
+			}
+			if token.EndBlock > 0 && blocksRange.From > token.EndBlock {
+				continue
+			}
+			qc := q
+			if blocksRange.Topic != nil {
+				qc.Topics = [][]common.Hash{{*blocksRange.Topic}, {}, {m.cfg.Address.Hash()}}
+			} else {
+				qc.Topics = [][]common.Hash{{}, {}, {m.cfg.Address.Hash()}}
+			}
+			qc.Addresses = []common.Address{token.Address}
+			if token.StartBlock > 0 && token.StartBlock > blocksRange.From {
+				qc.FromBlock = big.NewInt(int64(token.StartBlock))
+			}
+			if token.EndBlock > 0 && token.EndBlock < blocksRange.To {
+				qc.ToBlock = big.NewInt(int64(token.EndBlock))
+			}
+			qs = append(qs, qc)
+		}
 	}
-	if err != nil {
-		return err
+	return qs
+}
+
+func (m *ContractMonitor) tryToFetchLogs(ctx context.Context, blocksRange *BlocksRange) error {
+	qs := m.buildFilterQueries(blocksRange)
+	var logs, logsBatch []types.Log
+	var err error
+	for _, q := range qs {
+		if m.cfg.Chain.SafeLogsRequest {
+			logsBatch, err = m.client.FilterLogsSafe(ctx, q)
+		} else {
+			logsBatch, err = m.client.FilterLogs(ctx, q)
+		}
+		if err != nil {
+			return err
+		}
+		logs = append(logs, logsBatch...)
 	}
 	m.logger.WithFields(logrus.Fields{
 		"count":      len(logs),

@@ -83,6 +83,27 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 				Func:     provider.FindDifferentInformationSignatures,
 				Metric:   NewAlertDifferentInformationSignatures(cfg.ID),
 			}
+		case "unknown_erc_to_native_message_confirmation":
+			jobs[name] = &Job{
+				Interval: time.Minute,
+				Timeout:  time.Second * 10,
+				Func:     provider.FindUnknownErcToNativeConfirmations,
+				Metric:   NewAlertUnknownErcToNativeMessageConfirmation(cfg.ID),
+			}
+		case "unknown_erc_to_native_message_execution":
+			jobs[name] = &Job{
+				Interval: time.Minute,
+				Timeout:  time.Second * 10,
+				Func:     provider.FindUnknownErcToNativeExecutions,
+				Metric:   NewAlertUnknownErcToNativeMessageExecution(cfg.ID),
+			}
+		case "stuck_erc_to_native_message_confirmation":
+			jobs[name] = &Job{
+				Interval: time.Minute * 5,
+				Timeout:  time.Second * 20,
+				Func:     provider.FindStuckErcToNativeMessages,
+				Metric:   NewAlertStuckErcToNativeMessageConfirmation(cfg.ID),
+			}
 		default:
 			return nil, fmt.Errorf("unknown alert type %q", name)
 		}

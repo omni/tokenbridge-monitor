@@ -135,6 +135,16 @@ func (c *Client) TransactionByHash(ctx context.Context, txHash common.Hash) (*ty
 	return tx, err
 }
 
+func (c *Client) TransactionReceiptByHash(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	defer ObserveDuration(c.ChainID, c.url, "eth_getTransactionReceipt")()
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	receipt, err := c.client.TransactionReceipt(ctx, txHash)
+	ObserveError(c.ChainID, c.url, "eth_getTransactionReceipt", err)
+	return receipt, err
+}
+
 func (c *Client) CallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error) {
 	defer ObserveDuration(c.ChainID, c.url, "eth_call")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)

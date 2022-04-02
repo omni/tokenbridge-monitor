@@ -115,6 +115,45 @@ Validators signed different AMB information request results
 *Tx:* {{ template "explorer.tx.link" .CommonLabels }}
 {{- end }}
 
+{{ define "slack.stuck_erc_to_native_message.title" -}}
+Stuck ERC_TO_NATIVE message confirmation
+{{- end }}
+{{ define "slack.stuck_erc_to_native_message.text" -}}
+*Bridge:* {{ .CommonLabels.bridge_id }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
+*Age:* {{ .CommonAnnotations.age }}
+*Collected confirmations:* {{ .CommonLabels.count }}
+*Receiver:* {{ .CommonLabels.receiver }}
+*Value:* {{ .CommonLabels.value }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}
+
+{{ define "slack.unknown_erc_to_native_confirmation.title" -}}
+Validator signed for unknown ERC_TO_NATIVE message
+{{- end }}
+{{ define "slack.unknown_erc_to_native_confirmation.text" -}}
+*Bridge:* {{ .CommonLabels.bridge_id }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
+*Age:* {{ .CommonAnnotations.age }}
+*Validator:* {{ .CommonLabels.signer }}
+*Message hash:* {{ .CommonLabels.msg_hash }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}
+
+{{ define "slack.unknown_erc_to_native_execution.title" -}}
+Bridge executed unknown ERC_TO_NATIVE message
+{{- end }}
+{{ define "slack.unknown_erc_to_native_execution.text" -}}
+*Bridge:* {{ .CommonLabels.bridge_id }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Block number:* {{ .CommonLabels.block_number }}
+*Age:* {{ .CommonAnnotations.age }}
+*Message id:* {{ .CommonLabels.message_id }}
+*Tx:* {{ template "explorer.tx.link" .CommonLabels }}
+{{- end }}
+
 {{ define "slack.stuck_contract.title" -}}
 Monitoring of contract is stuck
 {{- end }}

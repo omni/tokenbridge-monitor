@@ -195,16 +195,31 @@ func (p *Presenter) searchSentMessage(ctx context.Context, log *entity.Log) (*Se
 		return nil, nil
 	}
 
+	var messageInfo interface{}
+	var events []*EventInfo
 	msg, err := p.repo.Messages.FindByMsgHash(ctx, sent.BridgeID, sent.MsgHash)
-	if err != nil || msg == nil {
+	if err != nil {
 		return nil, err
 	}
-	events, err := p.buildMessageEvents(ctx, msg)
+	if msg == nil {
+		ercToNativeMsg, err2 := p.repo.ErcToNativeMessages.FindByMsgHash(ctx, sent.BridgeID, sent.MsgHash)
+		if err2 != nil {
+			return nil, err2
+		}
+		if ercToNativeMsg == nil {
+			return nil, nil
+		}
+		messageInfo = ercToNativeMessageToInfo(ercToNativeMsg)
+		events, err = p.buildMessageEvents(ctx, ercToNativeMsg.BridgeID, ercToNativeMsg.MsgHash, ercToNativeMsg.MsgHash)
+	} else {
+		messageInfo = messageToInfo(msg)
+		events, err = p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
+	}
 	if err != nil {
 		return nil, err
 	}
 	return &SearchResult{
-		Message:       messageToInfo(msg),
+		Message:       messageInfo,
 		RelatedEvents: events,
 	}, nil
 }
@@ -218,16 +233,31 @@ func (p *Presenter) searchSignedMessage(ctx context.Context, log *entity.Log) (*
 		return nil, nil
 	}
 
+	var messageInfo interface{}
+	var events []*EventInfo
 	msg, err := p.repo.Messages.FindByMsgHash(ctx, sig.BridgeID, sig.MsgHash)
-	if err != nil || msg == nil {
+	if err != nil {
 		return nil, err
 	}
-	events, err := p.buildMessageEvents(ctx, msg)
+	if msg == nil {
+		ercToNativeMsg, err2 := p.repo.ErcToNativeMessages.FindByMsgHash(ctx, sig.BridgeID, sig.MsgHash)
+		if err2 != nil {
+			return nil, err2
+		}
+		if ercToNativeMsg == nil {
+			return nil, nil
+		}
+		messageInfo = ercToNativeMessageToInfo(ercToNativeMsg)
+		events, err = p.buildMessageEvents(ctx, ercToNativeMsg.BridgeID, ercToNativeMsg.MsgHash, ercToNativeMsg.MsgHash)
+	} else {
+		messageInfo = messageToInfo(msg)
+		events, err = p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
+	}
 	if err != nil {
 		return nil, err
 	}
 	return &SearchResult{
-		Message:       messageToInfo(msg),
+		Message:       messageInfo,
 		RelatedEvents: events,
 	}, nil
 }
@@ -241,16 +271,31 @@ func (p *Presenter) searchExecutedMessage(ctx context.Context, log *entity.Log) 
 		return nil, nil
 	}
 
+	var messageInfo interface{}
+	var events []*EventInfo
 	msg, err := p.repo.Messages.FindByMessageID(ctx, executed.BridgeID, executed.MessageID)
-	if err != nil || msg == nil {
+	if err != nil {
 		return nil, err
 	}
-	events, err := p.buildMessageEvents(ctx, msg)
+	if msg == nil {
+		ercToNativeMsg, err2 := p.repo.ErcToNativeMessages.FindByMsgHash(ctx, executed.BridgeID, executed.MessageID)
+		if err2 != nil {
+			return nil, err2
+		}
+		if ercToNativeMsg == nil {
+			return nil, nil
+		}
+		messageInfo = ercToNativeMessageToInfo(ercToNativeMsg)
+		events, err = p.buildMessageEvents(ctx, ercToNativeMsg.BridgeID, ercToNativeMsg.MsgHash, ercToNativeMsg.MsgHash)
+	} else {
+		messageInfo = messageToInfo(msg)
+		events, err = p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
+	}
 	if err != nil {
 		return nil, err
 	}
 	return &SearchResult{
-		Message:       messageToInfo(msg),
+		Message:       messageInfo,
 		RelatedEvents: events,
 	}, nil
 }
@@ -324,20 +369,20 @@ func (p *Presenter) searchExecutedInformationRequest(ctx context.Context, log *e
 	}, nil
 }
 
-func (p *Presenter) buildMessageEvents(ctx context.Context, msg *entity.Message) ([]*EventInfo, error) {
-	sent, err := p.repo.SentMessages.FindByMsgHash(ctx, msg.BridgeID, msg.MsgHash)
+func (p *Presenter) buildMessageEvents(ctx context.Context, bridgeID string, msgHash, messageID common.Hash) ([]*EventInfo, error) {
+	sent, err := p.repo.SentMessages.FindByMsgHash(ctx, bridgeID, msgHash)
 	if err != nil {
 		return nil, err
 	}
-	signed, err := p.repo.SignedMessages.FindByMsgHash(ctx, msg.BridgeID, msg.MsgHash)
+	signed, err := p.repo.SignedMessages.FindByMsgHash(ctx, bridgeID, msgHash)
 	if err != nil {
 		return nil, err
 	}
-	collected, err := p.repo.CollectedMessages.FindByMsgHash(ctx, msg.BridgeID, msg.MsgHash)
+	collected, err := p.repo.CollectedMessages.FindByMsgHash(ctx, bridgeID, msgHash)
 	if err != nil {
 		return nil, err
 	}
-	executed, err := p.repo.ExecutedMessages.FindByMessageID(ctx, msg.BridgeID, msg.MessageID)
+	executed, err := p.repo.ExecutedMessages.FindByMessageID(ctx, bridgeID, messageID)
 	if err != nil {
 		return nil, err
 	}

@@ -43,3 +43,13 @@ func informationRequestToInfo(req *entity.InformationRequest) *InformationReques
 		Executor:  req.Executor,
 	}
 }
+
+func ercToNativeMessageToInfo(req *entity.ErcToNativeMessage) *ErcToNativeMessageInfo {
+	return &ErcToNativeMessageInfo{
+		BridgeID:  req.BridgeID,
+		MsgHash:   req.MsgHash,
+		Direction: req.Direction,
+		Receiver:  req.Receiver,
+		Value:     req.Value,
+	}
+}

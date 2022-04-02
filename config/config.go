@@ -31,16 +31,24 @@ type ReloadJobConfig struct {
 	EndBlock   uint   `yaml:"end_block"`
 }
 
+type TokenConfig struct {
+	Address    common.Address `yaml:"address"`
+	StartBlock uint           `yaml:"start_block"`
+	EndBlock   uint           `yaml:"end_block"`
+}
+
 type BridgeSideConfig struct {
-	ChainName                string             `yaml:"chain"`
-	Chain                    *ChainConfig       `yaml:"-"`
-	Address                  common.Address     `yaml:"address"`
-	ValidatorContractAddress common.Address     `yaml:"validator_contract_address"`
-	StartBlock               uint               `yaml:"start_block"`
-	BlockConfirmations       uint               `yaml:"required_block_confirmations"`
-	MaxBlockRangeSize        uint               `yaml:"max_block_range_size"`
-	RefetchEvents            []*ReloadJobConfig `yaml:"refetch_events"`
-	WhitelistedSenders       []common.Address   `yaml:"whitelisted_senders"`
+	ChainName                     string             `yaml:"chain"`
+	Chain                         *ChainConfig       `yaml:"-"`
+	Address                       common.Address     `yaml:"address"`
+	ValidatorContractAddress      common.Address     `yaml:"validator_contract_address"`
+	StartBlock                    uint               `yaml:"start_block"`
+	BlockConfirmations            uint               `yaml:"required_block_confirmations"`
+	MaxBlockRangeSize             uint               `yaml:"max_block_range_size"`
+	RefetchEvents                 []*ReloadJobConfig `yaml:"refetch_events"`
+	WhitelistedSenders            []common.Address   `yaml:"whitelisted_senders"`
+	ErcToNativeTokens             []TokenConfig      `yaml:"erc_to_native_tokens"`
+	ErcToNativeBlacklistedSenders []common.Address   `yaml:"erc_to_native_blacklisted_senders"`
 }
 
 type BridgeAlertConfig struct {
@@ -49,10 +57,11 @@ type BridgeAlertConfig struct {
 }
 
 type BridgeConfig struct {
-	ID      string                        `yaml:"-"`
-	Home    *BridgeSideConfig             `yaml:"home"`
-	Foreign *BridgeSideConfig             `yaml:"foreign"`
-	Alerts  map[string]*BridgeAlertConfig `yaml:"alerts"`
+	ID            string                        `yaml:"-"`
+	IsErcToNative bool                          `yaml:"is_erc_to_native"`
+	Home          *BridgeSideConfig             `yaml:"home"`
+	Foreign       *BridgeSideConfig             `yaml:"foreign"`
+	Alerts        map[string]*BridgeAlertConfig `yaml:"alerts"`
 }
 
 type DBConfig struct {

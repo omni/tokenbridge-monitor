@@ -97,6 +97,36 @@ receivers:
           - type: button
             text: 'Silence :no_bell:'
             url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-stuck-erc-to-native-message
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: '{{ template "slack.stuck_erc_to_native_message.title" . }}'
+        text: '{{ template "slack.stuck_erc_to_native_message.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-unknown-erc-to-native-confirmation
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: '{{ template "slack.unknown_erc_to_native_confirmation.title" . }}'
+        text: '{{ template "slack.unknown_erc_to_native_confirmation.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-unknown-erc-to-native-execution
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: '{{ template "slack.unknown_erc_to_native_execution.title" . }}'
+        text: '{{ template "slack.unknown_erc_to_native_execution.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
   - name: slack-stuck-contract
     slack_configs:
       - send_resolved: true
@@ -138,7 +168,7 @@ route:
       matchers:
         - alertname = FailedMessageExecution
     - receiver: slack-stuck-information-request
-      group_by: [ "bridge_id", "chain_id", "block_number", "tx_hash" ]
+      group_by: [ "alertname", "bridge_id", "chain_id", "block_number", "tx_hash" ]
       matchers:
         - alertname = StuckInformationRequest
     - receiver: slack-unknown-information-signature
@@ -158,6 +188,18 @@ route:
       group_by: [ "..." ]
       matchers:
         - alertname = DifferentInformationSignatures
+    - receiver: slack-stuck-erc-to-native-message
+      group_by: [ "alertname", "bridge_id", "chain_id", "block_number", "tx_hash", "receiver", "value" ]
+      matchers:
+        - alertname = StuckErcToNativeMessage
+    - receiver: slack-unknown-erc-to-native-confirmation
+      group_by: [ "..." ]
+      matchers:
+        - alertname = UnknownErcToNativeMessageConfirmation
+    - receiver: slack-unknown-erc-to-native-execution
+      group_by: [ "..." ]
+      matchers:
+        - alertname = UnknownErcToNativeMessageExecution
     - receiver: slack-stuck-contract
       group_by: [ "..." ]
       matchers:

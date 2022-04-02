@@ -61,7 +61,7 @@ func (r *logsRepo) GetByID(ctx context.Context, id uint) (*entity.Log, error) {
 	return log, nil
 }
 
-func (r *logsRepo) FindByBlockRange(ctx context.Context, chainID string, addr common.Address, fromBlock uint, toBlock uint) ([]*entity.Log, error) {
+func (r *logsRepo) FindByBlockRange(ctx context.Context, chainID string, addr []common.Address, fromBlock uint, toBlock uint) ([]*entity.Log, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"chain_id": chainID, "address": addr}).

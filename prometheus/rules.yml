@@ -53,6 +53,24 @@ groups:
       expr: max_over_time(alert_monitor_different_information_signatures[5m]) > 0
       annotations:
         age: '{{ humanizeDuration $value }}'
+  - name: StuckErcToNativeMessage
+    rules:
+      - alert: StuckErcToNativeMessage
+        expr: max_over_time(alert_monitor_stuck_erc_to_native_message_confirmation[5m]) > 3600
+        annotations:
+          age: '{{ humanizeDuration $value }}'
+  - name: UnknownErcToNativeMessageConfirmation
+    rules:
+      - alert: UnknownErcToNativeMessageConfirmation
+        expr: max_over_time(alert_monitor_unknown_erc_to_native_message_confirmation[5m]) > 0
+        annotations:
+          age: '{{ humanizeDuration $value }}'
+  - name: UnknownErcToNativeMessageExecution
+    rules:
+      - alert: UnknownErcToNativeMessageExecution
+        expr: max_over_time(alert_monitor_unknown_erc_to_native_message_execution[5m]) > 0
+        annotations:
+          age: '{{ humanizeDuration $value }}'
   - name: StuckContractProgress
     rules:
     - alert: StuckContractProgress
