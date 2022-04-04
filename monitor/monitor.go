@@ -3,7 +3,7 @@ package monitor
 import (
 	"amb-monitor/config"
 	"amb-monitor/contract"
-	"amb-monitor/contract/constants"
+	"amb-monitor/contract/abi"
 	"amb-monitor/db"
 	"amb-monitor/entity"
 	"amb-monitor/ethclient"
@@ -63,11 +63,11 @@ func newContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 	if err != nil {
 		return nil, fmt.Errorf("failed to start eth client: %w", err)
 	}
-	abi := constants.AMB
+	contractAbi := abi.AMB
 	if bridgeCfg.IsErcToNative {
-		abi = constants.ERC_TO_NATIVE
+		contractAbi = abi.ERC_TO_NATIVE
 	}
-	bridgeContract := contract.NewContract(client, cfg.Address, abi)
+	bridgeContract := contract.NewContract(client, cfg.Address, contractAbi)
 	if cfg.ValidatorContractAddress == (common.Address{}) {
 		cfg.ValidatorContractAddress, err = bridgeContract.ValidatorContractAddress(ctx)
 		if err != nil {
@@ -137,32 +137,45 @@ func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo 
 	}
 	handlers := NewBridgeEventHandler(repo, cfg.ID, homeMonitor.client, foreignMonitor.client, cfg)
 	if cfg.IsErcToNative {
-		homeMonitor.eventHandlers["UserRequestForSignature"] = handlers.HandleErcToNativeUserRequestForSignature
-		homeMonitor.eventHandlers["SignedForAffirmation"] = handlers.HandleErcToNativeSignedForAffirmation
-		homeMonitor.eventHandlers["AffirmationCompleted"] = handlers.HandleErcToNativeAffirmationCompleted
-		foreignMonitor.eventHandlers["UserRequestForAffirmation"] = handlers.HandleErcToNativeUserRequestForAffirmation
-		foreignMonitor.eventHandlers["Transfer"] = handlers.HandleErcToNativeTransfer
-		foreignMonitor.eventHandlers["RelayedMessage"] = handlers.HandleErcToNativeRelayedMessage
+		homeMonitor.eventHandlers[abi.ErcToNativeUserRequestForSignature] = handlers.HandleErcToNativeUserRequestForSignature
+		homeMonitor.eventHandlers[abi.ErcToNativeSignedForAffirmation] = handlers.HandleErcToNativeSignedForAffirmation
+		homeMonitor.eventHandlers[abi.ErcToNativeAffirmationCompleted] = handlers.HandleErcToNativeAffirmationCompleted
+		foreignMonitor.eventHandlers[abi.ErcToNativeUserRequestForAffirmation] = handlers.HandleErcToNativeUserRequestForAffirmation
+		foreignMonitor.eventHandlers[abi.ErcToNativeTransfer] = handlers.HandleErcToNativeTransfer
+		foreignMonitor.eventHandlers[abi.ErcToNativeRelayedMessage] = handlers.HandleErcToNativeRelayedMessage
 	} else {
-		homeMonitor.eventHandlers["UserRequestForSignature"] = handlers.HandleUserRequestForSignature
-		homeMonitor.eventHandlers["UserRequestForSignature0"] = handlers.HandleLegacyUserRequestForSignature
-		homeMonitor.eventHandlers["SignedForAffirmation"] = handlers.HandleSignedForUserRequest
-		homeMonitor.eventHandlers["AffirmationCompleted"] = handlers.HandleAffirmationCompleted
-		homeMonitor.eventHandlers["AffirmationCompleted0"] = handlers.HandleAffirmationCompleted
-		homeMonitor.eventHandlers["UserRequestForInformation"] = handlers.HandleUserRequestForInformation
-		homeMonitor.eventHandlers["SignedForInformation"] = handlers.HandleSignedForInformation
-		homeMonitor.eventHandlers["InformationRetrieved"] = handlers.HandleInformationRetrieved
-		foreignMonitor.eventHandlers["UserRequestForAffirmation"] = handlers.HandleUserRequestForAffirmation
-		foreignMonitor.eventHandlers["UserRequestForAffirmation0"] = handlers.HandleLegacyUserRequestForAffirmation
-		foreignMonitor.eventHandlers["RelayedMessage"] = handlers.HandleRelayedMessage
-		foreignMonitor.eventHandlers["RelayedMessage0"] = handlers.HandleRelayedMessage
+		homeMonitor.eventHandlers[abi.UserRequestForSignature] = handlers.HandleUserRequestForSignature
+		homeMonitor.eventHandlers[abi.LegacyUserRequestForSignature] = handlers.HandleLegacyUserRequestForSignature
+		homeMonitor.eventHandlers[abi.SignedForAffirmation] = handlers.HandleSignedForUserRequest
+		homeMonitor.eventHandlers[abi.AffirmationCompleted] = handlers.HandleAffirmationCompleted
+		homeMonitor.eventHandlers[abi.LegacyAffirmationCompleted] = handlers.HandleAffirmationCompleted
+		homeMonitor.eventHandlers[abi.UserRequestForInformation] = handlers.HandleUserRequestForInformation
+		homeMonitor.eventHandlers[abi.SignedForInformation] = handlers.HandleSignedForInformation
+		homeMonitor.eventHandlers[abi.InformationRetrieved] = handlers.HandleInformationRetrieved
+		foreignMonitor.eventHandlers[abi.UserRequestForAffirmation] = handlers.HandleUserRequestForAffirmation
+		foreignMonitor.eventHandlers[abi.LegacyUserRequestForAffirmation] = handlers.HandleLegacyUserRequestForAffirmation
+		foreignMonitor.eventHandlers[abi.RelayedMessage] = handlers.HandleRelayedMessage
+		foreignMonitor.eventHandlers[abi.LegacyRelayedMessage] = handlers.HandleRelayedMessage
 	}
-	homeMonitor.eventHandlers["SignedForUserRequest"] = handlers.HandleSignedForUserRequest
-	homeMonitor.eventHandlers["CollectedSignatures"] = handlers.HandleCollectedSignatures
-	homeMonitor.eventHandlers["ValidatorAdded"] = handlers.HandleValidatorAdded
-	homeMonitor.eventHandlers["ValidatorRemoved"] = handlers.HandleValidatorRemoved
-	foreignMonitor.eventHandlers["ValidatorAdded"] = handlers.HandleValidatorAdded
-	foreignMonitor.eventHandlers["ValidatorRemoved"] = handlers.HandleValidatorRemoved
+	homeMonitor.eventHandlers[abi.SignedForUserRequest] = handlers.HandleSignedForUserRequest
+	homeMonitor.eventHandlers[abi.CollectedSignatures] = handlers.HandleCollectedSignatures
+	homeMonitor.eventHandlers[abi.ValidatorAdded] = handlers.HandleValidatorAdded
+	homeMonitor.eventHandlers[abi.ValidatorRemoved] = handlers.HandleValidatorRemoved
+	foreignMonitor.eventHandlers[abi.ValidatorAdded] = handlers.HandleValidatorAdded
+	foreignMonitor.eventHandlers[abi.ValidatorRemoved] = handlers.HandleValidatorRemoved
+
+	homeEvents := homeMonitor.contract.AllEvents()
+	foreignEvents := homeMonitor.contract.AllEvents()
+	for e := range homeMonitor.eventHandlers {
+		if !homeEvents[e] {
+			return nil, fmt.Errorf("home side contract does not have %s event in its ABI", e)
+		}
+	}
+	for e := range foreignMonitor.eventHandlers {
+		if !foreignEvents[e] {
+			return nil, fmt.Errorf("foreign side contract does not have %s event in its ABI", e)
+		}
+	}
 	return &Monitor{
 		cfg:            cfg,
 		logger:         logger,
@@ -211,12 +224,7 @@ func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, to
 	var logs []*entity.Log
 	for {
 		var err error
-		addresses := []common.Address{m.cfg.Address, m.cfg.ValidatorContractAddress}
-		if m.bridgeCfg.IsErcToNative {
-			for _, token := range m.bridgeCfg.Foreign.ErcToNativeTokens {
-				addresses = append(addresses, token.Address)
-			}
-		}
+		addresses := m.cfg.ContractAddresses(fromBlock, toBlock)
 		logs, err = m.repo.Logs.FindByBlockRange(ctx, m.client.ChainID, addresses, fromBlock, toBlock)
 		if err != nil {
 			m.logger.WithError(err).Error("can't find unprocessed logs in block range")

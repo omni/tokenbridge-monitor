@@ -3,7 +3,6 @@ package contract
 import (
 	"amb-monitor/entity"
 	"amb-monitor/ethclient"
-	"bytes"
 	"context"
 	"fmt"
 
@@ -22,9 +21,12 @@ func NewContract(client *ethclient.Client, addr common.Address, abi abi.ABI) *Co
 	return &Contract{addr, client, abi}
 }
 
-func (c *Contract) HasEvent(event string) bool {
-	_, ok := c.abi.Events[event]
-	return ok
+func (c *Contract) AllEvents() map[string]bool {
+	events := make(map[string]bool, len(c.abi.Events))
+	for _, event := range c.abi.Events {
+		events[event.String()] = true
+	}
+	return events
 }
 
 func (c *Contract) ValidatorContractAddress(ctx context.Context) (common.Address, error) {
@@ -59,7 +61,7 @@ func (c *Contract) ParseLog(log *entity.Log) (string, map[string]interface{}, er
 	var event *abi.Event
 	var indexed abi.Arguments
 	for _, e := range c.abi.Events {
-		if bytes.Equal(e.ID.Bytes(), log.Topic0.Bytes()) {
+		if e.ID == *log.Topic0 {
 			indexed = Indexed(e.Inputs)
 			if len(indexed) == len(topics) {
 				event = &e
@@ -79,7 +81,7 @@ func (c *Contract) ParseLog(log *entity.Log) (string, map[string]interface{}, er
 	if err := abi.ParseTopicsIntoMap(m, indexed, topics); err != nil {
 		return "", nil, fmt.Errorf("can't unpack topics: %w", err)
 	}
-	return event.Name, m, nil
+	return event.String(), m, nil
 }
 
 func Indexed(args abi.Arguments) abi.Arguments {

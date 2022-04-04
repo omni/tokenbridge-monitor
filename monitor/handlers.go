@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"amb-monitor/config"
-	"amb-monitor/contract/constants"
+	"amb-monitor/contract/abi"
 	"amb-monitor/entity"
 	"amb-monitor/ethclient"
 	"amb-monitor/repository"
@@ -77,7 +77,7 @@ func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log 
 		return fmt.Errorf("failed to get transaction receipt by hash %s: %w", log.TransactionHash, err)
 	}
 	for _, l := range receipt.Logs {
-		if len(l.Topics) > 0 && l.Topics[0] == constants.ERC_TO_NATIVE.Events["UserRequestForAffirmation"].ID {
+		if len(l.Topics) > 0 && l.Topics[0] == abi.ERC_TO_NATIVE.Events["UserRequestForAffirmation"].ID {
 			return nil
 		}
 	}

@@ -123,6 +123,20 @@ func (cfg *Config) init() error {
 	return nil
 }
 
+func (cfg *BridgeSideConfig) ContractAddresses(fromBlock, toBlock uint) []common.Address {
+	addresses := []common.Address{cfg.Address, cfg.ValidatorContractAddress}
+	for _, token := range cfg.ErcToNativeTokens {
+		if token.StartBlock > 0 && toBlock < token.StartBlock {
+			continue
+		}
+		if token.EndBlock > 0 && fromBlock > token.EndBlock {
+			continue
+		}
+		addresses = append(addresses, token.Address)
+	}
+	return addresses
+}
+
 func ReadConfig() (*Config, error) {
 	cfg := new(Config)
 	err := readYamlConfig(cfg)
