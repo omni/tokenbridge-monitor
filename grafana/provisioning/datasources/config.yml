@@ -8,10 +8,10 @@ datasources:
   typeName: PostgreSQL
   typeLogoUrl: public/app/plugins/datasource/postgres/img/postgresql_logo.svg
   access: proxy
-  url: 'postgres:5432'
-  password: 'pass'
-  user: postgres
-  database: db
+  url: ${PG_HOST}
+  password: ${PG_PASSWORD}
+  user: ${PG_USER}
+  database: ${PG_DB}
   basicAuth: false
   isDefault: true
   jsonData:
@@ -30,11 +30,13 @@ datasources:
   typeName: Prometheus
   typeLogoUrl: public/app/plugins/datasource/prometheus/img/prometheus_logo.svg
   access: proxy
-  url: 'http://prometheus:9090'
+  url: ${PROM_HOST}
   password: ''
   user: ''
   database: ''
   basicAuth: true
+  basicAuthUser: ${PROM_USER}
+  basicAuthPassword: ${PROM_PASSWORD}
   isDefault: false
   jsonData:
     httpMethod: POST
