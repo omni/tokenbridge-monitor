@@ -21,8 +21,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 2,
-  "iteration": 1648451955057,
+  "iteration": 1649742040975,
   "links": [],
   "panels": [
     {
@@ -62,7 +61,7 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 12,
+        "w": 10,
         "x": 0,
         "y": 1
       },
@@ -179,8 +178,8 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 6,
-        "w": 12,
-        "x": 12,
+        "w": 10,
+        "x": 10,
         "y": 1
       },
       "hiddenSeries": false,
@@ -279,6 +278,80 @@
       }
     },
     {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 28,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.1.5",
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*)\nFROM messages m JOIN sent_messages sm ON sm.bridge_id = m.bridge_id AND sm.msg_hash = m.msg_hash\nLEFT JOIN executed_messages em ON em.bridge_id = m.bridge_id AND em.message_id = m.message_id\nJOIN logs l ON l.id = sm.log_id\nJOIN block_timestamps bt ON bt.chain_id = l.chain_id AND bt.block_number = l.block_number\nWHERE m.bridge_id = '$bridge' AND em.log_id IS NULL AND m.data_type IN (0, 128) AND m.direction::direction_enum = 'foreign_to_home'\n",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Number of pending messages",
+      "type": "stat"
+    },
+    {
       "collapsed": false,
       "datasource": null,
       "gridPos": {
@@ -315,7 +388,7 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 12,
+        "w": 10,
         "x": 0,
         "y": 8
       },
@@ -432,8 +505,8 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 6,
-        "w": 12,
-        "x": 12,
+        "w": 10,
+        "x": 10,
         "y": 8
       },
       "hiddenSeries": false,
@@ -532,6 +605,80 @@
       }
     },
     {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 20,
+        "y": 8
+      },
+      "id": 29,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.1.5",
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*)\nFROM messages m JOIN sent_messages sm ON sm.bridge_id = m.bridge_id AND sm.msg_hash = m.msg_hash\nLEFT JOIN executed_messages em ON em.bridge_id = m.bridge_id AND em.message_id = m.message_id\nJOIN logs l ON l.id = sm.log_id\nJOIN block_timestamps bt ON bt.chain_id = l.chain_id AND bt.block_number = l.block_number\nWHERE m.bridge_id = '$bridge' AND em.log_id IS NULL AND m.data_type IN (0, 128) AND m.direction::direction_enum = 'home_to_foreign'\n",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Number of pending messages",
+      "type": "stat"
+    },
+    {
       "collapsed": false,
       "datasource": null,
       "gridPos": {
@@ -568,7 +715,7 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 12,
+        "w": 10,
         "x": 0,
         "y": 15
       },
@@ -685,8 +832,8 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 6,
-        "w": 12,
-        "x": 12,
+        "w": 10,
+        "x": 10,
         "y": 15
       },
       "hiddenSeries": false,
@@ -783,6 +930,80 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 20,
+        "y": 15
+      },
+      "id": 30,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.1.5",
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*)\nFROM information_requests m JOIN sent_information_requests sm ON sm.bridge_id = m.bridge_id AND sm.message_id = m.message_id\nLEFT JOIN executed_information_requests em ON em.bridge_id = m.bridge_id AND em.message_id = m.message_id\nJOIN logs l ON l.id = sm.log_id\nJOIN block_timestamps bt ON bt.chain_id = l.chain_id AND bt.block_number = l.block_number\nWHERE m.bridge_id = '$bridge' AND em.log_id IS NULL AND m.direction::direction_enum = 'foreign_to_home'\n",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Number of pending messages",
+      "type": "stat"
     },
     {
       "collapsed": false,
@@ -1571,5 +1792,5 @@
   "timezone": "",
   "title": "AMB",
   "uid": "rxl6GONnk",
-  "version": 4
+  "version": 1
 }
