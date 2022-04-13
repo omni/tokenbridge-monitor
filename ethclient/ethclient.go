@@ -20,6 +20,7 @@ type Client struct {
 	timeout   time.Duration
 	rawClient *rpc.Client
 	client    *ethclient.Client
+	signer    types.Signer
 }
 
 func NewClient(url string, timeout time.Duration, chainID string) (*Client, error) {
@@ -46,6 +47,7 @@ func NewClient(url string, timeout time.Duration, chainID string) (*Client, erro
 	if rpcChainID.String() != chainID {
 		return nil, fmt.Errorf("rpc url retunrned different chainID, expected %s, got %s", chainID, rpcChainID)
 	}
+	client.signer = types.NewLondonSigner(rpcChainID)
 	return client, nil
 }
 
@@ -153,6 +155,10 @@ func (c *Client) CallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte
 	res, err := c.client.CallContract(ctx, msg, nil)
 	ObserveError(c.ChainID, c.url, "eth_call", err)
 	return res, err
+}
+
+func (c *Client) TransactionSender(tx *types.Transaction) (common.Address, error) {
+	return c.signer.Sender(tx)
 }
 
 func toFilterArg(q ethereum.FilterQuery) (interface{}, error) {

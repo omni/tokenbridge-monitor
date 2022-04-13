@@ -237,9 +237,6 @@
                 "type": "integer"
               }
             },
-            "required": [
-              "event"
-            ],
             "additionalProperties": false
           }
         },

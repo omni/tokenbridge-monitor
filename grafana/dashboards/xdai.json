@@ -21,7 +21,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1649577198271,
+  "iteration": 1649851949807,
   "links": [],
   "panels": [
     {
@@ -733,7 +733,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 351
+                "value": 389
               }
             ]
           },
@@ -745,7 +745,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 241
+                "value": null
               }
             ]
           },
@@ -757,7 +757,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 201
+                "value": null
               },
               {
                 "id": "unit",
@@ -773,11 +773,39 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 237
+                "value": null
               },
               {
                 "id": "unit",
                 "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sender"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.width",
+                "value": 357
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "direction"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 151
               }
             ]
           }
@@ -801,7 +829,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT m.direction, concat('0x', encode(m.receiver, 'hex')) as receiver, sum(m.value) / 1e18 as total, avg(m.value) / 1e18 as average, count(*)\nFROM erc_to_native_messages m\nWHERE m.bridge_id = '$bridge' GROUP BY m.direction, m.receiver\nHAVING count(*) >= 10\nORDER BY count(*) DESC\n",
+          "rawSql": "SELECT m.direction, concat('0x', encode(m.sender, 'hex')) as sender, concat('0x', encode(m.receiver, 'hex')) as receiver, sum(m.value) / 1e18 as total, avg(m.value) / 1e18 as average, count(*)\nFROM erc_to_native_messages m\nWHERE m.bridge_id = '$bridge' GROUP BY m.direction, m.sender, m.receiver\nHAVING count(*) >= 10\nORDER BY count(*) DESC\n",
           "refId": "A",
           "select": [
             [
@@ -1331,5 +1359,5 @@
   "timezone": "",
   "title": "XDAI",
   "uid": "h48F4hIa2",
-  "version": 1
+  "version": 9
 }

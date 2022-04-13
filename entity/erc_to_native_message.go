@@ -12,6 +12,7 @@ type ErcToNativeMessage struct {
 	BridgeID  string         `db:"bridge_id"`
 	MsgHash   common.Hash    `db:"msg_hash"`
 	Direction Direction      `db:"direction"`
+	Sender    common.Address `db:"sender"`
 	Receiver  common.Address `db:"receiver"`
 	Value     string         `db:"value"`
 	CreatedAt *time.Time     `db:"created_at"`

@@ -24,6 +24,13 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/etc/grafana/dashboards
       - grafana-storage:/var/lib/grafana
+    environment:
+      PG_HOST: 'postgres:5432'
+      PG_USER: 'postgres'
+      PG_PASSWORD: 'pass'
+      PG_DB: 'db'
+      PROM_USER: 'admin'
+      PROM_HOST: 'http://prometheus:9090'
     ports:
       - "3000:3000"
   prometheus:

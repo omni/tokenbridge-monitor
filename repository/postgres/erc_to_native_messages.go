@@ -20,9 +20,9 @@ func NewErcToNativeMessagesRepo(table string, db *db.DB) entity.ErcToNativeMessa
 
 func (r *ercToNativeMessagesRepo) Ensure(ctx context.Context, msg *entity.ErcToNativeMessage) error {
 	q, args, err := sq.Insert(r.table).
-		Columns("bridge_id", "msg_hash", "direction", "receiver", "value").
-		Values(msg.BridgeID, msg.MsgHash, msg.Direction, msg.Receiver, msg.Value).
-		Suffix("ON CONFLICT (bridge_id, msg_hash) DO UPDATE SET updated_at = NOW()").
+		Columns("bridge_id", "msg_hash", "direction", "sender", "receiver", "value").
+		Values(msg.BridgeID, msg.MsgHash, msg.Direction, msg.Sender, msg.Receiver, msg.Value).
+		Suffix("ON CONFLICT (bridge_id, msg_hash) DO UPDATE SET sender = EXCLUDED.sender, updated_at = NOW()").
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {

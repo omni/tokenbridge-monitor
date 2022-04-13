@@ -288,8 +288,6 @@ func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
 func (m *ContractMonitor) RefetchEvents(lastFetchedBlock uint) {
 	m.logger.Info("refetching old events")
 	for _, job := range m.cfg.RefetchEvents {
-		topic := crypto.Keccak256Hash([]byte(job.Event))
-
 		fromBlock := job.StartBlock
 		if fromBlock < m.cfg.StartBlock {
 			fromBlock = m.cfg.StartBlock
@@ -308,11 +306,15 @@ func (m *ContractMonitor) RefetchEvents(lastFetchedBlock uint) {
 				"from_block": fromBlock,
 				"to_block":   end,
 			}).Info("scheduling new block range logs search")
-			m.blocksRangeChan <- &BlocksRange{
-				From:  fromBlock,
-				To:    end,
-				Topic: &topic,
+			br := &BlocksRange{
+				From: fromBlock,
+				To:   end,
 			}
+			if job.Event != "" {
+				topic := crypto.Keccak256Hash([]byte(job.Event))
+				br.Topic = &topic
+			}
+			m.blocksRangeChan <- br
 			fromBlock = end + 1
 		}
 	}

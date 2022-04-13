@@ -72,12 +72,12 @@ func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log 
 			return nil
 		}
 	}
-	receipt, err := p.foreignClient.TransactionReceiptByHash(ctx, log.TransactionHash)
+	logs, err := p.repo.Logs.FindByTxHash(ctx, log.TransactionHash)
 	if err != nil {
-		return fmt.Errorf("failed to get transaction receipt by hash %s: %w", log.TransactionHash, err)
+		return fmt.Errorf("failed to get transaction logs for %s: %w", log.TransactionHash, err)
 	}
-	for _, l := range receipt.Logs {
-		if len(l.Topics) > 0 && l.Topics[0] == abi.ERC_TO_NATIVE.Events["UserRequestForAffirmation"].ID {
+	for _, l := range logs {
+		if l.Topic0 != nil && *l.Topic0 == abi.ERC_TO_NATIVE.Events["UserRequestForAffirmation"].ID {
 			return nil
 		}
 	}
@@ -92,6 +92,7 @@ func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log 
 		BridgeID:  p.bridgeID,
 		Direction: entity.DirectionForeignToHome,
 		MsgHash:   msgHash,
+		Sender:    from,
 		Receiver:  from,
 		Value:     value.String(),
 	}
@@ -116,14 +117,35 @@ func (p *BridgeEventHandler) HandleErcToNativeUserRequestForAffirmation(ctx cont
 	msg = append(msg, log.TransactionHash[:]...)
 	msgHash := crypto.Keccak256Hash(msg)
 
+	logs, err := p.repo.Logs.FindByTxHash(ctx, log.TransactionHash)
+	if err != nil {
+		return fmt.Errorf("failed to get transaction logs for %s: %w", log.TransactionHash, err)
+	}
+	var sender common.Address
+	for _, l := range logs {
+		if l.Topic0 != nil && *l.Topic0 == abi.ERC_TO_NATIVE.Events["Transfer"].ID && l.Topic1 != nil && l.Topic2 != nil && len(l.Data) == 32 {
+			transferSender := common.BytesToAddress(l.Topic1[:])
+			transferReceiver := common.BytesToAddress(l.Topic2[:])
+			transferValue := new(big.Int).SetBytes(l.Data)
+			if transferReceiver == p.cfg.Foreign.Address && value.Cmp(transferValue) == 0 {
+				for _, t := range p.cfg.Foreign.ErcToNativeTokens {
+					if l.Address == t.Address && l.BlockNumber >= t.StartBlock && (t.EndBlock == 0 || l.BlockNumber <= t.EndBlock) {
+						sender = transferSender
+					}
+				}
+			}
+		}
+	}
+
 	message := &entity.ErcToNativeMessage{
 		BridgeID:  p.bridgeID,
 		Direction: entity.DirectionForeignToHome,
 		MsgHash:   msgHash,
+		Sender:    sender,
 		Receiver:  recipient,
 		Value:     value.String(),
 	}
-	err := p.repo.ErcToNativeMessages.Ensure(ctx, message)
+	err = p.repo.ErcToNativeMessages.Ensure(ctx, message)
 	if err != nil {
 		return err
 	}
@@ -174,14 +196,27 @@ func (p *BridgeEventHandler) HandleErcToNativeUserRequestForSignature(ctx contex
 	msg = append(msg, p.cfg.Foreign.Address[:]...)
 	msgHash := crypto.Keccak256Hash(msg)
 
+	sender := recipient
+	tx, err := p.homeClient.TransactionByHash(ctx, log.TransactionHash)
+	if err != nil {
+		return err
+	}
+	if tx.Value().Cmp(value) == 0 {
+		sender, err = p.homeClient.TransactionSender(tx)
+		if err != nil {
+			return fmt.Errorf("failed to extract transaction sender: %w", err)
+		}
+	}
+
 	message := &entity.ErcToNativeMessage{
 		BridgeID:  p.bridgeID,
 		Direction: entity.DirectionHomeToForeign,
 		MsgHash:   msgHash,
+		Sender:    sender,
 		Receiver:  recipient,
 		Value:     value.String(),
 	}
-	err := p.repo.ErcToNativeMessages.Ensure(ctx, message)
+	err = p.repo.ErcToNativeMessages.Ensure(ctx, message)
 	if err != nil {
 		return err
 	}
