@@ -8,7 +8,7 @@ Stuck AMB message confirmation
 *Chain ID:* {{ .CommonLabels.chain_id }}
 *Block number:* {{ .CommonLabels.block_number }}
 *Age:* {{ .CommonAnnotations.age }}
-*Collected confirmations:* {{ .CommonLabels.count }}
+*Collected confirmations:* {{ $count := "" }}{{ range .Alerts }}{{ $count = .Labels.count }}{{ end }}{{ $count }}
 *Tx:* {{ template "explorer.tx.link" .CommonLabels }}
 {{- end }}
 
@@ -58,7 +58,7 @@ Stuck AMB information request
 *Chain ID:* {{ .CommonLabels.chain_id }}
 *Block number:* {{ .CommonLabels.block_number }}
 *Age:* {{ .CommonAnnotations.age }}
-*Collected confirmations:* {{ .CommonLabels.count }}
+*Collected confirmations:* {{ $count := "" }}{{ range .Alerts }}{{ $count = .Labels.count }}{{ end }}{{ $count }}
 *Tx:* {{ template "explorer.tx.link" .CommonLabels }}
 {{- end }}
 
@@ -111,7 +111,7 @@ Validators signed different AMB information request results
 *Block number:* {{ .CommonLabels.block_number }}
 *Age:* {{ .CommonAnnotations.age }}
 *Message id:* {{ .CommonLabels.message_id }}
-*Distinct information signatures:* {{ .CommonLabels.count }}
+*Distinct information signatures:* {{ $count := "" }}{{ range .Alerts }}{{ $count = .Labels.count }}{{ end }}{{ $count }}
 *Tx:* {{ template "explorer.tx.link" .CommonLabels }}
 {{- end }}
 
@@ -123,7 +123,7 @@ Stuck ERC_TO_NATIVE message confirmation
 *Chain ID:* {{ .CommonLabels.chain_id }}
 *Block number:* {{ .CommonLabels.block_number }}
 *Age:* {{ .CommonAnnotations.age }}
-*Collected confirmations:* {{ .CommonLabels.count }}
+*Collected confirmations:* {{ $count := "" }}{{ range .Alerts }}{{ $count = .Labels.count }}{{ end }}{{ $count }}
 *Receiver:* {{ .CommonLabels.receiver }}
 *Value:* {{ .CommonLabels.value }}
 *Tx:* {{ template "explorer.tx.link" .CommonLabels }}

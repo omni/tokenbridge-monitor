@@ -62,6 +62,7 @@ func (r *signedInformationRequestsRepo) FindByMessageID(ctx context.Context, bri
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"bridge_id": bridgeID, "message_id": messageID}).
+		OrderBy("signer").
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {

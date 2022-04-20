@@ -59,6 +59,7 @@ func (r *signedMessagesRepo) FindByMsgHash(ctx context.Context, bridgeID string,
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"bridge_id": bridgeID, "msg_hash": msgHash}).
+		OrderBy("signer").
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
