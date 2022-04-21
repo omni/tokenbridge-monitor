@@ -21,7 +21,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1649851949807,
+  "iteration": 1650550279410,
   "links": [],
   "panels": [
     {
@@ -327,7 +327,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT sum(m.value / 1e18)\nFROM erc_to_native_messages m JOIN sent_messages sm ON sm.bridge_id = m.bridge_id AND sm.msg_hash = m.msg_hash\nLEFT JOIN executed_messages em ON em.bridge_id = m.bridge_id AND em.message_id = m.msg_hash\nJOIN logs l ON l.id = sm.log_id\nJOIN block_timestamps bt ON bt.chain_id = l.chain_id AND bt.block_number = l.block_number\nWHERE m.bridge_id = '$bridge' AND em.log_id IS NULL AND m.value > 0 AND m.direction::direction_enum = 'foreign_to_home'\n",
+          "rawSql": "SELECT coalesce(sum(m.value / 1e18), 0)\nFROM erc_to_native_messages m JOIN sent_messages sm ON sm.bridge_id = m.bridge_id AND sm.msg_hash = m.msg_hash\nLEFT JOIN executed_messages em ON em.bridge_id = m.bridge_id AND em.message_id = m.msg_hash\nJOIN logs l ON l.id = sm.log_id\nJOIN block_timestamps bt ON bt.chain_id = l.chain_id AND bt.block_number = l.block_number\nWHERE m.bridge_id = '$bridge' AND em.log_id IS NULL AND m.value > 0 AND m.direction::direction_enum = 'foreign_to_home'\n",
           "refId": "A",
           "select": [
             [
@@ -655,7 +655,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT sum(m.value / 1e18)\nFROM erc_to_native_messages m JOIN sent_messages sm ON sm.bridge_id = m.bridge_id AND sm.msg_hash = m.msg_hash\nLEFT JOIN executed_messages em ON em.bridge_id = m.bridge_id AND em.message_id = m.msg_hash\nJOIN logs l ON l.id = sm.log_id\nJOIN block_timestamps bt ON bt.chain_id = l.chain_id AND bt.block_number = l.block_number\nWHERE m.bridge_id = '$bridge' AND em.log_id IS NULL AND m.value > 0 AND m.direction::direction_enum = 'home_to_foreign'\n",
+          "rawSql": "SELECT coalesce(sum(m.value / 1e18), 0)\nFROM erc_to_native_messages m JOIN sent_messages sm ON sm.bridge_id = m.bridge_id AND sm.msg_hash = m.msg_hash\nLEFT JOIN executed_messages em ON em.bridge_id = m.bridge_id AND em.message_id = m.msg_hash\nJOIN logs l ON l.id = sm.log_id\nJOIN block_timestamps bt ON bt.chain_id = l.chain_id AND bt.block_number = l.block_number\nWHERE m.bridge_id = '$bridge' AND em.log_id IS NULL AND m.value > 0 AND m.direction::direction_enum = 'home_to_foreign'\n",
           "refId": "A",
           "select": [
             [
@@ -1359,5 +1359,5 @@
   "timezone": "",
   "title": "XDAI",
   "uid": "h48F4hIa2",
-  "version": 9
+  "version": 3
 }
