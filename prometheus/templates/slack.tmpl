@@ -124,6 +124,7 @@ Stuck ERC_TO_NATIVE message confirmation
 *Block number:* {{ .CommonLabels.block_number }}
 *Age:* {{ .CommonAnnotations.age }}
 *Collected confirmations:* {{ $count := "" }}{{ range .Alerts }}{{ $count = .Labels.count }}{{ end }}{{ $count }}
+*Sender:* {{ .CommonLabels.sender }}
 *Receiver:* {{ .CommonLabels.receiver }}
 *Value:* {{ .CommonLabels.value }}
 *Tx:* {{ template "explorer.tx.link" .CommonLabels }}

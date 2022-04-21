@@ -666,6 +666,7 @@ type StuckErcToNativeMessage struct {
 	TransactionHash common.Hash    `db:"transaction_hash"`
 	MsgHash         common.Hash    `db:"msg_hash"`
 	Count           uint64         `db:"count"`
+	Sender          common.Address `db:"sender"`
 	Receiver        common.Address `db:"receiver"`
 	Value           string         `db:"value"`
 }
@@ -678,6 +679,7 @@ func (c *StuckErcToNativeMessage) AlertValues() AlertValues {
 			"tx_hash":      c.TransactionHash.String(),
 			"msg_hash":     c.MsgHash.String(),
 			"count":        strconv.FormatUint(c.Count, 10),
+			"sender":       c.Sender.String(),
 			"receiver":     c.Receiver.String(),
 			"value":        c.Value,
 		},
@@ -693,6 +695,7 @@ func (p *DBAlertsProvider) FindStuckErcToNativeMessages(ctx context.Context, par
 		       sm.msg_hash,
 		       count(s.log_id) as count,
 		       EXTRACT(EPOCH FROM now() - ts.timestamp)::int as age,
+		       m.sender,
 		       m.receiver,
 		       m.value / 1e18 as value
 		FROM sent_messages sm
@@ -713,6 +716,7 @@ func (p *DBAlertsProvider) FindStuckErcToNativeMessages(ctx context.Context, par
 		       sm.msg_hash,
 		       count(s.log_id) as count,
 		       EXTRACT(EPOCH FROM now() - ts.timestamp)::int as age,
+		       m.sender,
 		       m.receiver,
 		       m.value / 1e18 as value
 		FROM sent_messages sm
