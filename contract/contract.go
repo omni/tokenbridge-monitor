@@ -1,10 +1,10 @@
 package contract
 
 import (
-	"amb-monitor/entity"
-	"amb-monitor/ethclient"
 	"context"
 	"fmt"
+	"tokenbridge-monitor/entity"
+	"tokenbridge-monitor/ethclient"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"

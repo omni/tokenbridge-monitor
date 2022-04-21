@@ -1,9 +1,9 @@
 package monitor
 
 import (
-	"amb-monitor/entity"
 	"bytes"
 	"encoding/binary"
+	"tokenbridge-monitor/entity"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"

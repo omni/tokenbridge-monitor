@@ -1,10 +1,10 @@
 package postgres
 
 import (
-	"amb-monitor/db"
-	"amb-monitor/entity"
 	"context"
 	"fmt"
+	"tokenbridge-monitor/db"
+	"tokenbridge-monitor/entity"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ethereum/go-ethereum/common"

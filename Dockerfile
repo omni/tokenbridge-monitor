@@ -13,8 +13,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
 
 COPY db/migrations ./db/migrations/
-COPY --from=build /app/amb-monitor ./
+COPY --from=build /app/tokenbridge-monitor ./
 
 EXPOSE 3333
 
-ENTRYPOINT ./amb-monitor
+ENTRYPOINT ./tokenbridge-monitor

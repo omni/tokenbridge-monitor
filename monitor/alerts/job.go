@@ -1,9 +1,9 @@
 package alerts
 
 import (
-	"amb-monitor/logging"
 	"context"
 	"time"
+	"tokenbridge-monitor/logging"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"

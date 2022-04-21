@@ -1,7 +1,7 @@
 package monitor
 
 import (
-	"amb-monitor/entity"
+	"tokenbridge-monitor/entity"
 
 	"github.com/ethereum/go-ethereum/common"
 )

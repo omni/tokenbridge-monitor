@@ -1,5 +1,5 @@
-# Tokenbridge AMB monitor
-This repo provides a real-time monitoring solution for the AMB bridge contracts.
+# Tokenbridge monitor
+This repo provides a real-time monitoring solution for the AMB/XDAI bridge contracts.
 It performs a real-time chain indexing for the configured bridged instances, and alerts in case of some important events or outages. 
 
 ## Tech layout
@@ -57,8 +57,8 @@ docker-compose -f docker-compose.dev.yml up monitor
 For final deployment, you will need a VM with a static IP and a DNS domain name attached to that IP.
 SSL certificates will be managed by a Traefik and Let's Encrypt automatically. 
 ```bash
-git clone https://github.com/poanetwork/amb-monitor.git
-cd amb-monitor
+git clone https://github.com/poanetwork/tokenbridge-monitor.git
+cd tokenbridge-monitor
 
 cp .env.example .env
 nano .env # put valid INFURA_PROJECT_KEY and valid domain names

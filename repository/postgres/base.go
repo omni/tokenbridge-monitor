@@ -1,7 +1,7 @@
 package postgres
 
 import (
-	"amb-monitor/db"
+	"tokenbridge-monitor/db"
 )
 
 type basePostgresRepo struct {

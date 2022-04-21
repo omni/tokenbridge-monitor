@@ -1,14 +1,14 @@
 package monitor
 
 import (
-	"amb-monitor/config"
-	"amb-monitor/contract/abi"
-	"amb-monitor/entity"
-	"amb-monitor/ethclient"
-	"amb-monitor/repository"
 	"context"
 	"fmt"
 	"math/big"
+	"tokenbridge-monitor/config"
+	"tokenbridge-monitor/contract/abi"
+	"tokenbridge-monitor/entity"
+	"tokenbridge-monitor/ethclient"
+	"tokenbridge-monitor/repository"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"

@@ -1,12 +1,12 @@
 package db
 
 import (
-	"amb-monitor/config"
 	"context"
 	"database/sql"
 	"fmt"
 	"runtime"
 	"strings"
+	"tokenbridge-monitor/config"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx"

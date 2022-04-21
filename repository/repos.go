@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"amb-monitor/db"
-	"amb-monitor/entity"
-	"amb-monitor/repository/postgres"
+	"tokenbridge-monitor/db"
+	"tokenbridge-monitor/entity"
+	"tokenbridge-monitor/repository/postgres"
 )
 
 type Repo struct {

@@ -1,16 +1,6 @@
 package monitor
 
 import (
-	"amb-monitor/config"
-	"amb-monitor/contract"
-	"amb-monitor/contract/abi"
-	"amb-monitor/db"
-	"amb-monitor/entity"
-	"amb-monitor/ethclient"
-	"amb-monitor/logging"
-	"amb-monitor/monitor/alerts"
-	"amb-monitor/repository"
-	"amb-monitor/utils"
 	"context"
 	"database/sql"
 	"errors"
@@ -19,6 +9,16 @@ import (
 	"sort"
 	"sync"
 	"time"
+	"tokenbridge-monitor/config"
+	"tokenbridge-monitor/contract"
+	"tokenbridge-monitor/contract/abi"
+	"tokenbridge-monitor/db"
+	"tokenbridge-monitor/entity"
+	"tokenbridge-monitor/ethclient"
+	"tokenbridge-monitor/logging"
+	"tokenbridge-monitor/monitor/alerts"
+	"tokenbridge-monitor/repository"
+	"tokenbridge-monitor/utils"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"

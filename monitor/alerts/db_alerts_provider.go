@@ -1,11 +1,11 @@
 package alerts
 
 import (
-	"amb-monitor/db"
 	"context"
 	"fmt"
 	"strconv"
 	"time"
+	"tokenbridge-monitor/db"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ethereum/go-ethereum/common"

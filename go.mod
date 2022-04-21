@@ -1,4 +1,4 @@
-module amb-monitor
+module tokenbridge-monitor
 
 go 1.17
 

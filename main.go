@@ -1,16 +1,16 @@
 package main
 
 import (
-	"amb-monitor/config"
-	"amb-monitor/db"
-	"amb-monitor/logging"
-	"amb-monitor/monitor"
-	"amb-monitor/presenter"
-	"amb-monitor/repository"
 	"context"
 	"net/http"
 	"os"
 	"os/signal"
+	"tokenbridge-monitor/config"
+	"tokenbridge-monitor/db"
+	"tokenbridge-monitor/logging"
+	"tokenbridge-monitor/monitor"
+	"tokenbridge-monitor/presenter"
+	"tokenbridge-monitor/repository"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )

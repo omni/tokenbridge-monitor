@@ -1,8 +1,8 @@
 package presenter
 
 import (
-	"amb-monitor/entity"
 	"fmt"
+	"tokenbridge-monitor/entity"
 )
 
 var formats = map[string]string{

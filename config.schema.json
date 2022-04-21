@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/poanetwork/amb-monitor/blob/master/config.schema.json",
+  "$id": "https://github.com/poanetwork/tokenbridge-monitor/blob/master/config.schema.json",
   "title": "AMB monitor config",
   "type": "object",
   "properties": {

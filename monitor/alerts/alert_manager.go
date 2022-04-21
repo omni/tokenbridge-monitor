@@ -1,12 +1,12 @@
 package alerts
 
 import (
-	"amb-monitor/config"
-	"amb-monitor/db"
-	"amb-monitor/logging"
 	"context"
 	"fmt"
 	"time"
+	"tokenbridge-monitor/config"
+	"tokenbridge-monitor/db"
+	"tokenbridge-monitor/logging"
 )
 
 type AlertManager struct {
