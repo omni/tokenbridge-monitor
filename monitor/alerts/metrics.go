@@ -112,6 +112,6 @@ var (
 			Name:        "stuck_erc_to_native_message_confirmation",
 			Help:        "Shows ERC_TO_NATIVE message for which signatures are still in the pending state.",
 			ConstLabels: prometheus.Labels{"bridge_id": bridge},
-		}, []string{"chain_id", "block_number", "tx_hash", "msg_hash", "count", "receiver", "value"})
+		}, []string{"chain_id", "block_number", "tx_hash", "msg_hash", "count", "sender", "receiver", "value"})
 	}
 )
