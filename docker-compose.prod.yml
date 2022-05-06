@@ -42,8 +42,8 @@ services:
       - grafana-storage:/var/lib/grafana
     environment:
       PG_HOST: 'postgres:5432'
-      PG_USER: 'postgres'
-      PG_PASSWORD: 'pass'
+      PG_USER: 'read_user'
+      PG_PASSWORD: 'read_user_pass'
       PG_DB: 'db'
       PROM_USER: 'admin'
       PROM_HOST: 'http://prometheus:9090'
