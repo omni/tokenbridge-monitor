@@ -73,3 +73,16 @@ type ValidatorsResult struct {
 	Foreign    *ValidatorSideResult
 	Validators []*ValidatorInfo
 }
+
+type LogResult struct {
+	LogID       uint
+	ChainID     string
+	Address     common.Address
+	Topic0      *common.Hash `json:",omitempty"`
+	Topic1      *common.Hash `json:",omitempty"`
+	Topic2      *common.Hash `json:",omitempty"`
+	Topic3      *common.Hash `json:",omitempty"`
+	Data        hexutil.Bytes
+	TxHash      common.Hash
+	BlockNumber uint
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"tokenbridge-monitor/config"
 	"tokenbridge-monitor/entity"
@@ -40,13 +41,13 @@ func (p *Presenter) Serve(addr string) error {
 	p.root.Get("/tx/{txHash:0x[0-9a-fA-F]{64}}", p.wrapJSONHandler(p.SearchTx))
 	p.root.Get("/block/{chainID:[0-9]+}/{blockNumber:[0-9]+}", p.wrapJSONHandler(p.SearchBlock))
 	p.root.Get("/bridge/{bridgeID:[0-9a-zA-Z_\\-]+}/validators", p.wrapJSONHandler(p.SearchValidators))
+	p.root.Get("/logs", p.wrapJSONHandler(p.SearchLogs))
 	return http.ListenAndServe(addr, p.root)
 }
 
-func (p *Presenter) wrapJSONHandler(handler func(ctx context.Context) (interface{}, error)) http.HandlerFunc {
+func (p *Presenter) wrapJSONHandler(handler func(r *http.Request) (interface{}, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		res, err := handler(ctx)
+		res, err := handler(r)
 		if err != nil {
 			p.logger.WithError(err).Error("failed to handle request")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -61,8 +62,9 @@ func (p *Presenter) wrapJSONHandler(handler func(ctx context.Context) (interface
 	}
 }
 
-func (p *Presenter) SearchTx(ctx context.Context) (interface{}, error) {
-	txHash := common.HexToHash(chi.URLParamFromCtx(ctx, "txHash"))
+func (p *Presenter) SearchTx(r *http.Request) (interface{}, error) {
+	ctx := r.Context()
+	txHash := common.HexToHash(chi.URLParam(r, "txHash"))
 
 	logs, err := p.repo.Logs.FindByTxHash(ctx, txHash)
 	if err != nil {
@@ -72,9 +74,10 @@ func (p *Presenter) SearchTx(ctx context.Context) (interface{}, error) {
 	return p.searchInLogs(ctx, logs), nil
 }
 
-func (p *Presenter) SearchBlock(ctx context.Context) (interface{}, error) {
-	chainID := chi.URLParamFromCtx(ctx, "chainID")
-	blockNumber, err := strconv.ParseUint(chi.URLParamFromCtx(ctx, "blockNumber"), 10, 64)
+func (p *Presenter) SearchBlock(r *http.Request) (interface{}, error) {
+	ctx := r.Context()
+	chainID := chi.URLParam(r, "chainID")
+	blockNumber, err := strconv.ParseUint(chi.URLParam(r, "blockNumber"), 10, 64)
 	if err != nil {
 		p.logger.WithError(err).Error("failed to parse blockNumber")
 		return nil, err
@@ -89,8 +92,9 @@ func (p *Presenter) SearchBlock(ctx context.Context) (interface{}, error) {
 	return p.searchInLogs(ctx, logs), nil
 }
 
-func (p *Presenter) SearchValidators(ctx context.Context) (interface{}, error) {
-	bridgeID := chi.URLParamFromCtx(ctx, "bridgeID")
+func (p *Presenter) SearchValidators(r *http.Request) (interface{}, error) {
+	ctx := r.Context()
+	bridgeID := chi.URLParam(r, "bridgeID")
 
 	if p.bridges[bridgeID] == nil {
 		return nil, fmt.Errorf("bridge %q not found", bridgeID)
@@ -153,6 +157,89 @@ func (p *Presenter) SearchValidators(ctx context.Context) (interface{}, error) {
 	}
 
 	return res, nil
+}
+
+var HashRegex = regexp.MustCompile("^0[xX][\\da-fA-F]{64}$")
+
+func (p *Presenter) SearchLogs(r *http.Request) (interface{}, error) {
+	ctx := r.Context()
+	q := r.URL.Query()
+	chainId := q.Get("chainId")
+	txHash := q.Get("txHash")
+	block := q.Get("block")
+	fromBlock := q.Get("fromBlock")
+	toBlock := q.Get("toBlock")
+
+	var err error
+	var logs []*entity.Log
+	if txHash != "" {
+		if !HashRegex.MatchString(txHash) {
+			return nil, fmt.Errorf("txHash has invalid format")
+		}
+		if block != "" || fromBlock != "" || toBlock != "" {
+			return nil, fmt.Errorf("block, fromBlock, toBlock must be empty when txHash is specified")
+		}
+
+		logs, err = p.repo.Logs.FindByTxHash(ctx, common.HexToHash(txHash))
+		if err != nil {
+			return nil, err
+		}
+		if chainId != "" {
+			filteredLogs := make([]*entity.Log, 0, len(logs))
+			for _, log := range logs {
+				if log.ChainID == chainId {
+					filteredLogs = append(filteredLogs, log)
+				}
+			}
+			logs = filteredLogs
+		}
+	} else if block != "" || (fromBlock != "" && toBlock != "") {
+		from, to := uint64(0), uint64(0)
+		if chainId == "" {
+			return nil, fmt.Errorf("chainId must be specified when block or fromBlock and toBlock are specified")
+		}
+		if block != "" {
+			if fromBlock != "" || toBlock != "" {
+				return nil, fmt.Errorf("fromBlock, toBlock must be empty when block is specified")
+			}
+			from, err = strconv.ParseUint(block, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			to = from
+		} else {
+			from, err = strconv.ParseUint(fromBlock, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			to, err = strconv.ParseUint(toBlock, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+		}
+		logs, err = p.repo.Logs.FindByBlockRange(ctx, chainId, nil, uint(from), uint(to))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("either txHash or block or fromBlock and toBlock must be specified")
+	}
+	result := make([]*LogResult, len(logs))
+	for i, log := range logs {
+		result[i] = &LogResult{
+			LogID:       log.ID,
+			ChainID:     log.ChainID,
+			Address:     log.Address,
+			Topic0:      log.Topic0,
+			Topic1:      log.Topic1,
+			Topic2:      log.Topic2,
+			Topic3:      log.Topic3,
+			Data:        log.Data,
+			TxHash:      log.TransactionHash,
+			BlockNumber: log.BlockNumber,
+		}
+	}
+	return result, nil
 }
 
 func (p *Presenter) searchInLogs(ctx context.Context, logs []*entity.Log) []*SearchResult {
