@@ -21,7 +21,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1650550279410,
+  "iteration": 1652004394458,
   "links": [],
   "panels": [
     {
@@ -1153,7 +1153,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT concat('0x', encode(v.address, 'hex')) as validator, count(v.removed_log_id) < count(*) as enabled,\n(\nSELECT extract(epoch from now() - max(bt.timestamp)) FROM signed_messages s\nJOIN logs l ON s.log_id = l.id\nJOIN block_timestamps bt ON bt.chain_id = l.chain_id AND bt.block_number = l.block_number\nWHERE s.bridge_id = '$bridge' AND s.signer = v.address\n) as since_last_active,\n(\nSELECT count(*) FROM signed_messages s WHERE s.bridge_id = '$bridge' AND s.signer = v.address\n) as total_confirmations\nFROM bridge_validators v\nWHERE v.bridge_id = '$bridge'\nGROUP BY v.address\nORDER BY 2 DESC, 1\n",
+          "rawSql": "SELECT concat('0x', encode(v.address, 'hex'))          as validator,\n       count(v.removed_log_id) < count(*)              as enabled,\n       extract(epoch from now() - max(va.last_active)) as since_last_active,\n       coalesce(max(va.total_confirmations), 0)        as total_confirmations\nFROM bridge_validators v\n         LEFT JOIN (SELECT s.signer, max(bt.timestamp) as last_active, count(*) as total_confirmations\n                    FROM signed_messages s\n                             JOIN logs l ON s.log_id = l.id\n                             JOIN block_timestamps bt ON bt.chain_id = l.chain_id AND bt.block_number = l.block_number\n                    WHERE s.bridge_id = '$bridge'\n                    GROUP BY s.signer) va ON va.signer = v.address\nWHERE v.bridge_id = '$bridge'\nGROUP BY v.address\nORDER BY 2 DESC, 1",
           "refId": "A",
           "select": [
             [
@@ -1359,5 +1359,5 @@
   "timezone": "",
   "title": "XDAI",
   "uid": "h48F4hIa2",
-  "version": 3
+  "version": 4
 }

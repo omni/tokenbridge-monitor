@@ -137,6 +137,16 @@ receivers:
           - type: button
             text: 'Silence :no_bell:'
             url: '{{ template "__alert_silence_link" . }}'
+  - name: slack-validator-offline
+    slack_configs:
+      - send_resolved: true
+        channel: '#amb-alerts'
+        title: '{{ template "slack.validator_offline.title" . }}'
+        text: '{{ template "slack.validator_offline.text" . }}'
+        actions:
+          - type: button
+            text: 'Silence :no_bell:'
+            url: '{{ template "__alert_silence_link" . }}'
   - name: slack-dm
     slack_configs:
       - send_resolved: true
@@ -200,6 +210,10 @@ route:
       group_by: [ "..." ]
       matchers:
         - alertname = UnknownErcToNativeMessageExecution
+    - receiver: slack-validator-offline
+      group_by: [ "..." ]
+      matchers:
+        - alertname = ValidatorOffline
     - receiver: slack-stuck-contract
       group_by: [ "..." ]
       matchers:

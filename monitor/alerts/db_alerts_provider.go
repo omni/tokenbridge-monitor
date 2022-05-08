@@ -742,3 +742,52 @@ func (p *DBAlertsProvider) FindStuckErcToNativeMessages(ctx context.Context, par
 	}
 	return alerts, nil
 }
+
+type LastValidatorActivity struct {
+	ChainID string         `db:"chain_id"`
+	Address common.Address `db:"address"`
+	Age     time.Duration  `db:"age"`
+}
+
+func (c *LastValidatorActivity) AlertValues() AlertValues {
+	return AlertValues{
+		Labels: map[string]string{
+			"chain_id": c.ChainID,
+			"address":  c.Address.String(),
+		},
+		Value: float64(c.Age),
+	}
+}
+
+func (p *DBAlertsProvider) FindLastValidatorActivity(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+	query := `
+		SELECT $2                                 as chain_id,
+		       v.address                          as address,
+		       EXTRACT(EPOCH FROM now() - max(coalesce(
+		               va.last_active,
+		               (SELECT max(bt.timestamp)
+		                FROM logs l
+		                         JOIN block_timestamps bt
+		                              ON l.chain_id = bt.chain_id AND l.block_number = bt.block_number
+		                WHERE v.log_id = l.id))))::int as age
+		FROM bridge_validators v
+		         LEFT JOIN (SELECT s.signer, max(bt.timestamp) as last_active
+		                    FROM signed_messages s
+		                             JOIN logs l ON s.log_id = l.id
+		                             JOIN block_timestamps bt ON bt.chain_id = l.chain_id AND bt.block_number = l.block_number
+		                    WHERE s.bridge_id = $1
+		                    GROUP BY s.signer) va ON va.signer = v.address
+		WHERE v.bridge_id = $1
+		GROUP BY v.address
+		HAVING count(v.removed_log_id) < count(*)`
+	res := make([]LastValidatorActivity, 0, 5)
+	err := p.db.SelectContext(ctx, &res, query, params.Bridge, params.HomeChainID)
+	if err != nil {
+		return nil, fmt.Errorf("can't select alerts: %w", err)
+	}
+	alerts := make([]AlertValues, len(res))
+	for i := range res {
+		alerts[i] = res[i].AlertValues()
+	}
+	return alerts, nil
+}

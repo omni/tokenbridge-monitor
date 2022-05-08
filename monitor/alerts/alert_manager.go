@@ -104,6 +104,13 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 				Func:     provider.FindStuckErcToNativeMessages,
 				Metric:   NewAlertStuckErcToNativeMessageConfirmation(cfg.ID),
 			}
+		case "last_validator_activity":
+			jobs[name] = &Job{
+				Interval: time.Minute * 10,
+				Timeout:  time.Second * 20,
+				Func:     provider.FindLastValidatorActivity,
+				Metric:   NewAlertLastValidatorActivity(cfg.ID),
+			}
 		default:
 			return nil, fmt.Errorf("unknown alert type %q", name)
 		}

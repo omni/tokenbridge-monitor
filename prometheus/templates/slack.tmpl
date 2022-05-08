@@ -163,3 +163,14 @@ Monitoring of contract is stuck
 *Chain ID:* {{ .CommonLabels.chain_id }}
 *Address:* {{ .CommonLabels.address }}
 {{- end }}
+
+{{ define "slack.validator_offline.title" -}}
+Bridge validator stopped producing successful confirmations
+{{- end }}
+{{ define "slack.validator_offline.text" -}}
+*Bridge:* {{ .CommonLabels.bridge_id }}
+*Chain ID:* {{ .CommonLabels.chain_id }}
+*Address:* {{ .CommonLabels.address }}
+*Time since last recorded action:* {{ .CommonAnnotations.age }}
+*Validator:* {{ template "explorer.address.link" .CommonLabels }}
+{{- end }}

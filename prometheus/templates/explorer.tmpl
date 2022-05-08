@@ -17,3 +17,23 @@ https://blockscout.com/xdai/mainnet/tx/{{ .tx_hash  }}
 {{ .tx_hash }}
 {{- end -}}
 {{- end }}
+
+{{ define "explorer.address.link" -}}
+{{- if eq .chain_id "1" -}}
+https://etherscan.io/address/{{ .address  }}
+{{- else if eq .chain_id "4" -}}
+https://rinkeby.etherscan.io/address/{{ .address  }}
+{{- else if eq .chain_id "42" -}}
+https://kovan.etherscan.io/address/{{ .address  }}
+{{- else if eq .chain_id "56" -}}
+https://bscscan.com/address/{{ .address  }}
+{{- else if eq .chain_id "77" -}}
+https://blockscout.com/poa/sokol/address/{{ .address  }}
+{{- else if eq .chain_id "99" -}}
+https://blockscout.com/poa/core/address/{{ .address  }}
+{{- else if eq .chain_id "100" -}}
+https://blockscout.com/xdai/mainnet/address/{{ .address  }}
+{{- else -}}
+{{ .address }}
+{{- end -}}
+{{- end }}

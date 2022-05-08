@@ -105,6 +105,13 @@
               },
               "stuck_erc_to_native_message_confirmation": {
                 "$ref": "#/$defs/alert_config"
+              },
+              "last_validator_activity": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": false
               }
             },
             "additionalProperties": false

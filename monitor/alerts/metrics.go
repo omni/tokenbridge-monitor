@@ -114,4 +114,13 @@ var (
 			ConstLabels: prometheus.Labels{"bridge_id": bridge},
 		}, []string{"chain_id", "block_number", "tx_hash", "msg_hash", "count", "sender", "receiver", "value"})
 	}
+	NewAlertLastValidatorActivity = func(bridge string) *prometheus.GaugeVec {
+		return promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace:   "alert",
+			Subsystem:   "monitor",
+			Name:        "last_validator_activity",
+			Help:        "Shows time passed since last successfully recorded action from the validator.",
+			ConstLabels: prometheus.Labels{"bridge_id": bridge},
+		}, []string{"chain_id", "address"})
+	}
 )

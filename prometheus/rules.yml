@@ -71,6 +71,12 @@ groups:
         expr: max_over_time(alert_monitor_unknown_erc_to_native_message_execution[5m]) > 0
         annotations:
           age: '{{ humanizeDuration $value }}'
+  - name: ValidatorOffline
+    rules:
+      - alert: ValidatorOffline
+        expr: max_over_time(alert_monitor_last_validator_activity[5m]) > 43200
+        annotations:
+          age: '{{ humanizeDuration $value }}'
   - name: StuckContractProgress
     rules:
     - alert: StuckContractProgress

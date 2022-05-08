@@ -87,6 +87,7 @@ bridges:
       unknown_erc_to_native_message_confirmation:
       unknown_erc_to_native_message_execution:
       stuck_erc_to_native_message_confirmation:
+      last_validator_activity:
   xdai-amb:
     home:
       chain: xdai
@@ -117,6 +118,7 @@ bridges:
       stuck_information_request:
       failed_information_request:
       different_information_signatures:
+      last_validator_activity:
   test-amb:
     home:
       chain: sokol
