@@ -49,6 +49,7 @@ func ercToNativeMessageToInfo(req *entity.ErcToNativeMessage) *ErcToNativeMessag
 		BridgeID:  req.BridgeID,
 		MsgHash:   req.MsgHash,
 		Direction: req.Direction,
+		Sender:    req.Sender,
 		Receiver:  req.Receiver,
 		Value:     req.Value,
 	}

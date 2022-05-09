@@ -30,6 +30,7 @@ type ErcToNativeMessageInfo struct {
 	BridgeID  string
 	MsgHash   common.Hash
 	Direction entity.Direction
+	Sender    common.Address
 	Receiver  common.Address
 	Value     string
 }
