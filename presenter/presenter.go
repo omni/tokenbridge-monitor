@@ -159,7 +159,7 @@ func (p *Presenter) SearchValidators(r *http.Request) (interface{}, error) {
 	return res, nil
 }
 
-var HashRegex = regexp.MustCompile("^0[xX][\\da-fA-F]{64}$")
+var HashRegex = regexp.MustCompile(`^0[xX][\da-fA-F]{64}$`)
 
 func (p *Presenter) SearchLogs(r *http.Request) (interface{}, error) {
 	ctx := r.Context()
@@ -194,7 +194,7 @@ func (p *Presenter) SearchLogs(r *http.Request) (interface{}, error) {
 			logs = filteredLogs
 		}
 	} else if block != "" || (fromBlock != "" && toBlock != "") {
-		from, to := uint64(0), uint64(0)
+		var from, to uint64
 		if chainId == "" {
 			return nil, fmt.Errorf("chainId must be specified when block or fromBlock and toBlock are specified")
 		}

@@ -3,7 +3,6 @@ package alerts
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 	"tokenbridge-monitor/db"
 
@@ -23,25 +22,12 @@ func NewDBAlertsProvider(db *db.DB) *DBAlertsProvider {
 }
 
 type UnknownConfirmation struct {
-	ChainID         string         `db:"chain_id"`
-	BlockNumber     uint64         `db:"block_number"`
-	Age             time.Duration  `db:"age"`
-	TransactionHash common.Hash    `db:"transaction_hash"`
-	Signer          common.Address `db:"signer"`
-	MsgHash         common.Hash    `db:"msg_hash"`
-}
-
-func (c *UnknownConfirmation) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id":     c.ChainID,
-			"block_number": strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":      c.TransactionHash.String(),
-			"signer":       c.Signer.String(),
-			"msg_hash":     c.MsgHash.String(),
-		},
-		Value: float64(c.Age),
-	}
+	ChainID         string         `db:"chain_id" json:"chain_id"`
+	BlockNumber     uint64         `db:"block_number" json:"block_number,string"`
+	Age             time.Duration  `db:"age" json:"_value,string"`
+	TransactionHash common.Hash    `db:"transaction_hash" json:"tx_hash"`
+	Signer          common.Address `db:"signer" json:"signer"`
+	MsgHash         common.Hash    `db:"msg_hash" json:"msg_hash"`
 }
 
 func (p *DBAlertsProvider) findMinProcessedTime(ctx context.Context, params *AlertJobParams) (*time.Time, error) {
@@ -71,7 +57,7 @@ func (p *DBAlertsProvider) findMinProcessedTime(ctx context.Context, params *Ale
 	return res, nil
 }
 
-func (p *DBAlertsProvider) FindUnknownConfirmations(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindUnknownConfirmations(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	minProcessedTS, err := p.findMinProcessedTime(ctx, params)
 	if err != nil {
 		return nil, err
@@ -94,34 +80,18 @@ func (p *DBAlertsProvider) FindUnknownConfirmations(ctx context.Context, params 
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
 type UnknownExecution struct {
-	ChainID         string        `db:"chain_id"`
-	BlockNumber     uint64        `db:"block_number"`
-	Age             time.Duration `db:"age"`
-	TransactionHash common.Hash   `db:"transaction_hash"`
-	MessageID       common.Hash   `db:"message_id"`
+	ChainID         string        `db:"chain_id" json:"chain_id"`
+	BlockNumber     uint64        `db:"block_number" json:"block_number,string"`
+	Age             time.Duration `db:"age" json:"_value,string"`
+	TransactionHash common.Hash   `db:"transaction_hash" json:"tx_hash"`
+	MessageID       common.Hash   `db:"message_id" json:"message_id"`
 }
 
-func (c *UnknownExecution) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id":     c.ChainID,
-			"block_number": strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":      c.TransactionHash.String(),
-			"message_id":   c.MessageID.String(),
-		},
-		Value: float64(c.Age),
-	}
-}
-
-func (p *DBAlertsProvider) FindUnknownExecutions(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindUnknownExecutions(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	minProcessedTS, err := p.findMinProcessedTime(ctx, params)
 	if err != nil {
 		return nil, err
@@ -153,36 +123,19 @@ func (p *DBAlertsProvider) FindUnknownExecutions(ctx context.Context, params *Al
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
 type StuckMessage struct {
-	ChainID         string        `db:"chain_id"`
-	BlockNumber     uint64        `db:"block_number"`
-	Age             time.Duration `db:"age"`
-	TransactionHash common.Hash   `db:"transaction_hash"`
-	MsgHash         common.Hash   `db:"msg_hash"`
-	Count           uint64        `db:"count"`
+	ChainID         string        `db:"chain_id" json:"chain_id"`
+	BlockNumber     uint64        `db:"block_number" json:"block_number,string"`
+	Age             time.Duration `db:"age" json:"_value,string"`
+	TransactionHash common.Hash   `db:"transaction_hash" json:"tx_hash"`
+	MsgHash         common.Hash   `db:"msg_hash" json:"msg_hash"`
+	Count           uint64        `db:"count" json:"count,string"`
 }
 
-func (c *StuckMessage) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id":     c.ChainID,
-			"block_number": strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":      c.TransactionHash.String(),
-			"msg_hash":     c.MsgHash.String(),
-			"count":        strconv.FormatUint(c.Count, 10),
-		},
-		Value: float64(c.Age),
-	}
-}
-
-func (p *DBAlertsProvider) FindStuckMessages(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindStuckMessages(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	query := `
 		SELECT l.chain_id,
 		       l.block_number,
@@ -232,36 +185,19 @@ func (p *DBAlertsProvider) FindStuckMessages(ctx context.Context, params *AlertJ
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
 type FailedExecution struct {
-	ChainID         string         `db:"chain_id"`
-	BlockNumber     uint64         `db:"block_number"`
-	Age             time.Duration  `db:"age"`
-	TransactionHash common.Hash    `db:"transaction_hash"`
-	Sender          common.Address `db:"sender"`
-	Executor        common.Address `db:"executor"`
+	ChainID         string         `db:"chain_id" json:"chain_id"`
+	BlockNumber     uint64         `db:"block_number" json:"block_number,string"`
+	Age             time.Duration  `db:"age" json:"_value,string"`
+	TransactionHash common.Hash    `db:"transaction_hash" json:"tx_hash"`
+	Sender          common.Address `db:"sender" json:"sender"`
+	Executor        common.Address `db:"executor" json:"executor"`
 }
 
-func (c *FailedExecution) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id":     c.ChainID,
-			"block_number": strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":      c.TransactionHash.String(),
-			"sender":       c.Sender.String(),
-			"executor":     c.Executor.String(),
-		},
-		Value: float64(c.Age),
-	}
-}
-
-func (p *DBAlertsProvider) FindFailedExecutions(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindFailedExecutions(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "m.sender", "m.executor", "EXTRACT(EPOCH FROM now() - bt.timestamp)::int as age").
 		From("messages m").
 		Join("executed_messages em on m.bridge_id = em.bridge_id AND em.message_id = m.message_id").
@@ -288,36 +224,19 @@ func (p *DBAlertsProvider) FindFailedExecutions(ctx context.Context, params *Ale
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
 type StuckInformationRequest struct {
-	ChainID         string        `db:"chain_id"`
-	BlockNumber     uint64        `db:"block_number"`
-	Age             time.Duration `db:"age"`
-	TransactionHash common.Hash   `db:"transaction_hash"`
-	MessageID       common.Hash   `db:"message_id"`
-	Count           uint64        `db:"count"`
+	ChainID         string        `db:"chain_id" json:"chain_id"`
+	BlockNumber     uint64        `db:"block_number" json:"block_number,string"`
+	Age             time.Duration `db:"age" json:"_value,string"`
+	TransactionHash common.Hash   `db:"transaction_hash" json:"tx_hash"`
+	MessageID       common.Hash   `db:"message_id" json:"message_id"`
+	Count           uint64        `db:"count" json:"count,string"`
 }
 
-func (c *StuckInformationRequest) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id":     c.ChainID,
-			"block_number": strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":      c.TransactionHash.String(),
-			"message_id":   c.MessageID.String(),
-			"count":        strconv.FormatUint(c.Count, 10),
-		},
-		Value: float64(c.Age),
-	}
-}
-
-func (p *DBAlertsProvider) FindStuckInformationRequests(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindStuckInformationRequests(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "r.message_id", "count(s.log_id) as count", "EXTRACT(EPOCH FROM now() - bt.timestamp)::int as age").
 		From("sent_information_requests sr").
 		Join("logs l on l.id = sr.log_id").
@@ -345,40 +264,21 @@ func (p *DBAlertsProvider) FindStuckInformationRequests(ctx context.Context, par
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
 type FailedInformationRequest struct {
-	ChainID         string         `db:"chain_id"`
-	BlockNumber     uint64         `db:"block_number"`
-	Age             time.Duration  `db:"age"`
-	TransactionHash common.Hash    `db:"transaction_hash"`
-	Sender          common.Address `db:"sender"`
-	Executor        common.Address `db:"executor"`
-	Status          bool           `db:"status"`
-	CallbackStatus  bool           `db:"callback_status"`
+	ChainID         string         `db:"chain_id" json:"chain_id"`
+	BlockNumber     uint64         `db:"block_number" json:"block_number,string"`
+	Age             time.Duration  `db:"age" json:"_value,string"`
+	TransactionHash common.Hash    `db:"transaction_hash" json:"tx_hash"`
+	Sender          common.Address `db:"sender" json:"sender"`
+	Executor        common.Address `db:"executor" json:"executor"`
+	Status          bool           `db:"status" json:"status,string"`
+	CallbackStatus  bool           `db:"callback_status" json:"callback_status,string"`
 }
 
-func (c *FailedInformationRequest) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id":        c.ChainID,
-			"block_number":    strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":         c.TransactionHash.String(),
-			"sender":          c.Sender.String(),
-			"executor":        c.Executor.String(),
-			"status":          strconv.FormatBool(c.Status),
-			"callback_status": strconv.FormatBool(c.CallbackStatus),
-		},
-		Value: float64(c.Age),
-	}
-}
-
-func (p *DBAlertsProvider) FindFailedInformationRequests(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindFailedInformationRequests(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "r.sender", "r.executor", "er.status", "er.callback_status", "EXTRACT(EPOCH FROM now() - bt.timestamp)::int as age").
 		From("information_requests r").
 		Join("executed_information_requests er on r.bridge_id = er.bridge_id AND er.message_id = r.message_id").
@@ -403,36 +303,19 @@ func (p *DBAlertsProvider) FindFailedInformationRequests(ctx context.Context, pa
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
 type DifferentInformationSignature struct {
-	ChainID         string        `db:"chain_id"`
-	BlockNumber     uint64        `db:"block_number"`
-	Age             time.Duration `db:"age"`
-	TransactionHash common.Hash   `db:"transaction_hash"`
-	MessageID       common.Hash   `db:"message_id"`
-	Count           uint64        `db:"count"`
+	ChainID         string        `db:"chain_id" json:"chain_id"`
+	BlockNumber     uint64        `db:"block_number" json:"block_number,string"`
+	Age             time.Duration `db:"age" json:"_value,string"`
+	TransactionHash common.Hash   `db:"transaction_hash" json:"tx_hash"`
+	MessageID       common.Hash   `db:"message_id" json:"message_id"`
+	Count           uint64        `db:"count" json:"count,string"`
 }
 
-func (c *DifferentInformationSignature) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id":     c.ChainID,
-			"block_number": strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":      c.TransactionHash.String(),
-			"message_id":   c.MessageID.String(),
-			"count":        strconv.FormatUint(c.Count, 10),
-		},
-		Value: float64(c.Age),
-	}
-}
-
-func (p *DBAlertsProvider) FindDifferentInformationSignatures(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindDifferentInformationSignatures(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	q, args, err := sq.Select("l.chain_id", "l.block_number", "l.transaction_hash", "r.message_id", "count(DISTINCT s.data) as count", "EXTRACT(EPOCH FROM now() - bt.timestamp)::int as age").
 		From("sent_information_requests sr").
 		Join("logs l on l.id = sr.log_id").
@@ -461,36 +344,19 @@ func (p *DBAlertsProvider) FindDifferentInformationSignatures(ctx context.Contex
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
 type UnknownInformationSignature struct {
-	ChainID         string         `db:"chain_id"`
-	BlockNumber     uint64         `db:"block_number"`
-	Age             time.Duration  `db:"age"`
-	TransactionHash common.Hash    `db:"transaction_hash"`
-	Signer          common.Address `db:"signer"`
-	MessageID       common.Hash    `db:"message_id"`
+	ChainID         string         `db:"chain_id" json:"chain_id"`
+	BlockNumber     uint64         `db:"block_number" json:"block_number,string"`
+	Age             time.Duration  `db:"age" json:"_value,string"`
+	TransactionHash common.Hash    `db:"transaction_hash" json:"tx_hash"`
+	Signer          common.Address `db:"signer" json:"signer"`
+	MessageID       common.Hash    `db:"message_id" json:"message_id"`
 }
 
-func (c *UnknownInformationSignature) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id":     c.ChainID,
-			"block_number": strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":      c.TransactionHash.String(),
-			"signer":       c.Signer.String(),
-			"message_id":   c.MessageID.String(),
-		},
-		Value: float64(c.Age),
-	}
-}
-
-func (p *DBAlertsProvider) FindUnknownInformationSignatures(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindUnknownInformationSignatures(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	minProcessedTS, err := p.findMinProcessedTime(ctx, params)
 	if err != nil {
 		return nil, err
@@ -513,34 +379,18 @@ func (p *DBAlertsProvider) FindUnknownInformationSignatures(ctx context.Context,
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
 type UnknownInformationExecution struct {
-	ChainID         string        `db:"chain_id"`
-	BlockNumber     uint64        `db:"block_number"`
-	Age             time.Duration `db:"age"`
-	TransactionHash common.Hash   `db:"transaction_hash"`
-	MessageID       common.Hash   `db:"message_id"`
+	ChainID         string        `db:"chain_id" json:"chain_id"`
+	BlockNumber     uint64        `db:"block_number" json:"block_number,string"`
+	Age             time.Duration `db:"age" json:"_value,string"`
+	TransactionHash common.Hash   `db:"transaction_hash" json:"tx_hash"`
+	MessageID       common.Hash   `db:"message_id" json:"message_id"`
 }
 
-func (c *UnknownInformationExecution) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id":     c.ChainID,
-			"block_number": strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":      c.TransactionHash.String(),
-			"message_id":   c.MessageID.String(),
-		},
-		Value: float64(c.Age),
-	}
-}
-
-func (p *DBAlertsProvider) FindUnknownInformationExecutions(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindUnknownInformationExecutions(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	minProcessedTS, err := p.findMinProcessedTime(ctx, params)
 	if err != nil {
 		return nil, err
@@ -563,14 +413,10 @@ func (p *DBAlertsProvider) FindUnknownInformationExecutions(ctx context.Context,
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
-func (p *DBAlertsProvider) FindUnknownErcToNativeConfirmations(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindUnknownErcToNativeConfirmations(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	minProcessedTS, err := p.findMinProcessedTime(ctx, params)
 	if err != nil {
 		return nil, err
@@ -593,34 +439,18 @@ func (p *DBAlertsProvider) FindUnknownErcToNativeConfirmations(ctx context.Conte
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
 type UnknownErcToNativeExecution struct {
-	ChainID         string        `db:"chain_id"`
-	BlockNumber     uint64        `db:"block_number"`
-	Age             time.Duration `db:"age"`
-	TransactionHash common.Hash   `db:"transaction_hash"`
-	MsgHash         common.Hash   `db:"msg_hash"`
+	ChainID         string        `db:"chain_id" json:"chain_id"`
+	BlockNumber     uint64        `db:"block_number" json:"block_number,string"`
+	Age             time.Duration `db:"age" json:"_value,string"`
+	TransactionHash common.Hash   `db:"transaction_hash" json:"tx_hash"`
+	MsgHash         common.Hash   `db:"msg_hash" json:"msg_hash"`
 }
 
-func (c *UnknownErcToNativeExecution) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id":     c.ChainID,
-			"block_number": strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":      c.TransactionHash.String(),
-			"msg_hash":     c.MsgHash.String(),
-		},
-		Value: float64(c.Age),
-	}
-}
-
-func (p *DBAlertsProvider) FindUnknownErcToNativeExecutions(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindUnknownErcToNativeExecutions(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	minProcessedTS, err := p.findMinProcessedTime(ctx, params)
 	if err != nil {
 		return nil, err
@@ -652,42 +482,22 @@ func (p *DBAlertsProvider) FindUnknownErcToNativeExecutions(ctx context.Context,
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
 type StuckErcToNativeMessage struct {
-	ChainID         string         `db:"chain_id"`
-	BlockNumber     uint64         `db:"block_number"`
-	Age             time.Duration  `db:"age"`
-	TransactionHash common.Hash    `db:"transaction_hash"`
-	MsgHash         common.Hash    `db:"msg_hash"`
-	Count           uint64         `db:"count"`
-	Sender          common.Address `db:"sender"`
-	Receiver        common.Address `db:"receiver"`
-	Value           string         `db:"value"`
+	ChainID         string         `db:"chain_id" json:"chain_id"`
+	BlockNumber     uint64         `db:"block_number" json:"block_number,string"`
+	Age             time.Duration  `db:"age" json:"_value,string"`
+	TransactionHash common.Hash    `db:"transaction_hash" json:"tx_hash"`
+	MsgHash         common.Hash    `db:"msg_hash" json:"msg_hash"`
+	Count           uint64         `db:"count" json:"count,string"`
+	Sender          common.Address `db:"sender" json:"sender"`
+	Receiver        common.Address `db:"receiver" json:"receiver"`
+	Value           string         `db:"value" json:"value"`
 }
 
-func (c *StuckErcToNativeMessage) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id":     c.ChainID,
-			"block_number": strconv.FormatUint(c.BlockNumber, 10),
-			"tx_hash":      c.TransactionHash.String(),
-			"msg_hash":     c.MsgHash.String(),
-			"count":        strconv.FormatUint(c.Count, 10),
-			"sender":       c.Sender.String(),
-			"receiver":     c.Receiver.String(),
-			"value":        c.Value,
-		},
-		Value: float64(c.Age),
-	}
-}
-
-func (p *DBAlertsProvider) FindStuckErcToNativeMessages(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindStuckErcToNativeMessages(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	query := `
 		SELECT l.chain_id,
 		       l.block_number,
@@ -736,30 +546,16 @@ func (p *DBAlertsProvider) FindStuckErcToNativeMessages(ctx context.Context, par
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
 
 type LastValidatorActivity struct {
-	ChainID string         `db:"chain_id"`
-	Address common.Address `db:"address"`
-	Age     time.Duration  `db:"age"`
+	ChainID string         `db:"chain_id" json:"chain_id"`
+	Address common.Address `db:"address" json:"address"`
+	Age     time.Duration  `db:"age" json:"_value,string"`
 }
 
-func (c *LastValidatorActivity) AlertValues() AlertValues {
-	return AlertValues{
-		Labels: map[string]string{
-			"chain_id": c.ChainID,
-			"address":  c.Address.String(),
-		},
-		Value: float64(c.Age),
-	}
-}
-
-func (p *DBAlertsProvider) FindLastValidatorActivity(ctx context.Context, params *AlertJobParams) ([]AlertValues, error) {
+func (p *DBAlertsProvider) FindLastValidatorActivity(ctx context.Context, params *AlertJobParams) (interface{}, error) {
 	query := `
 		SELECT $2                                 as chain_id,
 		       v.address                          as address,
@@ -785,9 +581,5 @@ func (p *DBAlertsProvider) FindLastValidatorActivity(ctx context.Context, params
 	if err != nil {
 		return nil, fmt.Errorf("can't select alerts: %w", err)
 	}
-	alerts := make([]AlertValues, len(res))
-	for i := range res {
-		alerts[i] = res[i].AlertValues()
-	}
-	return alerts, nil
+	return res, nil
 }
