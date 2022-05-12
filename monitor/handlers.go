@@ -17,20 +17,18 @@ import (
 type EventHandler func(ctx context.Context, log *entity.Log, data map[string]interface{}) error
 
 type BridgeEventHandler struct {
-	repo          *repository.Repo
-	bridgeID      string
-	homeClient    *ethclient.Client
-	foreignClient *ethclient.Client
-	cfg           *config.BridgeConfig
+	repo       *repository.Repo
+	bridgeID   string
+	homeClient *ethclient.Client
+	cfg        *config.BridgeConfig
 }
 
-func NewBridgeEventHandler(repo *repository.Repo, bridgeID string, homeClient, foreignClient *ethclient.Client, cfg *config.BridgeConfig) *BridgeEventHandler {
+func NewBridgeEventHandler(repo *repository.Repo, cfg *config.BridgeConfig, homeClient *ethclient.Client) *BridgeEventHandler {
 	return &BridgeEventHandler{
-		repo:          repo,
-		bridgeID:      bridgeID,
-		homeClient:    homeClient,
-		foreignClient: foreignClient,
-		cfg:           cfg,
+		repo:       repo,
+		bridgeID:   cfg.ID,
+		homeClient: homeClient,
+		cfg:        cfg,
 	}
 }
 

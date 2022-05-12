@@ -51,14 +51,14 @@ func NewClient(url string, timeout time.Duration, chainID string) (*Client, erro
 	return client, nil
 }
 
-func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
+func (c *Client) BlockNumber(ctx context.Context) (uint, error) {
 	defer ObserveDuration(c.ChainID, c.url, "eth_blockNumber")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	n, err := c.client.BlockNumber(ctx)
 	ObserveError(c.ChainID, c.url, "eth_blockNumber", err)
-	return n, err
+	return uint(n), err
 }
 
 func (c *Client) HeaderByNumber(ctx context.Context, n uint) (*types.Header, error) {
