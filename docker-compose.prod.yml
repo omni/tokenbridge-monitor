@@ -83,7 +83,7 @@ services:
     restart: unless-stopped
   monitor:
     container_name: monitor
-    image: ghcr.io/poanetwork/tokenbridge-monitor:v0.0.25
+    image: ghcr.io/poanetwork/tokenbridge-monitor:v0.0.26
     env_file:
       - .env
     volumes:
@@ -96,7 +96,7 @@ services:
     restart: unless-stopped
   fix_block_timestamps:
     container_name: fix_block_timestamps
-    image: ghcr.io/poanetwork/tokenbridge-monitor:v0.0.25
+    image: ghcr.io/poanetwork/tokenbridge-monitor:v0.0.26
     entrypoint: [ "./fix_block_timestamps" ]
     env_file:
       - .env
