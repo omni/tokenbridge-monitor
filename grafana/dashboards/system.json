@@ -21,8 +21,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 1,
-  "iteration": 1648451982586,
+  "iteration": 1653133345364,
   "links": [],
   "panels": [
     {
@@ -281,14 +280,17 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -344,10 +346,20 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "{__name__=~\"monitor_contract_latest_head_block|monitor_contract_latest_fetched_block|monitor_contract_latest_processed_block\",chain_id=\"$chain\"} > 0",
+          "expr": "monitor_contract_latest_head_block{chain_id=\"$chain\"} - monitor_contract_latest_fetched_block{chain_id=\"$chain\"}",
+          "hide": false,
+          "instant": false,
           "interval": "",
-          "legendFormat": "{{bridge_id}} - {{__name__}}",
+          "legendFormat": "fetching lag {{bridge_id}}",
           "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "monitor_contract_latest_fetched_block{chain_id=\"$chain\"} - monitor_contract_latest_processed_block{chain_id=\"$chain\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "processing lag {{bridge_id}}",
+          "refId": "B"
         }
       ],
       "title": "Syncronization in $chain",
