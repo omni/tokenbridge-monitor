@@ -13,7 +13,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
 
 COPY db/migrations ./db/migrations/
-COPY --from=build /app/out/monitor ./
+COPY --from=build /app/out/ ./
 
 EXPOSE 3333
 

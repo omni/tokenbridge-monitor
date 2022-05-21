@@ -18,6 +18,13 @@ services:
       - "3333:3333"
     volumes:
       - ./config.yml:/app/config.yml
+  fix_block_timestamps:
+    build: .
+    entrypoint: ["./fix_block_timestamps"]
+    env_file:
+      - .env
+    volumes:
+      - ./config.yml:/app/config.yml
   grafana:
     image: grafana/grafana:8.1.5
     volumes:

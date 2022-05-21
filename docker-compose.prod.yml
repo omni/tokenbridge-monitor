@@ -94,6 +94,14 @@ services:
       - "traefik.http.routers.monitor.entrypoints=websecure"
       - "traefik.http.routers.monitor.tls.certresolver=myresolver"
     restart: unless-stopped
+  fix_block_timestamps:
+    container_name: fix_block_timestamps
+    image: ghcr.io/poanetwork/tokenbridge-monitor:v0.0.25
+    entrypoint: [ "./fix_block_timestamps" ]
+    env_file:
+      - .env
+    volumes:
+      - ./config.yml:/app/config.yml
 volumes:
   db:
   grafana-storage:
