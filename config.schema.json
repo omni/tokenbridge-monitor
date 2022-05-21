@@ -58,8 +58,10 @@
       "additionalProperties": {
         "type": "object",
         "properties": {
-          "is_erc_to_native": {
-            "type": "boolean"
+          "bridge_mode": {
+            "type": "string",
+            "enum": ["AMB", "ERC_TO_NATIVE"],
+            "default": "AMB"
           },
           "home": {
             "$ref": "#/$defs/side_config"

@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"tokenbridge-monitor/config"
 	"tokenbridge-monitor/db"
+	"tokenbridge-monitor/ethclient"
 	"tokenbridge-monitor/logging"
 	"tokenbridge-monitor/monitor"
 	"tokenbridge-monitor/presenter"
@@ -67,7 +68,15 @@ func main() {
 	}
 	for _, bridgeCfg := range cfg.Bridges {
 		bridgeLogger := logger.WithField("bridge_id", bridgeCfg.ID)
-		m, err2 := monitor.NewMonitor(ctx, bridgeLogger, dbConn, repo, bridgeCfg)
+		homeClient, err2 := ethclient.NewClient(bridgeCfg.Home.Chain.RPC.Host, bridgeCfg.Home.Chain.RPC.Timeout, bridgeCfg.Home.Chain.ChainID)
+		if err2 != nil {
+			bridgeLogger.WithError(err2).Fatal("can't dial home rpc client")
+		}
+		foreignClient, err2 := ethclient.NewClient(bridgeCfg.Foreign.Chain.RPC.Host, bridgeCfg.Foreign.Chain.RPC.Timeout, bridgeCfg.Foreign.Chain.ChainID)
+		if err2 != nil {
+			bridgeLogger.WithError(err2).Fatal("can't dial foreign rpc client")
+		}
+		m, err2 := monitor.NewMonitor(ctx, bridgeLogger, dbConn, repo, bridgeCfg, homeClient, foreignClient)
 		if err2 != nil {
 			bridgeLogger.WithError(err2).Fatal("can't initialize bridge monitor")
 		}

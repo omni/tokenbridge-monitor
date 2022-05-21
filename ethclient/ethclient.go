@@ -14,8 +14,19 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-type Client struct {
-	ChainID   string
+type Client interface {
+	BlockNumber(ctx context.Context) (uint, error)
+	HeaderByNumber(ctx context.Context, n uint) (*types.Header, error)
+	FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error)
+	FilterLogsSafe(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error)
+	TransactionByHash(ctx context.Context, hash common.Hash) (*types.Transaction, error)
+	TransactionReceiptByHash(ctx context.Context, hash common.Hash) (*types.Receipt, error)
+	CallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error)
+	TransactionSender(tx *types.Transaction) (common.Address, error)
+}
+
+type rpcClient struct {
+	chainID   string
 	url       string
 	timeout   time.Duration
 	rawClient *rpc.Client
@@ -23,7 +34,7 @@ type Client struct {
 	signer    types.Signer
 }
 
-func NewClient(url string, timeout time.Duration, chainID string) (*Client, error) {
+func NewClient(url string, timeout time.Duration, chainID string) (Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -31,8 +42,8 @@ func NewClient(url string, timeout time.Duration, chainID string) (*Client, erro
 	if err != nil {
 		return nil, fmt.Errorf("can't dial JSON rpc url: %w", err)
 	}
-	client := &Client{
-		ChainID:   chainID,
+	client := &rpcClient{
+		chainID:   chainID,
 		url:       url,
 		timeout:   timeout,
 		rawClient: rawClient,
@@ -51,46 +62,46 @@ func NewClient(url string, timeout time.Duration, chainID string) (*Client, erro
 	return client, nil
 }
 
-func (c *Client) BlockNumber(ctx context.Context) (uint, error) {
-	defer ObserveDuration(c.ChainID, c.url, "eth_blockNumber")()
+func (c *rpcClient) BlockNumber(ctx context.Context) (uint, error) {
+	defer ObserveDuration(c.chainID, c.url, "eth_blockNumber")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	n, err := c.client.BlockNumber(ctx)
-	ObserveError(c.ChainID, c.url, "eth_blockNumber", err)
+	ObserveError(c.chainID, c.url, "eth_blockNumber", err)
 	return uint(n), err
 }
 
-func (c *Client) HeaderByNumber(ctx context.Context, n uint) (*types.Header, error) {
-	defer ObserveDuration(c.ChainID, c.url, "eth_getBlockByNumber")()
+func (c *rpcClient) HeaderByNumber(ctx context.Context, n uint) (*types.Header, error) {
+	defer ObserveDuration(c.chainID, c.url, "eth_getBlockByNumber")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	header, err := c.client.HeaderByNumber(ctx, big.NewInt(int64(n)))
-	ObserveError(c.ChainID, c.url, "eth_getBlockByNumber", err)
+	ObserveError(c.chainID, c.url, "eth_getBlockByNumber", err)
 	return header, err
 }
 
-func (c *Client) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
-	defer ObserveDuration(c.ChainID, c.url, "eth_getLogs")()
+func (c *rpcClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
+	defer ObserveDuration(c.chainID, c.url, "eth_getLogs")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	logs, err := c.client.FilterLogs(ctx, q)
-	ObserveError(c.ChainID, c.url, "eth_getLogs", err)
+	ObserveError(c.chainID, c.url, "eth_getLogs", err)
 	return logs, err
 }
 
 // FilterLogsSafe is the same as FilterLogs, but makes an additional eth_blockNumber
 // request to ensure that the node behind RPC is synced to the needed point.
-func (c *Client) FilterLogsSafe(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
-	defer ObserveDuration(c.ChainID, c.url, "eth_getLogsSafe")()
+func (c *rpcClient) FilterLogsSafe(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
+	defer ObserveDuration(c.chainID, c.url, "eth_getLogsSafe")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	var err error
 	defer func() {
-		ObserveError(c.ChainID, c.url, "eth_getLogsSafe", err)
+		ObserveError(c.chainID, c.url, "eth_getLogsSafe", err)
 	}()
 
 	var arg interface{}
@@ -127,37 +138,37 @@ func (c *Client) FilterLogsSafe(ctx context.Context, q ethereum.FilterQuery) ([]
 	return logs, nil
 }
 
-func (c *Client) TransactionByHash(ctx context.Context, txHash common.Hash) (*types.Transaction, error) {
-	defer ObserveDuration(c.ChainID, c.url, "eth_getTransactionByHash")()
+func (c *rpcClient) TransactionByHash(ctx context.Context, txHash common.Hash) (*types.Transaction, error) {
+	defer ObserveDuration(c.chainID, c.url, "eth_getTransactionByHash")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	tx, _, err := c.client.TransactionByHash(ctx, txHash)
-	ObserveError(c.ChainID, c.url, "eth_getTransactionByHash", err)
+	ObserveError(c.chainID, c.url, "eth_getTransactionByHash", err)
 	return tx, err
 }
 
-func (c *Client) TransactionReceiptByHash(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	defer ObserveDuration(c.ChainID, c.url, "eth_getTransactionReceipt")()
+func (c *rpcClient) TransactionReceiptByHash(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	defer ObserveDuration(c.chainID, c.url, "eth_getTransactionReceipt")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	receipt, err := c.client.TransactionReceipt(ctx, txHash)
-	ObserveError(c.ChainID, c.url, "eth_getTransactionReceipt", err)
+	ObserveError(c.chainID, c.url, "eth_getTransactionReceipt", err)
 	return receipt, err
 }
 
-func (c *Client) CallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error) {
-	defer ObserveDuration(c.ChainID, c.url, "eth_call")()
+func (c *rpcClient) CallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error) {
+	defer ObserveDuration(c.chainID, c.url, "eth_call")()
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	res, err := c.client.CallContract(ctx, msg, nil)
-	ObserveError(c.ChainID, c.url, "eth_call", err)
+	ObserveError(c.chainID, c.url, "eth_call", err)
 	return res, err
 }
 
-func (c *Client) TransactionSender(tx *types.Transaction) (common.Address, error) {
+func (c *rpcClient) TransactionSender(tx *types.Transaction) (common.Address, error) {
 	return c.signer.Sender(tx)
 }
 

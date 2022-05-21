@@ -19,11 +19,11 @@ type EventHandler func(ctx context.Context, log *entity.Log, data map[string]int
 type BridgeEventHandler struct {
 	repo       *repository.Repo
 	bridgeID   string
-	homeClient *ethclient.Client
+	homeClient ethclient.Client
 	cfg        *config.BridgeConfig
 }
 
-func NewBridgeEventHandler(repo *repository.Repo, cfg *config.BridgeConfig, homeClient *ethclient.Client) *BridgeEventHandler {
+func NewBridgeEventHandler(repo *repository.Repo, cfg *config.BridgeConfig, homeClient ethclient.Client) *BridgeEventHandler {
 	return &BridgeEventHandler{
 		repo:       repo,
 		bridgeID:   cfg.ID,

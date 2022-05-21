@@ -56,12 +56,19 @@ type BridgeAlertConfig struct {
 	ForeignStartBlock uint `yaml:"foreign_start_block"`
 }
 
+type BridgeMode string
+
+const (
+	BridgeModeArbitraryMessage BridgeMode = "AMB"
+	BridgeModeErcToNative      BridgeMode = "ERC_TO_NATIVE"
+)
+
 type BridgeConfig struct {
-	ID            string                        `yaml:"-"`
-	IsErcToNative bool                          `yaml:"is_erc_to_native"`
-	Home          *BridgeSideConfig             `yaml:"home"`
-	Foreign       *BridgeSideConfig             `yaml:"foreign"`
-	Alerts        map[string]*BridgeAlertConfig `yaml:"alerts"`
+	ID         string                        `yaml:"-"`
+	BridgeMode BridgeMode                    `yaml:"bridge_mode"`
+	Home       *BridgeSideConfig             `yaml:"home"`
+	Foreign    *BridgeSideConfig             `yaml:"foreign"`
+	Alerts     map[string]*BridgeAlertConfig `yaml:"alerts"`
 }
 
 type DBConfig struct {
@@ -110,6 +117,21 @@ func (cfg *Config) init() error {
 		}
 		if bridge.Foreign.MaxBlockRangeSize <= 0 {
 			bridge.Foreign.MaxBlockRangeSize = 1000
+		}
+		if len(bridge.Home.ErcToNativeTokens) > 0 {
+			return fmt.Errorf("non-empty home token address list")
+		}
+		switch bridge.BridgeMode {
+		case BridgeModeErcToNative:
+			if len(bridge.Foreign.ErcToNativeTokens) == 0 {
+				return fmt.Errorf("empty foreign token address list in ERC_TO_NATIVE mode")
+			}
+		case BridgeModeArbitraryMessage:
+		default:
+			bridge.BridgeMode = BridgeModeArbitraryMessage
+			if len(bridge.Foreign.ErcToNativeTokens) > 0 {
+				return fmt.Errorf("non-empty foreign token address list in AMB mode")
+			}
 		}
 		for _, side := range [2]*BridgeSideConfig{bridge.Home, bridge.Foreign} {
 			chainName := side.ChainName

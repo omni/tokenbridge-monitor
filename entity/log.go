@@ -55,3 +55,20 @@ func NewLog(chainID string, log types.Log) *Log {
 	}
 	return e
 }
+
+func (l *Log) Topics() []common.Hash {
+	topics := make([]common.Hash, 0, 4)
+	if l.Topic0 != nil {
+		topics = append(topics, *l.Topic0)
+		if l.Topic1 != nil {
+			topics = append(topics, *l.Topic1)
+			if l.Topic2 != nil {
+				topics = append(topics, *l.Topic2)
+				if l.Topic3 != nil {
+					topics = append(topics, *l.Topic3)
+				}
+			}
+		}
+	}
+	return topics
+}

@@ -12,7 +12,6 @@ import (
 	"time"
 	"tokenbridge-monitor/config"
 	"tokenbridge-monitor/contract"
-	"tokenbridge-monitor/contract/abi"
 	"tokenbridge-monitor/entity"
 	"tokenbridge-monitor/ethclient"
 	"tokenbridge-monitor/logging"
@@ -37,11 +36,11 @@ type ContractMonitor struct {
 	cfg                  *config.BridgeSideConfig
 	logger               logging.Logger
 	repo                 *repository.Repo
-	client               *ethclient.Client
+	client               ethclient.Client
 	logsCursor           *entity.LogsCursor
 	blocksRangeChan      chan *BlocksRange
 	logsChan             chan *LogsBatch
-	contract             *contract.Contract
+	contract             *contract.BridgeContract
 	eventHandlers        map[string]EventHandler
 	headBlock            uint
 	isSynced             bool
@@ -51,38 +50,31 @@ type ContractMonitor struct {
 	processedBlockMetric prometheus.Gauge
 }
 
-func NewContractMonitor(ctx context.Context, logger logging.Logger, repo *repository.Repo, bridgeCfg *config.BridgeConfig, cfg *config.BridgeSideConfig) (*ContractMonitor, error) {
-	client, err := ethclient.NewClient(cfg.Chain.RPC.Host, cfg.Chain.RPC.Timeout, cfg.Chain.ChainID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start eth client: %w", err)
-	}
-	contractAbi := abi.AMB
-	if bridgeCfg.IsErcToNative {
-		contractAbi = abi.ERC_TO_NATIVE
-	}
-	bridgeContract := contract.NewContract(client, cfg.Address, contractAbi)
+func NewContractMonitor(ctx context.Context, logger logging.Logger, repo *repository.Repo, bridgeCfg *config.BridgeConfig, cfg *config.BridgeSideConfig, client ethclient.Client) (*ContractMonitor, error) {
+	bridgeContract := contract.NewBridgeContract(client, cfg.Address, bridgeCfg.BridgeMode)
 	if cfg.ValidatorContractAddress == (common.Address{}) {
-		cfg.ValidatorContractAddress, err = bridgeContract.ValidatorContractAddress(ctx)
+		addr, err := bridgeContract.ValidatorContractAddress(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get validator contract address: %w", err)
 		}
 		logger.WithFields(logrus.Fields{
-			"chain_id":                   client.ChainID,
+			"chain_id":                   cfg.Chain.ChainID,
 			"bridge_address":             cfg.Address,
 			"validator_contract_address": cfg.ValidatorContractAddress,
 			"start_block":                cfg.StartBlock,
 		}).Info("obtained validator contract address")
+		cfg.ValidatorContractAddress = addr
 	}
-	logsCursor, err := repo.LogsCursors.GetByChainIDAndAddress(ctx, client.ChainID, cfg.Address)
+	logsCursor, err := repo.LogsCursors.GetByChainIDAndAddress(ctx, cfg.Chain.ChainID, cfg.Address)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.WithFields(logrus.Fields{
-				"chain_id":    client.ChainID,
+				"chain_id":    cfg.Chain.ChainID,
 				"address":     cfg.Address,
 				"start_block": cfg.StartBlock,
 			}).Warn("contract cursor is not present, staring indexing from scratch")
 			logsCursor = &entity.LogsCursor{
-				ChainID:            client.ChainID,
+				ChainID:            cfg.Chain.ChainID,
 				Address:            cfg.Address,
 				LastFetchedBlock:   cfg.StartBlock - 1,
 				LastProcessedBlock: cfg.StartBlock - 1,
@@ -93,7 +85,7 @@ func NewContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 	}
 	commonLabels := prometheus.Labels{
 		"bridge_id": bridgeCfg.ID,
-		"chain_id":  client.ChainID,
+		"chain_id":  cfg.Chain.ChainID,
 		"address":   cfg.Address.String(),
 	}
 	return &ContractMonitor{
@@ -135,6 +127,8 @@ func (m *ContractMonitor) VerifyEventHandlersABI() error {
 func (m *ContractMonitor) Start(ctx context.Context) {
 	lastProcessedBlock := m.logsCursor.LastProcessedBlock
 	lastFetchedBlock := m.logsCursor.LastFetchedBlock
+	m.processedBlockMetric.Set(float64(lastProcessedBlock))
+	m.fetchedBlockMetric.Set(float64(lastFetchedBlock))
 	go m.StartBlockFetcher(ctx, lastFetchedBlock+1)
 	go m.StartLogsProcessor(ctx)
 	m.LoadUnprocessedLogs(ctx, lastProcessedBlock+1, lastFetchedBlock)
@@ -149,7 +143,7 @@ func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, to
 
 	addresses := m.cfg.ContractAddresses(fromBlock, toBlock)
 	for {
-		logs, err := m.repo.Logs.FindByBlockRange(ctx, m.client.ChainID, addresses, fromBlock, toBlock)
+		logs, err := m.repo.Logs.FindByBlockRange(ctx, m.cfg.Chain.ChainID, addresses, fromBlock, toBlock)
 		if err != nil {
 			m.logger.WithError(err).Error("can't find unprocessed logs in block range")
 		} else {
@@ -272,7 +266,7 @@ func (m *ContractMonitor) buildFilterQueries(blocksRange *BlocksRange) []ethereu
 		q.Topics = [][]common.Hash{{*blocksRange.Topic}}
 	}
 	qs = append(qs, q)
-	if m.bridgeCfg.IsErcToNative {
+	if m.bridgeCfg.BridgeMode == config.BridgeModeErcToNative {
 		for _, token := range m.cfg.ErcToNativeTokens {
 			if token.StartBlock > 0 && blocksRange.To < token.StartBlock {
 				continue
@@ -437,7 +431,7 @@ func (m *ContractMonitor) StartLogsProcessor(ctx context.Context) {
 }
 
 func (m *ContractMonitor) tryToGetBlockTimestamp(ctx context.Context, blockNumber uint) error {
-	ts, err := m.repo.BlockTimestamps.GetByBlockNumber(ctx, m.client.ChainID, blockNumber)
+	ts, err := m.repo.BlockTimestamps.GetByBlockNumber(ctx, m.cfg.Chain.ChainID, blockNumber)
 	if err != nil {
 		return fmt.Errorf("can't get block timestamp from db: %w", err)
 	}
@@ -451,7 +445,7 @@ func (m *ContractMonitor) tryToGetBlockTimestamp(ctx context.Context, blockNumbe
 		return fmt.Errorf("can't request block header: %w", err)
 	}
 	return m.repo.BlockTimestamps.Ensure(ctx, &entity.BlockTimestamp{
-		ChainID:     m.client.ChainID,
+		ChainID:     m.cfg.Chain.ChainID,
 		BlockNumber: blockNumber,
 		Timestamp:   time.Unix(int64(header.Time), 0),
 	})

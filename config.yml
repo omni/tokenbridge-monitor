@@ -59,7 +59,7 @@ chains:
     block_index_interval: 60s
 bridges:
   xdai:
-    is_erc_to_native: true
+    bridge_mode: ERC_TO_NATIVE
     home:
       chain: xdai
       address: 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6
@@ -89,6 +89,7 @@ bridges:
       stuck_erc_to_native_message_confirmation:
       last_validator_activity:
   xdai-amb:
+    bridge_mode: AMB
     home:
       chain: xdai
       address: 0x75Df5AF045d91108662D8080fD1FEFAd6aA0bb59
@@ -120,6 +121,7 @@ bridges:
       different_information_signatures:
       last_validator_activity:
   test-amb:
+    bridge_mode: AMB
     home:
       chain: sokol
       address: 0xFe446bEF1DbF7AFE24E81e05BC8B271C1BA9a560
@@ -149,6 +151,7 @@ bridges:
         home_start_block: 21822099
       different_information_signatures:
   bsc-xdai-amb:
+    bridge_mode: AMB
     home:
       chain: xdai
       address: 0x162E898bD0aacB578C8D5F8d6ca588c13d2A383F
@@ -176,6 +179,7 @@ bridges:
       failed_information_request:
       different_information_signatures:
   rinkeby-xdai-amb:
+    bridge_mode: AMB
     home:
       chain: xdai
       address: 0xc38D4991c951fE8BCE1a12bEef2046eF36b0FA4A
@@ -201,6 +205,7 @@ bridges:
       failed_information_request:
       different_information_signatures:
   poa-xdai-amb:
+    bridge_mode: AMB
     home:
       chain: xdai
       address: 0xc2d77d118326c33BBe36EbeAbf4F7ED6BC2dda5c
@@ -226,6 +231,7 @@ bridges:
       failed_information_request:
       different_information_signatures:
   eth-bsc-amb:
+    bridge_mode: AMB
     home:
       chain: bsc
       address: 0x6943A218d58135793F1FE619414eD476C37ad65a

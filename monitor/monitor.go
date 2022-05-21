@@ -6,6 +6,7 @@ import (
 	"tokenbridge-monitor/config"
 	"tokenbridge-monitor/contract/abi"
 	"tokenbridge-monitor/db"
+	"tokenbridge-monitor/ethclient"
 	"tokenbridge-monitor/logging"
 	"tokenbridge-monitor/monitor/alerts"
 	"tokenbridge-monitor/repository"
@@ -20,13 +21,13 @@ type Monitor struct {
 	alertManager   *alerts.AlertManager
 }
 
-func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo *repository.Repo, cfg *config.BridgeConfig) (*Monitor, error) {
+func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo *repository.Repo, cfg *config.BridgeConfig, homeClient, foreignClient ethclient.Client) (*Monitor, error) {
 	logger.Info("initializing bridge monitor")
-	homeMonitor, err := NewContractMonitor(ctx, logger.WithField("contract", "home"), repo, cfg, cfg.Home)
+	homeMonitor, err := NewContractMonitor(ctx, logger.WithField("contract", "home"), repo, cfg, cfg.Home, homeClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize home side monitor: %w", err)
 	}
-	foreignMonitor, err := NewContractMonitor(ctx, logger.WithField("contract", "foreign"), repo, cfg, cfg.Foreign)
+	foreignMonitor, err := NewContractMonitor(ctx, logger.WithField("contract", "foreign"), repo, cfg, cfg.Foreign, foreignClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize foreign side monitor: %w", err)
 	}
@@ -42,9 +43,10 @@ func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo 
 		foreignMonitor: foreignMonitor,
 		alertManager:   alertManager,
 	}
-	if cfg.IsErcToNative {
+	switch cfg.BridgeMode {
+	case config.BridgeModeErcToNative:
 		monitor.RegisterErcToNativeEventHandlers()
-	} else {
+	case config.BridgeModeArbitraryMessage:
 		monitor.RegisterAMBEventHandlers()
 	}
 	err = monitor.homeMonitor.VerifyEventHandlersABI()
