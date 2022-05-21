@@ -95,6 +95,7 @@ WHERE not exists(SELECT *
 			if err != nil {
 				logger.WithFields(fields).WithError(err).Fatal("can't dial chain json rpc")
 			}
+			clients[bt.ChainID] = client
 		}
 
 		fields["block_number"] = bt.BlockNumber
