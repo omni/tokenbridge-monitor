@@ -41,8 +41,8 @@ func unmarshalMessage(bridgeID string, direction entity.Direction, encodedData [
 }
 
 func unmarshalLegacyMessage(bridgeID string, direction entity.Direction, encodedData []byte) *entity.Message {
-	dataType := encodedData[104]
-	if dataType > 0 {
+	// transaction hash (32 bytes) + sender (20 bytes) + receiver (20 bytes) + gas limit (32 bytes) + data type (1 byte) + calldata
+	if encodedData[104] > 0 {
 		panic("unsupported datatype")
 	}
 
