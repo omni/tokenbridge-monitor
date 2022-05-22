@@ -48,7 +48,7 @@ func (r *sentInformationRequestsRepo) FindByLogID(ctx context.Context, logID uin
 	err = r.db.GetContext(ctx, req, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get sent information requesst: %w", err)
 	}
@@ -68,7 +68,7 @@ func (r *sentInformationRequestsRepo) FindByMessageID(ctx context.Context, bridg
 	err = r.db.GetContext(ctx, req, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get sent information request: %w", err)
 	}

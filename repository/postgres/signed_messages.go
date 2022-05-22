@@ -48,7 +48,7 @@ func (r *signedMessagesRepo) FindByLogID(ctx context.Context, logID uint) (*enti
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get signed messages: %w", err)
 	}
@@ -68,9 +68,6 @@ func (r *signedMessagesRepo) FindByMsgHash(ctx context.Context, bridgeID string,
 	msgs := make([]*entity.SignedMessage, 0, 4)
 	err = r.db.SelectContext(ctx, &msgs, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
 		return nil, fmt.Errorf("can't get signed messages: %w", err)
 	}
 	return msgs, nil
@@ -92,7 +89,7 @@ func (r *signedMessagesRepo) FindLatest(ctx context.Context, bridgeID, chainID s
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get latest signed message: %w", err)
 	}

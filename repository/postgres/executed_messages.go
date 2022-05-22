@@ -48,7 +48,7 @@ func (r *executedMessagesRepo) FindByLogID(ctx context.Context, logID uint) (*en
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get executed message: %w", err)
 	}
@@ -68,7 +68,7 @@ func (r *executedMessagesRepo) FindByMessageID(ctx context.Context, bridgeID str
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get executed message: %w", err)
 	}

@@ -53,7 +53,7 @@ func (r *bridgeValidatorsRepo) FindActiveValidator(ctx context.Context, bridgeID
 	err = r.db.GetContext(ctx, val, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get bridge validator: %w", err)
 	}

@@ -48,7 +48,7 @@ func (r *executedInformationRequestsRepo) FindByLogID(ctx context.Context, logID
 	err = r.db.GetContext(ctx, req, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get executed information requesst: %w", err)
 	}
@@ -68,7 +68,7 @@ func (r *executedInformationRequestsRepo) FindByMessageID(ctx context.Context, b
 	err = r.db.GetContext(ctx, req, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get executed information request: %w", err)
 	}

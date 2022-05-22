@@ -50,7 +50,7 @@ func (r *blockTimestampsRepo) GetByBlockNumber(ctx context.Context, chainID stri
 	err = r.db.GetContext(ctx, ts, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get block timestamp: %w", err)
 	}

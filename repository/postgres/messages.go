@@ -48,7 +48,7 @@ func (r *messagesRepo) FindByMsgHash(ctx context.Context, bridgeID string, msgHa
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get message: %w", err)
 	}
@@ -68,7 +68,7 @@ func (r *messagesRepo) FindByMessageID(ctx context.Context, bridgeID string, mes
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get message: %w", err)
 	}

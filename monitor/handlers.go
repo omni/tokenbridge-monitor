@@ -2,10 +2,12 @@ package monitor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"tokenbridge-monitor/config"
 	"tokenbridge-monitor/contract/abi"
+	"tokenbridge-monitor/db"
 	"tokenbridge-monitor/entity"
 	"tokenbridge-monitor/ethclient"
 	"tokenbridge-monitor/repository"
@@ -413,10 +415,10 @@ func (p *BridgeEventHandler) HandleValidatorRemoved(ctx context.Context, log *en
 	validator := data["validator"].(common.Address)
 	val, err := p.repo.BridgeValidators.FindActiveValidator(ctx, p.bridgeID, log.ChainID, validator)
 	if err != nil {
+		if errors.Is(err, db.ErrNotFound) {
+			return nil
+		}
 		return err
-	}
-	if val == nil {
-		return nil
 	}
 	val.RemovedLogID = &log.ID
 	return p.repo.BridgeValidators.Ensure(ctx, val)

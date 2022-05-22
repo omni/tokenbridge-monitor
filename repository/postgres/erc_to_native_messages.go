@@ -48,7 +48,7 @@ func (r *ercToNativeMessagesRepo) FindByMsgHash(ctx context.Context, bridgeID st
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get message: %w", err)
 	}

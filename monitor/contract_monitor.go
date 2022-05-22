@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"math/big"
@@ -11,6 +10,7 @@ import (
 	"time"
 	"tokenbridge-monitor/config"
 	"tokenbridge-monitor/contract"
+	"tokenbridge-monitor/db"
 	"tokenbridge-monitor/entity"
 	"tokenbridge-monitor/ethclient"
 	"tokenbridge-monitor/logging"
@@ -66,7 +66,7 @@ func NewContractMonitor(ctx context.Context, logger logging.Logger, repo *reposi
 	}
 	logsCursor, err := repo.LogsCursors.GetByChainIDAndAddress(ctx, cfg.Chain.ChainID, cfg.Address)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, db.ErrNotFound) {
 			logger.WithFields(logrus.Fields{
 				"chain_id":    cfg.Chain.ChainID,
 				"address":     cfg.Address,
@@ -400,24 +400,24 @@ func (m *ContractMonitor) StartLogsProcessor(ctx context.Context) {
 }
 
 func (m *ContractMonitor) tryToGetBlockTimestamp(ctx context.Context, blockNumber uint) error {
-	ts, err := m.repo.BlockTimestamps.GetByBlockNumber(ctx, m.cfg.Chain.ChainID, blockNumber)
+	_, err := m.repo.BlockTimestamps.GetByBlockNumber(ctx, m.cfg.Chain.ChainID, blockNumber)
 	if err != nil {
+		if errors.Is(err, db.ErrNotFound) {
+			m.logger.WithField("block_number", blockNumber).Debug("fetching block timestamp")
+			header, err := m.client.HeaderByNumber(ctx, blockNumber)
+			if err != nil {
+				return fmt.Errorf("can't request block header: %w", err)
+			}
+			return m.repo.BlockTimestamps.Ensure(ctx, &entity.BlockTimestamp{
+				ChainID:     m.cfg.Chain.ChainID,
+				BlockNumber: blockNumber,
+				Timestamp:   time.Unix(int64(header.Time), 0),
+			})
+		}
 		return fmt.Errorf("can't get block timestamp from db: %w", err)
 	}
-	if ts != nil {
-		m.logger.WithField("block_number", blockNumber).Debug("timestamp already exists, skipping")
-		return nil
-	}
-	m.logger.WithField("block_number", blockNumber).Debug("fetching block timestamp")
-	header, err := m.client.HeaderByNumber(ctx, blockNumber)
-	if err != nil {
-		return fmt.Errorf("can't request block header: %w", err)
-	}
-	return m.repo.BlockTimestamps.Ensure(ctx, &entity.BlockTimestamp{
-		ChainID:     m.cfg.Chain.ChainID,
-		BlockNumber: blockNumber,
-		Timestamp:   time.Unix(int64(header.Time), 0),
-	})
+	m.logger.WithField("block_number", blockNumber).Debug("timestamp already exists, skipping")
+	return nil
 }
 
 func (m *ContractMonitor) tryToProcessLogsBatch(ctx context.Context, batch *LogsBatch) error {

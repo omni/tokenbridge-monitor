@@ -51,7 +51,7 @@ func (r *signedInformationRequestsRepo) FindByLogID(ctx context.Context, logID u
 	err = r.db.GetContext(ctx, req, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get signed information requesst: %w", err)
 	}
@@ -71,9 +71,6 @@ func (r *signedInformationRequestsRepo) FindByMessageID(ctx context.Context, bri
 	reqs := make([]*entity.SignedInformationRequest, 0, 4)
 	err = r.db.SelectContext(ctx, &reqs, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
 		return nil, fmt.Errorf("can't get signed information requests: %w", err)
 	}
 	return reqs, nil
