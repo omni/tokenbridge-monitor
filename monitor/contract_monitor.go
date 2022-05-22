@@ -182,6 +182,7 @@ func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
 				}).Info("scheduling new block range logs search")
 				m.blocksRangeChan <- batch
 			}
+			start = head + 1
 		}
 
 		if utils.ContextSleep(ctx, m.cfg.Chain.BlockIndexInterval) == nil {
