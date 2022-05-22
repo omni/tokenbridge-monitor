@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 	"sort"
 	"sync"
@@ -172,20 +171,13 @@ func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
 			head -= m.cfg.BlockConfirmations
 			m.recordHeadBlockNumber(head)
 
-			for start <= head {
-				end := start + m.cfg.MaxBlockRangeSize - 1
-				if end > head {
-					end = head
-				}
+			batches := SplitBlockRange(start, head, m.cfg.MaxBlockRangeSize)
+			for _, batch := range batches {
 				m.logger.WithFields(logrus.Fields{
-					"from_block": start,
-					"to_block":   end,
+					"from_block": batch.From,
+					"to_block":   batch.To,
 				}).Info("scheduling new block range logs search")
-				m.blocksRangeChan <- &BlocksRange{
-					From: start,
-					To:   end,
-				}
-				start = end + 1
+				m.blocksRangeChan <- batch
 			}
 		}
 
@@ -207,25 +199,17 @@ func (m *ContractMonitor) RefetchEvents(lastFetchedBlock uint) {
 			toBlock = lastFetchedBlock
 		}
 
-		for fromBlock <= toBlock {
-			end := fromBlock + m.cfg.MaxBlockRangeSize - 1
-			if end > toBlock {
-				end = toBlock
-			}
+		batches := SplitBlockRange(fromBlock, toBlock, m.cfg.MaxBlockRangeSize)
+		for _, batch := range batches {
 			m.logger.WithFields(logrus.Fields{
-				"from_block": fromBlock,
-				"to_block":   end,
+				"from_block": batch.From,
+				"to_block":   batch.To,
 			}).Info("scheduling new block range logs search")
-			br := &BlocksRange{
-				From: fromBlock,
-				To:   end,
-			}
 			if job.Event != "" {
 				topic := crypto.Keccak256Hash([]byte(job.Event))
-				br.Topic = &topic
+				batch.Topic = &topic
 			}
-			m.blocksRangeChan <- br
-			fromBlock = end + 1
+			m.blocksRangeChan <- batch
 		}
 	}
 }
@@ -340,34 +324,19 @@ func (m *ContractMonitor) tryToFetchLogs(ctx context.Context, blocksRange *Block
 }
 
 func (m *ContractMonitor) submitLogs(logs []*entity.Log, endBlock uint) {
-	jobs, lastBlock := 0, uint(0)
-	for _, log := range logs {
-		if log.BlockNumber > lastBlock {
-			lastBlock = log.BlockNumber
-			jobs++
-		}
-	}
+	logBatches := SplitLogsInBatches(logs)
 	m.logger.WithFields(logrus.Fields{
 		"count": len(logs),
-		"jobs":  jobs,
+		"jobs":  len(logBatches),
 	}).Info("create jobs for logs processor")
-	// fake log to simplify loop, it will be skipped
-	logs = append(logs, &entity.Log{BlockNumber: math.MaxUint32})
-	batchStartIndex := 0
-	for i, log := range logs {
-		if log.BlockNumber > logs[batchStartIndex].BlockNumber {
-			m.logger.WithFields(logrus.Fields{
-				"count":        i - batchStartIndex,
-				"block_number": logs[batchStartIndex].BlockNumber,
-			}).Debug("submitting logs batch to logs processor")
-			m.logsChan <- &LogsBatch{
-				BlockNumber: logs[batchStartIndex].BlockNumber,
-				Logs:        logs[batchStartIndex:i],
-			}
-			batchStartIndex = i
-		}
+	for _, batch := range logBatches {
+		m.logger.WithFields(logrus.Fields{
+			"count":        len(batch.Logs),
+			"block_number": batch.BlockNumber,
+		}).Debug("submitting logs batch to logs processor")
+		m.logsChan <- batch
 	}
-	if lastBlock < endBlock {
+	if logBatches[len(logBatches)-1].BlockNumber < endBlock {
 		m.logsChan <- &LogsBatch{
 			BlockNumber: endBlock,
 			Logs:        nil,

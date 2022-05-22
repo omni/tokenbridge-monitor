@@ -2,3 +2,5 @@
 .idea/
 prometheus/slack_api_url.txt
 prometheus/admin_password.txt
+cover.out
+coverage.html
