@@ -36,7 +36,10 @@ func NewBridgeEventHandler(repo *repository.Repo, cfg *config.BridgeConfig, home
 }
 
 func (p *BridgeEventHandler) HandleUserRequestForAffirmation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	encodedData := data["encodedData"].([]byte)
+	encodedData, ok := data["encodedData"].([]byte)
+	if !ok {
+		return fmt.Errorf("encodedData type %T is invalid: %w", data["encodedData"], ErrWrongArgumentType)
+	}
 	message := unmarshalMessage(p.bridgeID, entity.DirectionForeignToHome, encodedData)
 	err := p.repo.Messages.Ensure(ctx, message)
 	if err != nil {
@@ -50,7 +53,10 @@ func (p *BridgeEventHandler) HandleUserRequestForAffirmation(ctx context.Context
 }
 
 func (p *BridgeEventHandler) HandleLegacyUserRequestForAffirmation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	encodedData := data["encodedData"].([]byte)
+	encodedData, ok := data["encodedData"].([]byte)
+	if !ok {
+		return fmt.Errorf("encodedData type %T is invalid: %w", data["encodedData"], ErrWrongArgumentType)
+	}
 	encodedData = append(log.TransactionHash[:], encodedData...)
 	message := unmarshalLegacyMessage(p.bridgeID, entity.DirectionForeignToHome, encodedData)
 	err := p.repo.Messages.Ensure(ctx, message)
@@ -65,8 +71,14 @@ func (p *BridgeEventHandler) HandleLegacyUserRequestForAffirmation(ctx context.C
 }
 
 func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	from := data["from"].(common.Address)
-	value := data["value"].(*big.Int)
+	from, ok := data["from"].(common.Address)
+	if !ok {
+		return fmt.Errorf("from type %T is invalid: %w", data["from"], ErrWrongArgumentType)
+	}
+	value, ok := data["value"].(*big.Int)
+	if !ok {
+		return fmt.Errorf("value type %T is invalid: %w", data["value"], ErrWrongArgumentType)
+	}
 
 	for _, token := range p.cfg.Foreign.ErcToNativeTokens {
 		if token.Address == log.Address {
@@ -114,8 +126,14 @@ func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log 
 }
 
 func (p *BridgeEventHandler) HandleErcToNativeUserRequestForAffirmation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	recipient := data["recipient"].(common.Address)
-	value := data["value"].(*big.Int)
+	recipient, ok := data["recipient"].(common.Address)
+	if !ok {
+		return fmt.Errorf("recipient type %T is invalid: %w", data["recipient"], ErrWrongArgumentType)
+	}
+	value, ok := data["value"].(*big.Int)
+	if !ok {
+		return fmt.Errorf("value type %T is invalid: %w", data["value"], ErrWrongArgumentType)
+	}
 
 	valueBytes := common.BigToHash(value)
 	msg := recipient[:]
@@ -163,7 +181,10 @@ func (p *BridgeEventHandler) HandleErcToNativeUserRequestForAffirmation(ctx cont
 }
 
 func (p *BridgeEventHandler) HandleUserRequestForSignature(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	encodedData := data["encodedData"].([]byte)
+	encodedData, ok := data["encodedData"].([]byte)
+	if !ok {
+		return fmt.Errorf("encodedData type %T is invalid: %w", data["encodedData"], ErrWrongArgumentType)
+	}
 	message := unmarshalMessage(p.bridgeID, entity.DirectionHomeToForeign, encodedData)
 	err := p.repo.Messages.Ensure(ctx, message)
 	if err != nil {
@@ -177,7 +198,10 @@ func (p *BridgeEventHandler) HandleUserRequestForSignature(ctx context.Context, 
 }
 
 func (p *BridgeEventHandler) HandleLegacyUserRequestForSignature(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	encodedData := data["encodedData"].([]byte)
+	encodedData, ok := data["encodedData"].([]byte)
+	if !ok {
+		return fmt.Errorf("encodedData type %T is invalid: %w", data["encodedData"], ErrWrongArgumentType)
+	}
 	encodedData = append(log.TransactionHash[:], encodedData...)
 	message := unmarshalLegacyMessage(p.bridgeID, entity.DirectionHomeToForeign, encodedData)
 	err := p.repo.Messages.Ensure(ctx, message)
@@ -192,8 +216,14 @@ func (p *BridgeEventHandler) HandleLegacyUserRequestForSignature(ctx context.Con
 }
 
 func (p *BridgeEventHandler) HandleErcToNativeUserRequestForSignature(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	recipient := data["recipient"].(common.Address)
-	value := data["value"].(*big.Int)
+	recipient, ok := data["recipient"].(common.Address)
+	if !ok {
+		return fmt.Errorf("recipient type %T is invalid: %w", data["recipient"], ErrWrongArgumentType)
+	}
+	value, ok := data["value"].(*big.Int)
+	if !ok {
+		return fmt.Errorf("value type %T is invalid: %w", data["value"], ErrWrongArgumentType)
+	}
 
 	valueBytes := common.BigToHash(value)
 	msg := recipient[:]
@@ -234,8 +264,14 @@ func (p *BridgeEventHandler) HandleErcToNativeUserRequestForSignature(ctx contex
 }
 
 func (p *BridgeEventHandler) HandleSignedForUserRequest(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	msgHash := data["messageHash"].([32]byte)
-	validator := data["signer"].(common.Address)
+	msgHash, ok := data["messageHash"].([32]byte)
+	if !ok {
+		return fmt.Errorf("messageHash type %T is invalid: %w", data["messageHash"], ErrWrongArgumentType)
+	}
+	validator, ok := data["signer"].(common.Address)
+	if !ok {
+		return fmt.Errorf("signer type %T is invalid: %w", data["signer"], ErrWrongArgumentType)
+	}
 
 	return p.repo.SignedMessages.Ensure(ctx, &entity.SignedMessage{
 		LogID:    log.ID,
@@ -246,7 +282,10 @@ func (p *BridgeEventHandler) HandleSignedForUserRequest(ctx context.Context, log
 }
 
 func (p *BridgeEventHandler) HandleErcToNativeSignedForAffirmation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	validator := data["signer"].(common.Address)
+	validator, ok := data["signer"].(common.Address)
+	if !ok {
+		return fmt.Errorf("signer type %T is invalid: %w", data["signer"], ErrWrongArgumentType)
+	}
 
 	tx, err := p.homeClient.TransactionByHash(ctx, log.TransactionHash)
 	if err != nil {
@@ -263,8 +302,14 @@ func (p *BridgeEventHandler) HandleErcToNativeSignedForAffirmation(ctx context.C
 }
 
 func (p *BridgeEventHandler) HandleRelayedMessage(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	messageID := data["messageId"].([32]byte)
-	status := data["status"].(bool)
+	messageID, ok := data["messageId"].([32]byte)
+	if !ok {
+		return fmt.Errorf("messageId type %T is invalid: %w", data["messageId"], ErrWrongArgumentType)
+	}
+	status, ok := data["status"].(bool)
+	if !ok {
+		return fmt.Errorf("status type %T is invalid: %w", data["status"], ErrWrongArgumentType)
+	}
 
 	return p.repo.ExecutedMessages.Ensure(ctx, &entity.ExecutedMessage{
 		LogID:     log.ID,
@@ -275,9 +320,18 @@ func (p *BridgeEventHandler) HandleRelayedMessage(ctx context.Context, log *enti
 }
 
 func (p *BridgeEventHandler) HandleErcToNativeRelayedMessage(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	recipient := data["recipient"].(common.Address)
-	value := data["value"].(*big.Int)
-	transactionHash := data["transactionHash"].([32]byte)
+	recipient, ok := data["recipient"].(common.Address)
+	if !ok {
+		return fmt.Errorf("recipient type %T is invalid: %w", data["recipient"], ErrWrongArgumentType)
+	}
+	value, ok := data["value"].(*big.Int)
+	if !ok {
+		return fmt.Errorf("value type %T is invalid: %w", data["value"], ErrWrongArgumentType)
+	}
+	transactionHash, ok := data["transactionHash"].([32]byte)
+	if !ok {
+		return fmt.Errorf("transactionHash type %T is invalid: %w", data["transactionHash"], ErrWrongArgumentType)
+	}
 
 	valueBytes := common.BigToHash(value)
 
@@ -295,8 +349,14 @@ func (p *BridgeEventHandler) HandleErcToNativeRelayedMessage(ctx context.Context
 }
 
 func (p *BridgeEventHandler) HandleAffirmationCompleted(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	messageID := data["messageId"].([32]byte)
-	status := data["status"].(bool)
+	messageID, ok := data["messageId"].([32]byte)
+	if !ok {
+		return fmt.Errorf("messageId type %T is invalid: %w", data["messageId"], ErrWrongArgumentType)
+	}
+	status, ok := data["status"].(bool)
+	if !ok {
+		return fmt.Errorf("status type %T is invalid: %w", data["status"], ErrWrongArgumentType)
+	}
 
 	return p.repo.ExecutedMessages.Ensure(ctx, &entity.ExecutedMessage{
 		LogID:     log.ID,
@@ -307,9 +367,18 @@ func (p *BridgeEventHandler) HandleAffirmationCompleted(ctx context.Context, log
 }
 
 func (p *BridgeEventHandler) HandleErcToNativeAffirmationCompleted(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	recipient := data["recipient"].(common.Address)
-	value := data["value"].(*big.Int)
-	transactionHash := data["transactionHash"].([32]byte)
+	recipient, ok := data["recipient"].(common.Address)
+	if !ok {
+		return fmt.Errorf("recipient type %T is invalid: %w", data["recipient"], ErrWrongArgumentType)
+	}
+	value, ok := data["value"].(*big.Int)
+	if !ok {
+		return fmt.Errorf("value type %T is invalid: %w", data["value"], ErrWrongArgumentType)
+	}
+	transactionHash, ok := data["transactionHash"].([32]byte)
+	if !ok {
+		return fmt.Errorf("transactionHash type %T is invalid: %w", data["transactionHash"], ErrWrongArgumentType)
+	}
 
 	valueBytes := common.BigToHash(value)
 
@@ -326,9 +395,18 @@ func (p *BridgeEventHandler) HandleErcToNativeAffirmationCompleted(ctx context.C
 }
 
 func (p *BridgeEventHandler) HandleCollectedSignatures(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	msgHash := data["messageHash"].([32]byte)
-	relayer := data["authorityResponsibleForRelay"].(common.Address)
-	numSignatures := data["NumberOfCollectedSignatures"].(*big.Int)
+	msgHash, ok := data["messageHash"].([32]byte)
+	if !ok {
+		return fmt.Errorf("messageHash type %T is invalid: %w", data["messageHash"], ErrWrongArgumentType)
+	}
+	relayer, ok := data["authorityResponsibleForRelay"].(common.Address)
+	if !ok {
+		return fmt.Errorf("authorityResponsibleForRelay type %T is invalid: %w", data["authorityResponsibleForRelay"], ErrWrongArgumentType)
+	}
+	numSignatures, ok := data["NumberOfCollectedSignatures"].(*big.Int)
+	if !ok {
+		return fmt.Errorf("NumberOfCollectedSignatures type %T is invalid: %w", data["NumberOfCollectedSignatures"], ErrWrongArgumentType)
+	}
 
 	return p.repo.CollectedMessages.Ensure(ctx, &entity.CollectedMessage{
 		LogID:             log.ID,
@@ -340,10 +418,22 @@ func (p *BridgeEventHandler) HandleCollectedSignatures(ctx context.Context, log 
 }
 
 func (p *BridgeEventHandler) HandleUserRequestForInformation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	messageID := data["messageId"].([32]byte)
-	requestSelector := data["requestSelector"].([32]byte)
-	sender := data["sender"].(common.Address)
-	requestData := data["data"].([]byte)
+	messageID, ok := data["messageId"].([32]byte)
+	if !ok {
+		return fmt.Errorf("messageId type %T is invalid: %w", data["messageId"], ErrWrongArgumentType)
+	}
+	requestSelector, ok := data["requestSelector"].([32]byte)
+	if !ok {
+		return fmt.Errorf("requestSelector type %T is invalid: %w", data["requestSelector"], ErrWrongArgumentType)
+	}
+	sender, ok := data["sender"].(common.Address)
+	if !ok {
+		return fmt.Errorf("sender type %T is invalid: %w", data["sender"], ErrWrongArgumentType)
+	}
+	requestData, ok := data["data"].([]byte)
+	if !ok {
+		return fmt.Errorf("data type %T is invalid: %w", data["data"], ErrWrongArgumentType)
+	}
 
 	err := p.repo.InformationRequests.Ensure(ctx, &entity.InformationRequest{
 		BridgeID:        p.bridgeID,
@@ -365,8 +455,14 @@ func (p *BridgeEventHandler) HandleUserRequestForInformation(ctx context.Context
 }
 
 func (p *BridgeEventHandler) HandleSignedForInformation(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	messageID := data["messageId"].([32]byte)
-	validator := data["signer"].(common.Address)
+	messageID, ok := data["messageId"].([32]byte)
+	if !ok {
+		return fmt.Errorf("messageId type %T is invalid: %w", data["messageId"], ErrWrongArgumentType)
+	}
+	validator, ok := data["signer"].(common.Address)
+	if !ok {
+		return fmt.Errorf("signer type %T is invalid: %w", data["signer"], ErrWrongArgumentType)
+	}
 
 	tx, err := p.homeClient.TransactionByHash(ctx, log.TransactionHash)
 	if err != nil {
@@ -383,9 +479,18 @@ func (p *BridgeEventHandler) HandleSignedForInformation(ctx context.Context, log
 }
 
 func (p *BridgeEventHandler) HandleInformationRetrieved(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	messageID := data["messageId"].([32]byte)
-	status := data["status"].(bool)
-	callbackStatus := data["callbackStatus"].(bool)
+	messageID, ok := data["messageId"].([32]byte)
+	if !ok {
+		return fmt.Errorf("messageId type %T is invalid: %w", data["messageId"], ErrWrongArgumentType)
+	}
+	status, ok := data["status"].(bool)
+	if !ok {
+		return fmt.Errorf("status type %T is invalid: %w", data["status"], ErrWrongArgumentType)
+	}
+	callbackStatus, ok := data["callbackStatus"].(bool)
+	if !ok {
+		return fmt.Errorf("callbackStatus type %T is invalid: %w", data["callbackStatus"], ErrWrongArgumentType)
+	}
 
 	tx, err := p.homeClient.TransactionByHash(ctx, log.TransactionHash)
 	if err != nil {
@@ -403,7 +508,10 @@ func (p *BridgeEventHandler) HandleInformationRetrieved(ctx context.Context, log
 }
 
 func (p *BridgeEventHandler) HandleValidatorAdded(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	validator := data["validator"].(common.Address)
+	validator, ok := data["validator"].(common.Address)
+	if !ok {
+		return fmt.Errorf("validator type %T is invalid: %w", data["validator"], ErrWrongArgumentType)
+	}
 	return p.repo.BridgeValidators.Ensure(ctx, &entity.BridgeValidator{
 		LogID:    log.ID,
 		BridgeID: p.bridgeID,
@@ -413,7 +521,10 @@ func (p *BridgeEventHandler) HandleValidatorAdded(ctx context.Context, log *enti
 }
 
 func (p *BridgeEventHandler) HandleValidatorRemoved(ctx context.Context, log *entity.Log, data map[string]interface{}) error {
-	validator := data["validator"].(common.Address)
+	validator, ok := data["validator"].(common.Address)
+	if !ok {
+		return fmt.Errorf("validator type %T is invalid: %w", data["validator"], ErrWrongArgumentType)
+	}
 	val, err := p.repo.BridgeValidators.FindActiveValidator(ctx, p.bridgeID, log.ChainID, validator)
 	if err != nil {
 		if errors.Is(err, db.ErrNotFound) {

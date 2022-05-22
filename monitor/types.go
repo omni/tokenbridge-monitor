@@ -1,11 +1,16 @@
 package monitor
 
 import (
+	"errors"
 	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/poanetwork/tokenbridge-monitor/entity"
+)
+
+var (
+	ErrWrongArgumentType = errors.New("argument has unexpected type")
 )
 
 type BlocksRange struct {
