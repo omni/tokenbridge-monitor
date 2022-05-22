@@ -3,10 +3,11 @@ package monitor
 import (
 	"bytes"
 	"encoding/binary"
-	"tokenbridge-monitor/entity"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/poanetwork/tokenbridge-monitor/entity"
 )
 
 func unmarshalMessage(bridgeID string, direction entity.Direction, encodedData []byte) *entity.Message {

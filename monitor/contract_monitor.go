@@ -8,14 +8,6 @@ import (
 	"sort"
 	"sync"
 	"time"
-	"tokenbridge-monitor/config"
-	"tokenbridge-monitor/contract"
-	"tokenbridge-monitor/db"
-	"tokenbridge-monitor/entity"
-	"tokenbridge-monitor/ethclient"
-	"tokenbridge-monitor/logging"
-	"tokenbridge-monitor/repository"
-	"tokenbridge-monitor/utils"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -23,6 +15,15 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+
+	"github.com/poanetwork/tokenbridge-monitor/config"
+	"github.com/poanetwork/tokenbridge-monitor/contract"
+	"github.com/poanetwork/tokenbridge-monitor/db"
+	"github.com/poanetwork/tokenbridge-monitor/entity"
+	"github.com/poanetwork/tokenbridge-monitor/ethclient"
+	"github.com/poanetwork/tokenbridge-monitor/logging"
+	"github.com/poanetwork/tokenbridge-monitor/repository"
+	"github.com/poanetwork/tokenbridge-monitor/utils"
 )
 
 const defaultSyncedThreshold = 10

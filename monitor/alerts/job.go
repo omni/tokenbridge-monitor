@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"strconv"
 	"time"
-	"tokenbridge-monitor/logging"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+
+	"github.com/poanetwork/tokenbridge-monitor/logging"
 )
 
 type AlertJobParams struct {

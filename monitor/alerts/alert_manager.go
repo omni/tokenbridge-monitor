@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"tokenbridge-monitor/config"
-	"tokenbridge-monitor/db"
-	"tokenbridge-monitor/logging"
+
+	"github.com/poanetwork/tokenbridge-monitor/config"
+	"github.com/poanetwork/tokenbridge-monitor/db"
+	"github.com/poanetwork/tokenbridge-monitor/logging"
 )
 
 type AlertManager struct {

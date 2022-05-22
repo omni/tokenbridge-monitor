@@ -2,10 +2,11 @@ package monitor_test
 
 import (
 	"testing"
-	"tokenbridge-monitor/entity"
-	"tokenbridge-monitor/monitor"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/poanetwork/tokenbridge-monitor/entity"
+	"github.com/poanetwork/tokenbridge-monitor/monitor"
 )
 
 func TestSplitBlockRange(t *testing.T) {

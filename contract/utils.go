@@ -2,10 +2,11 @@ package contract
 
 import (
 	"fmt"
-	"tokenbridge-monitor/entity"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/poanetwork/tokenbridge-monitor/entity"
 )
 
 func Indexed(args abi.Arguments) abi.Arguments {

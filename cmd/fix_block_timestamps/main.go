@@ -4,14 +4,15 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"tokenbridge-monitor/config"
-	"tokenbridge-monitor/db"
-	"tokenbridge-monitor/entity"
-	"tokenbridge-monitor/ethclient"
-	"tokenbridge-monitor/logging"
-	"tokenbridge-monitor/repository"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/poanetwork/tokenbridge-monitor/config"
+	"github.com/poanetwork/tokenbridge-monitor/db"
+	"github.com/poanetwork/tokenbridge-monitor/entity"
+	"github.com/poanetwork/tokenbridge-monitor/ethclient"
+	"github.com/poanetwork/tokenbridge-monitor/logging"
+	"github.com/poanetwork/tokenbridge-monitor/repository"
 )
 
 func main() {

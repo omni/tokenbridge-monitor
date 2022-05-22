@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"tokenbridge-monitor/db"
-	"tokenbridge-monitor/entity"
 
 	sq "github.com/Masterminds/squirrel"
+
+	"github.com/poanetwork/tokenbridge-monitor/db"
+	"github.com/poanetwork/tokenbridge-monitor/entity"
 )
 
 type blockTimestampsRepo basePostgresRepo

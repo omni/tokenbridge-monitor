@@ -1,7 +1,7 @@
 package postgres
 
 import (
-	"tokenbridge-monitor/db"
+	"github.com/poanetwork/tokenbridge-monitor/db"
 )
 
 type basePostgresRepo struct {

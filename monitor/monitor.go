@@ -3,13 +3,14 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"tokenbridge-monitor/config"
-	"tokenbridge-monitor/contract/abi"
-	"tokenbridge-monitor/db"
-	"tokenbridge-monitor/ethclient"
-	"tokenbridge-monitor/logging"
-	"tokenbridge-monitor/monitor/alerts"
-	"tokenbridge-monitor/repository"
+
+	"github.com/poanetwork/tokenbridge-monitor/config"
+	"github.com/poanetwork/tokenbridge-monitor/contract/abi"
+	"github.com/poanetwork/tokenbridge-monitor/db"
+	"github.com/poanetwork/tokenbridge-monitor/ethclient"
+	"github.com/poanetwork/tokenbridge-monitor/logging"
+	"github.com/poanetwork/tokenbridge-monitor/monitor/alerts"
+	"github.com/poanetwork/tokenbridge-monitor/repository"
 )
 
 type Monitor struct {

@@ -2,7 +2,8 @@ package presenter
 
 import (
 	"fmt"
-	"tokenbridge-monitor/entity"
+
+	"github.com/poanetwork/tokenbridge-monitor/entity"
 )
 
 var formats = map[string]string{

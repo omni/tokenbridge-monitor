@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"tokenbridge-monitor/db"
-	"tokenbridge-monitor/entity"
-	"tokenbridge-monitor/repository/postgres"
+	"github.com/poanetwork/tokenbridge-monitor/db"
+	"github.com/poanetwork/tokenbridge-monitor/entity"
+	"github.com/poanetwork/tokenbridge-monitor/repository/postgres"
 )
 
 type Repo struct {

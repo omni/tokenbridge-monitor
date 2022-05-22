@@ -2,9 +2,10 @@ package monitor
 
 import (
 	"math"
-	"tokenbridge-monitor/entity"
 
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/poanetwork/tokenbridge-monitor/entity"
 )
 
 type BlocksRange struct {

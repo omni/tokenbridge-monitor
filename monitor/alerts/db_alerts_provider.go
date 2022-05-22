@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"tokenbridge-monitor/db"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/lib/pq"
+
+	"github.com/poanetwork/tokenbridge-monitor/db"
 )
 
 type DBAlertsProvider struct {

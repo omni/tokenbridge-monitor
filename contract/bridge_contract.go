@@ -3,11 +3,12 @@ package contract
 import (
 	"context"
 	"fmt"
-	"tokenbridge-monitor/config"
-	"tokenbridge-monitor/contract/abi"
-	"tokenbridge-monitor/ethclient"
 
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/poanetwork/tokenbridge-monitor/config"
+	"github.com/poanetwork/tokenbridge-monitor/contract/abi"
+	"github.com/poanetwork/tokenbridge-monitor/ethclient"
 )
 
 type BridgeContract struct {

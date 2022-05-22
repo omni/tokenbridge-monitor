@@ -5,15 +5,16 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"tokenbridge-monitor/config"
-	"tokenbridge-monitor/db"
-	"tokenbridge-monitor/ethclient"
-	"tokenbridge-monitor/logging"
-	"tokenbridge-monitor/monitor"
-	"tokenbridge-monitor/presenter"
-	"tokenbridge-monitor/repository"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/poanetwork/tokenbridge-monitor/config"
+	"github.com/poanetwork/tokenbridge-monitor/db"
+	"github.com/poanetwork/tokenbridge-monitor/ethclient"
+	"github.com/poanetwork/tokenbridge-monitor/logging"
+	"github.com/poanetwork/tokenbridge-monitor/monitor"
+	"github.com/poanetwork/tokenbridge-monitor/presenter"
+	"github.com/poanetwork/tokenbridge-monitor/repository"
 )
 
 func main() {
