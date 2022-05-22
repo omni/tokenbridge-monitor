@@ -19,11 +19,11 @@ func NewBridgeContract(client ethclient.Client, addr common.Address, mode config
 	var contract *Contract
 	switch mode {
 	case config.BridgeModeArbitraryMessage:
-		contract = NewContract(client, addr, abi.AMB)
+		contract = NewContract(client, addr, abi.ArbitraryMessageABI)
 	case config.BridgeModeErcToNative:
-		contract = NewContract(client, addr, abi.ERC_TO_NATIVE)
+		contract = NewContract(client, addr, abi.ErcToNativeABI)
 	default:
-		contract = NewContract(client, addr, abi.AMB)
+		contract = NewContract(client, addr, abi.ArbitraryMessageABI)
 	}
 	return &BridgeContract{contract}
 }

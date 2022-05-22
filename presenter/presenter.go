@@ -168,7 +168,7 @@ var HashRegex = regexp.MustCompile(`^0[xX][\da-fA-F]{64}$`)
 func (p *Presenter) SearchLogs(r *http.Request) (interface{}, error) {
 	ctx := r.Context()
 	q := r.URL.Query()
-	chainId := q.Get("chainId")
+	chainID := q.Get("chainId")
 	txHash := q.Get("txHash")
 	block := q.Get("block")
 	fromBlock := q.Get("fromBlock")
@@ -188,10 +188,10 @@ func (p *Presenter) SearchLogs(r *http.Request) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		if chainId != "" {
+		if chainID != "" {
 			filteredLogs := make([]*entity.Log, 0, len(logs))
 			for _, log := range logs {
-				if log.ChainID == chainId {
+				if log.ChainID == chainID {
 					filteredLogs = append(filteredLogs, log)
 				}
 			}
@@ -199,7 +199,7 @@ func (p *Presenter) SearchLogs(r *http.Request) (interface{}, error) {
 		}
 	} else if block != "" || (fromBlock != "" && toBlock != "") {
 		var from, to uint64
-		if chainId == "" {
+		if chainID == "" {
 			return nil, fmt.Errorf("chainId must be specified when block or fromBlock and toBlock are specified")
 		}
 		if block != "" {
@@ -221,7 +221,7 @@ func (p *Presenter) SearchLogs(r *http.Request) (interface{}, error) {
 				return nil, err
 			}
 		}
-		logs, err = p.repo.Logs.FindByBlockRange(ctx, chainId, nil, uint(from), uint(to))
+		logs, err = p.repo.Logs.FindByBlockRange(ctx, chainID, nil, uint(from), uint(to))
 		if err != nil {
 			return nil, err
 		}

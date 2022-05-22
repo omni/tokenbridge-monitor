@@ -179,16 +179,15 @@ func toFilterArg(q ethereum.FilterQuery) (interface{}, error) {
 	}
 	if q.BlockHash != nil {
 		return nil, fmt.Errorf("logs query from BlockHash is not supported")
-	} else {
-		if q.FromBlock == nil {
-			arg["fromBlock"] = "0x0"
-		} else {
-			arg["fromBlock"] = hexutil.EncodeBig(q.FromBlock)
-		}
-		if q.ToBlock == nil || q.ToBlock.Int64() <= 0 {
-			return nil, fmt.Errorf("only positive toBlock is supported")
-		}
-		arg["toBlock"] = hexutil.EncodeBig(q.ToBlock)
 	}
+	if q.FromBlock == nil {
+		arg["fromBlock"] = "0x0"
+	} else {
+		arg["fromBlock"] = hexutil.EncodeBig(q.FromBlock)
+	}
+	if q.ToBlock == nil || q.ToBlock.Int64() <= 0 {
+		return nil, fmt.Errorf("only positive toBlock is supported")
+	}
+	arg["toBlock"] = hexutil.EncodeBig(q.ToBlock)
 	return arg, nil
 }

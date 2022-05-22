@@ -1,5 +1,6 @@
 package abi
 
+//nolint:golint
 import (
 	_ "embed"
 	"strings"
@@ -8,12 +9,15 @@ import (
 )
 
 //go:embed amb.json
-var ambJsonABI string
+var arbitraryMessageJSONABI string
 
 //go:embed erc_to_native.json
-var etnJsonABI string
+var ercToNativeJSONABI string
 
-var AMB, ERC_TO_NATIVE abi.ABI
+var (
+	ArbitraryMessageABI abi.ABI
+	ErcToNativeABI      abi.ABI
+)
 
 const (
 	UserRequestForSignature         = "event UserRequestForSignature(bytes32 indexed messageId, bytes encodedData)"
@@ -44,11 +48,11 @@ const (
 
 func init() {
 	var err error
-	AMB, err = abi.JSON(strings.NewReader(ambJsonABI))
+	ArbitraryMessageABI, err = abi.JSON(strings.NewReader(arbitraryMessageJSONABI))
 	if err != nil {
 		panic(err)
 	}
-	ERC_TO_NATIVE, err = abi.JSON(strings.NewReader(etnJsonABI))
+	ErcToNativeABI, err = abi.JSON(strings.NewReader(ercToNativeJSONABI))
 	if err != nil {
 		panic(err)
 	}

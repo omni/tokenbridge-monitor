@@ -1,5 +1,6 @@
 package db
 
+//nolint:golint,revive
 import (
 	"context"
 	"database/sql"

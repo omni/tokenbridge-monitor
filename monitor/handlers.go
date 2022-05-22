@@ -95,7 +95,7 @@ func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log 
 		return fmt.Errorf("failed to get transaction logs for %s: %w", log.TransactionHash, err)
 	}
 	for _, l := range logs {
-		if l.Topic0 != nil && *l.Topic0 == abi.ERC_TO_NATIVE.Events["UserRequestForAffirmation"].ID {
+		if l.Topic0 != nil && *l.Topic0 == abi.ErcToNativeABI.Events["UserRequestForAffirmation"].ID {
 			return nil
 		}
 	}
@@ -147,7 +147,7 @@ func (p *BridgeEventHandler) HandleErcToNativeUserRequestForAffirmation(ctx cont
 	}
 	var sender common.Address
 	for _, l := range logs {
-		if l.Topic0 != nil && *l.Topic0 == abi.ERC_TO_NATIVE.Events["Transfer"].ID && l.Topic1 != nil && l.Topic2 != nil && len(l.Data) == 32 {
+		if l.Topic0 != nil && *l.Topic0 == abi.ErcToNativeABI.Events["Transfer"].ID && l.Topic1 != nil && l.Topic2 != nil && len(l.Data) == 32 {
 			transferSender := common.BytesToAddress(l.Topic1[:])
 			transferReceiver := common.BytesToAddress(l.Topic2[:])
 			transferValue := new(big.Int).SetBytes(l.Data)
