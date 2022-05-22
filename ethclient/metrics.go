@@ -31,11 +31,12 @@ var (
 func ObserveError(chainID, url, query string, err error) {
 	result := "ok"
 	if err != nil {
+		var rpcErr rpc.Error
 		result = "error"
 		if errors.Is(err, context.DeadlineExceeded) {
 			result = "timeout"
-		} else if err, ok := err.(rpc.Error); ok {
-			result = fmt.Sprintf("error-%d-%s", err.ErrorCode(), err.Error())
+		} else if errors.As(err, &rpcErr) {
+			result = fmt.Sprintf("error-%d-%s", rpcErr.ErrorCode(), rpcErr.Error())
 		}
 	}
 	RequestResults.WithLabelValues(chainID, url, query, result).Inc()

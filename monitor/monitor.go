@@ -52,11 +52,11 @@ func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo 
 	}
 	err = monitor.homeMonitor.VerifyEventHandlersABI()
 	if err != nil {
-		return nil, fmt.Errorf("home side contract does not have %s event in its ABI", err)
+		return nil, fmt.Errorf("home side contract does not ABI for registered event handler: %w", err)
 	}
 	err = monitor.foreignMonitor.VerifyEventHandlersABI()
 	if err != nil {
-		return nil, fmt.Errorf("foreign side contract does not have %s event in its ABI", err)
+		return nil, fmt.Errorf("foreign side contract does not ABI for registered event handler: %w", err)
 	}
 	return monitor, nil
 }
