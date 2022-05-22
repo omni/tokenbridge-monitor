@@ -336,7 +336,7 @@ func (m *ContractMonitor) submitLogs(logs []*entity.Log, endBlock uint) {
 		}).Debug("submitting logs batch to logs processor")
 		m.logsChan <- batch
 	}
-	if logBatches[len(logBatches)-1].BlockNumber < endBlock {
+	if len(logBatches) == 0 || logBatches[len(logBatches)-1].BlockNumber < endBlock {
 		m.logsChan <- &LogsBatch{
 			BlockNumber: endBlock,
 			Logs:        nil,
