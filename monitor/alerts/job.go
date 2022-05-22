@@ -17,12 +17,12 @@ import (
 type AlertJobParams struct {
 	Bridge                  string
 	HomeChainID             string
-	HomeStartBlockNumber    uint
-	HomeBridgeAddress       common.Address
-	HomeWhitelistedSenders  []common.Address
 	ForeignChainID          string
+	HomeStartBlockNumber    uint
 	ForeignStartBlockNumber uint
+	HomeBridgeAddress       common.Address
 	ForeignBridgeAddress    common.Address
+	HomeWhitelistedSenders  []common.Address
 }
 
 type AlertMetricValues map[string]string
