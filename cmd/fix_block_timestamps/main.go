@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	var logger = logging.New()
+	logger := logging.New()
 
 	cfg, err := config.ReadConfig()
 	if err != nil {

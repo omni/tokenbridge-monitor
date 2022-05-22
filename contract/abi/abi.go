@@ -15,8 +15,8 @@ var arbitraryMessageJSONABI string
 var ercToNativeJSONABI string
 
 var (
-	ArbitraryMessageABI abi.ABI
-	ErcToNativeABI      abi.ABI
+	ArbitraryMessageABI = MustReadABI(arbitraryMessageJSONABI)
+	ErcToNativeABI      = MustReadABI(ercToNativeJSONABI)
 )
 
 const (
@@ -46,14 +46,10 @@ const (
 	ValidatorRemoved = "event ValidatorRemoved(address indexed validator)"
 )
 
-func init() {
-	var err error
-	ArbitraryMessageABI, err = abi.JSON(strings.NewReader(arbitraryMessageJSONABI))
+func MustReadABI(rawJSON string) abi.ABI {
+	res, err := abi.JSON(strings.NewReader(rawJSON))
 	if err != nil {
 		panic(err)
 	}
-	ErcToNativeABI, err = abi.JSON(strings.NewReader(ercToNativeJSONABI))
-	if err != nil {
-		panic(err)
-	}
+	return res
 }

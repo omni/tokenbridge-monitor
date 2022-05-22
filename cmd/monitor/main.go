@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	var logger = logging.New()
+	logger := logging.New()
 
 	cfg, err := config.ReadConfig()
 	if err != nil {
@@ -94,6 +94,6 @@ func main() {
 	for range c {
 		cancel()
 		logger.Warn("caught CTRL-C, gracefully terminating")
-		os.Exit(0)
+		return
 	}
 }

@@ -9,9 +9,7 @@ import (
 	"github.com/poanetwork/tokenbridge-monitor/entity"
 )
 
-var (
-	ErrWrongArgumentType = errors.New("argument has unexpected type")
-)
+var ErrWrongArgumentType = errors.New("argument has unexpected type")
 
 type BlocksRange struct {
 	From  uint

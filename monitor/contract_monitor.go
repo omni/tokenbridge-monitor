@@ -26,10 +26,12 @@ import (
 	"github.com/poanetwork/tokenbridge-monitor/utils"
 )
 
-const defaultSyncedThreshold = 10
-const defaultBlockRangesChanCap = 10
-const defaultLogsChanCap = 200
-const defaultEventHandlersMapCap = 20
+const (
+	defaultSyncedThreshold     = 10
+	defaultBlockRangesChanCap  = 10
+	defaultLogsChanCap         = 200
+	defaultEventHandlersMapCap = 20
+)
 
 type ContractMonitor struct {
 	bridgeCfg            *config.BridgeConfig

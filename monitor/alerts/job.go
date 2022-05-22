@@ -85,7 +85,9 @@ func (j *Job) Start(ctx context.Context, isSynced func() bool) {
 				values, err2 := ConvertToAlertMetricValues(alerts)
 				if err2 != nil {
 					j.logger.WithError(err2).Error("can't convert to alert metric values")
-				} else if len(values) > 0 {
+				} else if len(values) == 0 {
+					j.logger.WithField("duration", time.Since(start)).Info("no alerts has been found")
+				} else {
 					j.logger.WithFields(logrus.Fields{
 						"count":    len(values),
 						"duration": time.Since(start),
@@ -93,8 +95,6 @@ func (j *Job) Start(ctx context.Context, isSynced func() bool) {
 					for _, v := range values {
 						j.Metric.With(v.Labels()).Set(v.Value())
 					}
-				} else {
-					j.logger.WithField("duration", time.Since(start)).Info("no alerts has been found")
 				}
 			}
 		} else {
