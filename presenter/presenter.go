@@ -80,7 +80,7 @@ func (p *Presenter) SearchTx(r *http.Request) (interface{}, error) {
 func (p *Presenter) SearchBlock(r *http.Request) (interface{}, error) {
 	ctx := r.Context()
 	chainID := chi.URLParam(r, "chainID")
-	blockNumber, err := strconv.ParseUint(chi.URLParam(r, "blockNumber"), 10, 64)
+	blockNumber, err := strconv.ParseUint(chi.URLParam(r, "blockNumber"), 10, 32)
 	if err != nil {
 		p.logger.WithError(err).Error("failed to parse blockNumber")
 		return nil, err
@@ -206,17 +206,17 @@ func (p *Presenter) SearchLogs(r *http.Request) (interface{}, error) {
 			if fromBlock != "" || toBlock != "" {
 				return nil, fmt.Errorf("fromBlock, toBlock must be empty when block is specified")
 			}
-			from, err = strconv.ParseUint(block, 10, 64)
+			from, err = strconv.ParseUint(block, 10, 32)
 			if err != nil {
 				return nil, err
 			}
 			to = from
 		} else {
-			from, err = strconv.ParseUint(fromBlock, 10, 64)
+			from, err = strconv.ParseUint(fromBlock, 10, 32)
 			if err != nil {
 				return nil, err
 			}
-			to, err = strconv.ParseUint(toBlock, 10, 64)
+			to, err = strconv.ParseUint(toBlock, 10, 32)
 			if err != nil {
 				return nil, err
 			}
