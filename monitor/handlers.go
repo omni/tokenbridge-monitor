@@ -65,9 +65,14 @@ func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log 
 	from := data["from"].(common.Address)
 	value := data["value"].(*big.Int)
 
-	for _, addr := range p.cfg.Foreign.ErcToNativeBlacklistedSenders {
-		if from == addr {
-			return nil
+	for _, token := range p.cfg.Foreign.ErcToNativeTokens {
+		if token.Address == log.Address {
+			for _, addr := range token.BlacklistedSenders {
+				if from == addr {
+					return nil
+				}
+			}
+			break
 		}
 	}
 	logs, err := p.repo.Logs.FindByTxHash(ctx, log.TransactionHash)

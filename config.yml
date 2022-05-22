@@ -80,9 +80,9 @@ bridges:
           end_block: 9884448
         - address: 0x6B175474E89094C44Da98b954EedeAC495271d0F
           start_block: 8928158
-      erc_to_native_blacklisted_senders:
-        - 0x0000000000000000000000000000000000000000
-        - 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643
+          blacklisted_senders:
+            - 0x0000000000000000000000000000000000000000
+            - 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643
     alerts:
       unknown_erc_to_native_message_confirmation:
       unknown_erc_to_native_message_execution:
