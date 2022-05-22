@@ -1,0 +1,35 @@
+run:
+  concurrency: 4
+  timeout: 5m
+  go: '1.17'
+linters:
+  enable-all: true
+  disable:
+    - dupl
+    - wrapcheck
+    - tagliatelle
+    - gomnd
+    - varnamelen
+    - nlreturn
+    - gochecknoglobals
+    - lll
+    - goerr113
+    - ireturn
+    - exhaustivestruct
+    - exhaustruct
+    - cyclop
+    - wsl
+    - nestif
+    - gocognit
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/poanetwork/tokenbridge-monitor)
+  gocritic:
+    disabled-checks:
+      - ifElseChain
+  funlen:
+    lines: 130
+    statements: 60
