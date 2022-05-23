@@ -21,7 +21,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1653133345364,
+  "iteration": 1653254191537,
   "links": [],
   "panels": [
     {
@@ -96,7 +96,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "increase(monitor_rpc_request_results_total{status!=\"ok\"}[20m])",
+          "expr": "rate(monitor_rpc_request_results_total{status!=\"ok\"}[1m])",
           "interval": "",
           "legendFormat": "{{status}} - {{chain_id}} - {{query}}",
           "refId": "A"
@@ -413,5 +413,5 @@
   "timezone": "",
   "title": "Monitor health dashboard",
   "uid": "7fnHj1Hnz",
-  "version": 1
+  "version": 2
 }
