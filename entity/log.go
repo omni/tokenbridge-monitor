@@ -33,7 +33,7 @@ type LogsRepo interface {
 }
 
 func NewLog(chainID string, log types.Log) *Log {
-	e := &Log{
+	res := &Log{
 		ChainID:         chainID,
 		Address:         log.Address,
 		Data:            log.Data,
@@ -42,18 +42,18 @@ func NewLog(chainID string, log types.Log) *Log {
 		TransactionHash: log.TxHash,
 	}
 	if len(log.Topics) > 0 {
-		e.Topic0 = &log.Topics[0]
+		res.Topic0 = &log.Topics[0]
 		if len(log.Topics) > 1 {
-			e.Topic1 = &log.Topics[1]
+			res.Topic1 = &log.Topics[1]
 			if len(log.Topics) > 2 {
-				e.Topic2 = &log.Topics[2]
+				res.Topic2 = &log.Topics[2]
 				if len(log.Topics) > 3 {
-					e.Topic3 = &log.Topics[3]
+					res.Topic3 = &log.Topics[3]
 				}
 			}
 		}
 	}
-	return e
+	return res
 }
 
 func (l *Log) Topics() []common.Hash {

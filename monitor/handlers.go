@@ -146,14 +146,14 @@ func (p *BridgeEventHandler) HandleErcToNativeUserRequestForAffirmation(ctx cont
 		return fmt.Errorf("failed to get transaction logs for %s: %w", log.TransactionHash, err)
 	}
 	var sender common.Address
-	for _, l := range logs {
-		if l.Topic0 != nil && *l.Topic0 == abi.ErcToNativeABI.Events["Transfer"].ID && l.Topic1 != nil && l.Topic2 != nil && len(l.Data) == 32 {
-			transferSender := common.BytesToAddress(l.Topic1[:])
-			transferReceiver := common.BytesToAddress(l.Topic2[:])
-			transferValue := new(big.Int).SetBytes(l.Data)
+	for _, txLog := range logs {
+		if len(txLog.Topics()) >= 3 && *txLog.Topic0 == abi.ErcToNativeABI.Events["Transfer"].ID && len(txLog.Data) == 32 {
+			transferSender := common.BytesToAddress(txLog.Topic1[:])
+			transferReceiver := common.BytesToAddress(txLog.Topic2[:])
+			transferValue := new(big.Int).SetBytes(txLog.Data)
 			if transferReceiver == p.cfg.Foreign.Address && value.Cmp(transferValue) == 0 {
 				for _, t := range p.cfg.Foreign.ErcToNativeTokens {
-					if l.Address == t.Address && l.BlockNumber >= t.StartBlock && (t.EndBlock == 0 || l.BlockNumber <= t.EndBlock) {
+					if txLog.Address == t.Address && txLog.BlockNumber >= t.StartBlock && (t.EndBlock == 0 || txLog.BlockNumber <= t.EndBlock) {
 						sender = transferSender
 					}
 				}

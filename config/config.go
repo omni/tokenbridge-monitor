@@ -94,13 +94,13 @@ type Config struct {
 }
 
 func readYamlConfig(cfg *Config) error {
-	f, err := os.ReadFile("config.yml")
+	blob, err := os.ReadFile("config.yml")
 	if err != nil {
 		return fmt.Errorf("can't access config file: %w", err)
 	}
-	f = []byte(os.ExpandEnv(string(f)))
+	blob = []byte(os.ExpandEnv(string(blob)))
 
-	dec := yaml.NewDecoder(bytes.NewReader(f))
+	dec := yaml.NewDecoder(bytes.NewReader(blob))
 	dec.KnownFields(true)
 	err = dec.Decode(cfg)
 	if err != nil {

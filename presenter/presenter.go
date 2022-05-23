@@ -82,7 +82,7 @@ func (p *Presenter) Serve(addr string) error {
 	return http.ListenAndServe(addr, p.root)
 }
 
-func (p *Presenter) JSON(w http.ResponseWriter, r *http.Request, status int, v interface{}) {
+func (p *Presenter) JSON(w http.ResponseWriter, r *http.Request, status int, res interface{}) {
 	enc := json.NewEncoder(w)
 
 	if pretty, _ := strconv.ParseBool(chi.URLParam(r, "pretty")); pretty {
@@ -90,7 +90,7 @@ func (p *Presenter) JSON(w http.ResponseWriter, r *http.Request, status int, v i
 	}
 
 	w.WriteHeader(status)
-	if err := enc.Encode(v); err != nil {
+	if err := enc.Encode(res); err != nil {
 		p.Error(w, r, fmt.Errorf("failed to marshal JSON result: %w", err))
 		return
 	}
@@ -680,13 +680,13 @@ func (p *Presenter) getTxInfo(ctx context.Context, logID uint) (*TxInfo, error) 
 	if err != nil {
 		return nil, err
 	}
-	ts, err := p.repo.BlockTimestamps.GetByBlockNumber(ctx, log.ChainID, log.BlockNumber)
+	bt, err := p.repo.BlockTimestamps.GetByBlockNumber(ctx, log.ChainID, log.BlockNumber)
 	if err != nil {
 		return nil, err
 	}
 	return &TxInfo{
 		BlockNumber: log.BlockNumber,
-		Timestamp:   ts.Timestamp,
+		Timestamp:   bt.Timestamp,
 		Link:        logToTxLink(log),
 	}, nil
 }

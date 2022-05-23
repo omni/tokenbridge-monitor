@@ -142,17 +142,17 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 }
 
 func (m *AlertManager) Start(ctx context.Context, isSynced func() bool) {
-	t := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	for !isSynced() {
 		select {
 		case <-ctx.Done():
-			t.Stop()
+			ticker.Stop()
 			return
-		case <-t.C:
+		case <-ticker.C:
 			m.logger.Debug("waiting for bridge monitor to be synchronized on both sides")
 		}
 	}
-	t.Stop()
+	ticker.Stop()
 	m.logger.Info("both sides of the monitor are synced, starting alert manager jobs")
 
 	for name, job := range m.jobs {

@@ -9,7 +9,6 @@ linters:
     - wrapcheck
     - tagliatelle
     - gomnd
-    - varnamelen
     - nlreturn
     - gochecknoglobals
     - lll
@@ -33,3 +32,16 @@ linters-settings:
   funlen:
     lines: 130
     statements: 60
+  varnamelen:
+    ignore-names:
+      - db
+      - tx
+      - q
+    ignore-decls:
+      - w http.ResponseWriter
+      - r *http.Request
+      - r chi.Router
+      - bt *entity.BlockTimestamp
+      - ok bool
+      - wg *sync.WaitGroup
+      - i int

@@ -33,16 +33,16 @@ func FindMatchingEventABI(contractABI abi.ABI, topics []common.Hash) *abi.Event 
 
 func DecodeEventLog(event *abi.Event, topics []common.Hash, data []byte) (map[string]interface{}, error) {
 	indexed := Indexed(event.Inputs)
-	m := make(map[string]interface{})
+	values := make(map[string]interface{})
 	if len(indexed) < len(event.Inputs) {
-		if err := event.Inputs.UnpackIntoMap(m, data); err != nil {
+		if err := event.Inputs.UnpackIntoMap(values, data); err != nil {
 			return nil, fmt.Errorf("can't unpack data: %w", err)
 		}
 	}
-	if err := abi.ParseTopicsIntoMap(m, indexed, topics[1:]); err != nil {
+	if err := abi.ParseTopicsIntoMap(values, indexed, topics[1:]); err != nil {
 		return nil, fmt.Errorf("can't unpack topics: %w", err)
 	}
-	return m, nil
+	return values, nil
 }
 
 func ParseLog(contractABI abi.ABI, log *entity.Log) (string, map[string]interface{}, error) {

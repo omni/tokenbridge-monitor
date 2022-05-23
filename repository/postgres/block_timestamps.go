@@ -47,13 +47,13 @@ func (r *blockTimestampsRepo) GetByBlockNumber(ctx context.Context, chainID stri
 	if err != nil {
 		return nil, fmt.Errorf("can't build query: %w", err)
 	}
-	ts := new(entity.BlockTimestamp)
-	err = r.db.GetContext(ctx, ts, q, args...)
+	bt := new(entity.BlockTimestamp)
+	err = r.db.GetContext(ctx, bt, q, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, db.ErrNotFound
 		}
 		return nil, fmt.Errorf("can't get block timestamp: %w", err)
 	}
-	return ts, nil
+	return bt, nil
 }

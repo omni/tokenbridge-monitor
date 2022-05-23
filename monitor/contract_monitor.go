@@ -244,7 +244,7 @@ func (m *ContractMonitor) StartLogsFetcher(ctx context.Context) {
 }
 
 func (m *ContractMonitor) buildFilterQueries(blocksRange *BlocksRange) []ethereum.FilterQuery {
-	var qs []ethereum.FilterQuery
+	var queries []ethereum.FilterQuery
 	q := ethereum.FilterQuery{
 		FromBlock: big.NewInt(int64(blocksRange.From)),
 		ToBlock:   big.NewInt(int64(blocksRange.To)),
@@ -253,7 +253,7 @@ func (m *ContractMonitor) buildFilterQueries(blocksRange *BlocksRange) []ethereu
 	if blocksRange.Topic != nil {
 		q.Topics = [][]common.Hash{{*blocksRange.Topic}}
 	}
-	qs = append(qs, q)
+	queries = append(queries, q)
 	if m.bridgeCfg.BridgeMode == config.BridgeModeErcToNative {
 		for _, token := range m.cfg.ErcToNativeTokens {
 			if token.StartBlock > 0 && blocksRange.To < token.StartBlock {
@@ -262,23 +262,23 @@ func (m *ContractMonitor) buildFilterQueries(blocksRange *BlocksRange) []ethereu
 			if token.EndBlock > 0 && blocksRange.From > token.EndBlock {
 				continue
 			}
-			qc := q
+			q = ethereum.FilterQuery{}
 			if blocksRange.Topic != nil {
-				qc.Topics = [][]common.Hash{{*blocksRange.Topic}, {}, {m.cfg.Address.Hash()}}
+				q.Topics = [][]common.Hash{{*blocksRange.Topic}, {}, {m.cfg.Address.Hash()}}
 			} else {
-				qc.Topics = [][]common.Hash{{}, {}, {m.cfg.Address.Hash()}}
+				q.Topics = [][]common.Hash{{}, {}, {m.cfg.Address.Hash()}}
 			}
-			qc.Addresses = []common.Address{token.Address}
+			q.Addresses = []common.Address{token.Address}
 			if token.StartBlock > 0 && token.StartBlock > blocksRange.From {
-				qc.FromBlock = big.NewInt(int64(token.StartBlock))
+				q.FromBlock = big.NewInt(int64(token.StartBlock))
 			}
 			if token.EndBlock > 0 && token.EndBlock < blocksRange.To {
-				qc.ToBlock = big.NewInt(int64(token.EndBlock))
+				q.ToBlock = big.NewInt(int64(token.EndBlock))
 			}
-			qs = append(qs, qc)
+			queries = append(queries, q)
 		}
 	}
-	return qs
+	return queries
 }
 
 func (m *ContractMonitor) tryToFetchLogs(ctx context.Context, blocksRange *BlocksRange) error {
