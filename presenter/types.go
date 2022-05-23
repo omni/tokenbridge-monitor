@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
+	"github.com/poanetwork/tokenbridge-monitor/config"
 	"github.com/poanetwork/tokenbridge-monitor/entity"
 )
 
@@ -36,12 +37,6 @@ type ErcToNativeMessageInfo struct {
 	Value     string
 }
 
-type TxInfo struct {
-	BlockNumber uint
-	Timestamp   time.Time
-	Link        string
-}
-
 type EventInfo struct {
 	Action         string
 	LogID          uint            `json:"-"`
@@ -59,23 +54,6 @@ type SearchResult struct {
 	RelatedEvents []*EventInfo
 }
 
-type ValidatorInfo struct {
-	Signer           common.Address
-	LastConfirmation *TxInfo
-}
-
-type ValidatorSideResult struct {
-	ChainID     string
-	BlockNumber uint
-}
-
-type ValidatorsResult struct {
-	BridgeID   string
-	Home       *ValidatorSideResult
-	Foreign    *ValidatorSideResult
-	Validators []*ValidatorInfo
-}
-
 type LogResult struct {
 	LogID       uint
 	ChainID     string
@@ -87,4 +65,46 @@ type LogResult struct {
 	Data        hexutil.Bytes
 	TxHash      common.Hash
 	BlockNumber uint
+}
+
+type BridgeInfo struct {
+	BridgeID string
+	Mode     config.BridgeMode
+	Home     *BridgeSideInfo
+	Foreign  *BridgeSideInfo
+}
+
+type BridgeSideInfo struct {
+	Chain                  string
+	ChainID                string
+	BridgeAddress          common.Address
+	LastFetchedBlock       uint
+	LastFetchBlockTime     time.Time
+	LastProcessedBlock     uint
+	LastProcessedBlockTime time.Time
+	Validators             []common.Address
+}
+
+type ValidatorsInfo struct {
+	BridgeID   string
+	Mode       config.BridgeMode
+	Validators []*ValidatorInfo
+}
+
+type ValidatorInfo struct {
+	Address          common.Address
+	LastConfirmation *TxInfo
+}
+
+type TxInfo struct {
+	BlockNumber uint
+	Timestamp   time.Time
+	Link        string
+}
+
+type FilterContext struct {
+	ChainID   *string
+	FromBlock *uint
+	ToBlock   *uint
+	TxHash    *common.Hash
 }

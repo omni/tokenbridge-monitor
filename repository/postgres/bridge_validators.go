@@ -61,11 +61,12 @@ func (r *bridgeValidatorsRepo) FindActiveValidator(ctx context.Context, bridgeID
 	return val, nil
 }
 
-func (r *bridgeValidatorsRepo) FindActiveValidators(ctx context.Context, bridgeID string) ([]*entity.BridgeValidator, error) {
+func (r *bridgeValidatorsRepo) FindActiveValidators(ctx context.Context, bridgeID string, chainID string) ([]*entity.BridgeValidator, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{
 			"bridge_id":      bridgeID,
+			"chain_id":       chainID,
 			"removed_log_id": nil,
 		}).
 		PlaceholderFormat(sq.Dollar).

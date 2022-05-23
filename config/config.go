@@ -12,7 +12,7 @@ import (
 )
 
 type RPCConfig struct {
-	Host    string        `yaml:"host"`
+	Host    string        `yaml:"host" json:"-"` // hidden from public presenter endpoint
 	Timeout time.Duration `yaml:"timeout"`
 	RPS     float64       `yaml:"rps"`
 }
