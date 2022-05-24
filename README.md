@@ -50,8 +50,15 @@ docker-compose -f docker-compose.dev.yml up monitor
 * http://localhost:3000 (user: admin, password: admin)
 * http://localhost:9090/alerts
 * http://localhost:9093/#/alerts
-* http://localhost:3333/tx/<tx_hash>
+* http://localhost:3333/bridge/<bridge_id>
+* http://localhost:3333/bridge/<bridge_id>/config
 * http://localhost:3333/bridge/<bridge_id>/validators
+* http://localhost:3333/chain/<chain_id>/block/<block_number>
+* http://localhost:3333/chain/<chain_id>/block/<block_number>/logs
+* http://localhost:3333/chain/<chain_id>/tx/<tx_hash>
+* http://localhost:3333/chain/<chain_id>/tx/<tx_hash>/logs
+* http://localhost:3333/tx/<tx_hash>
+* http://localhost:3333/tx/<tx_hash>/logs
 
 ## Deployment
 For final deployment, you will need a VM with a static IP and a DNS domain name attached to that IP.
