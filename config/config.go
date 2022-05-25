@@ -146,7 +146,11 @@ func (cfg *Config) init() error {
 }
 
 func (cfg *BridgeSideConfig) ContractAddresses(fromBlock, toBlock uint) []common.Address {
-	addresses := []common.Address{cfg.Address, cfg.ValidatorContractAddress}
+	return append(cfg.ErcToNativeTokenAddresses(fromBlock, toBlock), cfg.Address, cfg.ValidatorContractAddress)
+}
+
+func (cfg *BridgeSideConfig) ErcToNativeTokenAddresses(fromBlock, toBlock uint) []common.Address {
+	addresses := make([]common.Address, 0, len(cfg.ErcToNativeTokens))
 	for _, token := range cfg.ErcToNativeTokens {
 		if token.StartBlock > 0 && toBlock < token.StartBlock {
 			continue

@@ -90,12 +90,20 @@ func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log 
 			break
 		}
 	}
-	logs, err := p.repo.Logs.FindByTxHash(ctx, log.TransactionHash)
+	filter := entity.LogsFilter{
+		ChainID:   &log.ChainID,
+		Addresses: []common.Address{p.cfg.Foreign.Address},
+		FromBlock: &log.BlockNumber,
+		ToBlock:   &log.BlockNumber,
+		TxHash:    &log.TransactionHash,
+		Topic0:    &abi.ErcToNativeUserRequestForAffirmationEventSignature,
+	}
+	logs, err := p.repo.Logs.Find(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to get transaction logs for %s: %w", log.TransactionHash, err)
 	}
 	for _, l := range logs {
-		if l.Topic0 != nil && *l.Topic0 == abi.ErcToNativeABI.Events["UserRequestForAffirmation"].ID {
+		if l.Topic0 != nil && *l.Topic0 == abi.ErcToNativeUserRequestForAffirmationEventSignature {
 			return nil
 		}
 	}
@@ -141,23 +149,25 @@ func (p *BridgeEventHandler) HandleErcToNativeUserRequestForAffirmation(ctx cont
 	msg = append(msg, log.TransactionHash[:]...)
 	msgHash := crypto.Keccak256Hash(msg)
 
-	logs, err := p.repo.Logs.FindByTxHash(ctx, log.TransactionHash)
+	filter := entity.LogsFilter{
+		ChainID:    &log.ChainID,
+		Addresses:  p.cfg.Foreign.ErcToNativeTokenAddresses(log.BlockNumber, log.BlockNumber),
+		FromBlock:  &log.BlockNumber,
+		ToBlock:    &log.BlockNumber,
+		TxHash:     &log.TransactionHash,
+		Topic0:     &abi.ErcToNativeTransferEventSignature,
+		Topic2:     hashPtr(p.cfg.Foreign.Address.Hash()),
+		DataLength: uintPtr(32),
+	}
+	logs, err := p.repo.Logs.Find(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to get transaction logs for %s: %w", log.TransactionHash, err)
 	}
-	var sender common.Address
+	sender := recipient
 	for _, txLog := range logs {
-		if len(txLog.Topics()) >= 3 && *txLog.Topic0 == abi.ErcToNativeABI.Events["Transfer"].ID && len(txLog.Data) == 32 {
-			transferSender := common.BytesToAddress(txLog.Topic1[:])
-			transferReceiver := common.BytesToAddress(txLog.Topic2[:])
-			transferValue := new(big.Int).SetBytes(txLog.Data)
-			if transferReceiver == p.cfg.Foreign.Address && value.Cmp(transferValue) == 0 {
-				for _, t := range p.cfg.Foreign.ErcToNativeTokens {
-					if txLog.Address == t.Address && txLog.BlockNumber >= t.StartBlock && (t.EndBlock == 0 || txLog.BlockNumber <= t.EndBlock) {
-						sender = transferSender
-					}
-				}
-			}
+		transferValue := new(big.Int).SetBytes(txLog.Data)
+		if value.Cmp(transferValue) == 0 {
+			sender = common.BytesToAddress(txLog.Topic1[:])
 		}
 	}
 

@@ -24,12 +24,23 @@ type Log struct {
 	UpdatedAt       *time.Time     `db:"updated_at"`
 }
 
+type LogsFilter struct {
+	ChainID    *string
+	Addresses  []common.Address
+	FromBlock  *uint
+	ToBlock    *uint
+	TxHash     *common.Hash
+	Topic0     *common.Hash
+	Topic1     *common.Hash
+	Topic2     *common.Hash
+	Topic3     *common.Hash
+	DataLength *uint
+}
+
 type LogsRepo interface {
 	Ensure(ctx context.Context, logs ...*Log) error
 	GetByID(ctx context.Context, id uint) (*Log, error)
-	FindByBlockRange(ctx context.Context, chainID string, addr []common.Address, fromBlock, toBlock uint) ([]*Log, error)
-	FindByBlockNumber(ctx context.Context, chainID string, block uint) ([]*Log, error)
-	FindByTxHash(ctx context.Context, txHash common.Hash) ([]*Log, error)
+	Find(ctx context.Context, filter LogsFilter) ([]*Log, error)
 }
 
 func NewLog(chainID string, log types.Log) *Log {

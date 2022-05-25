@@ -143,9 +143,14 @@ func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, to
 		"to_block":   toBlock,
 	}).Info("loading fetched but not yet processed blocks")
 
-	addresses := m.cfg.ContractAddresses(fromBlock, toBlock)
+	filter := entity.LogsFilter{
+		ChainID:   &m.cfg.Chain.ChainID,
+		Addresses: m.cfg.ContractAddresses(fromBlock, toBlock),
+		FromBlock: &fromBlock,
+		ToBlock:   &toBlock,
+	}
 	for {
-		logs, err := m.repo.Logs.FindByBlockRange(ctx, m.cfg.Chain.ChainID, addresses, fromBlock, toBlock)
+		logs, err := m.repo.Logs.Find(ctx, filter)
 		if err != nil {
 			m.logger.WithError(err).Error("can't find unprocessed logs in block range")
 		} else {

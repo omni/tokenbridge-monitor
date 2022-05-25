@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/poanetwork/tokenbridge-monitor/db"
 	"github.com/poanetwork/tokenbridge-monitor/entity"
@@ -62,62 +61,52 @@ func (r *logsRepo) GetByID(ctx context.Context, id uint) (*entity.Log, error) {
 	return log, nil
 }
 
-func (r *logsRepo) FindByBlockRange(ctx context.Context, chainID string, addr []common.Address, fromBlock uint, toBlock uint) ([]*entity.Log, error) {
-	filter := sq.Eq{"chain_id": chainID}
-	if addr != nil {
-		filter["address"] = addr
+func (r *logsRepo) Find(ctx context.Context, filter entity.LogsFilter) ([]*entity.Log, error) {
+	cond := sq.And{}
+	if filter.ChainID != nil {
+		cond = append(cond, sq.Eq{"chain_id": *filter.ChainID})
 	}
-	q, args, err := sq.Select("*").
-		From(r.table).
-		Where(filter).
-		Where(sq.LtOrEq{"block_number": toBlock}).
-		Where(sq.GtOrEq{"block_number": fromBlock}).
-		OrderBy("block_number", "log_index").
-		PlaceholderFormat(sq.Dollar).
-		ToSql()
-	if err != nil {
-		return nil, fmt.Errorf("can't build query: %w", err)
+	if len(filter.Addresses) > 0 {
+		cond = append(cond, sq.Eq{"address": filter.Addresses})
 	}
-	logs := make([]*entity.Log, 0, 10)
-	err = r.db.SelectContext(ctx, &logs, q, args...)
-	if err != nil {
-		return nil, fmt.Errorf("can't get logs by block number range: %w", err)
+	if filter.FromBlock != nil {
+		cond = append(cond, sq.GtOrEq{"block_number": *filter.FromBlock})
 	}
-	return logs, nil
-}
+	if filter.ToBlock != nil {
+		cond = append(cond, sq.LtOrEq{"block_number": *filter.ToBlock})
+	}
+	if filter.TxHash != nil {
+		cond = append(cond, sq.Eq{"transaction_hash": *filter.TxHash})
+	}
+	if filter.Topic0 != nil {
+		cond = append(cond, sq.Eq{"topic0": *filter.Topic0})
+	}
+	if filter.Topic1 != nil {
+		cond = append(cond, sq.Eq{"topic1": *filter.Topic1})
+	}
+	if filter.Topic2 != nil {
+		cond = append(cond, sq.Eq{"topic2": *filter.Topic2})
+	}
+	if filter.Topic3 != nil {
+		cond = append(cond, sq.Eq{"topic3": *filter.Topic3})
+	}
+	if filter.DataLength != nil {
+		cond = append(cond, sq.Eq{"length(data)": *filter.DataLength})
+	}
 
-func (r *logsRepo) FindByBlockNumber(ctx context.Context, chainID string, block uint) ([]*entity.Log, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
-		Where(sq.Eq{"chain_id": chainID, "block_number": block}).
-		OrderBy("log_index").
-		PlaceholderFormat(sq.Dollar).
-		ToSql()
-	if err != nil {
-		return nil, fmt.Errorf("can't build query: %w", err)
-	}
-	logs := make([]*entity.Log, 0, 10)
-	err = r.db.SelectContext(ctx, &logs, q, args...)
-	if err != nil {
-		return nil, fmt.Errorf("can't get logs by block number: %w", err)
-	}
-	return logs, nil
-}
-
-func (r *logsRepo) FindByTxHash(ctx context.Context, txHash common.Hash) ([]*entity.Log, error) {
-	q, args, err := sq.Select("*").
-		From(r.table).
-		Where(sq.Eq{"transaction_hash": txHash}).
+		Where(cond).
 		OrderBy("chain_id", "block_number", "log_index").
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("can't build query: %w", err)
 	}
-	logs := make([]*entity.Log, 0, 2)
+	logs := make([]*entity.Log, 0, 10)
 	err = r.db.SelectContext(ctx, &logs, q, args...)
 	if err != nil {
-		return nil, fmt.Errorf("can't get logs by tx hash: %w", err)
+		return nil, fmt.Errorf("can't find logs by filter query: %w", err)
 	}
 	return logs, nil
 }

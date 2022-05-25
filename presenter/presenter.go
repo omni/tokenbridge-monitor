@@ -203,30 +203,20 @@ func (p *Presenter) GetBridgeValidators(w http.ResponseWriter, r *http.Request) 
 func (p *Presenter) getFilteredLogs(ctx context.Context) ([]*entity.Log, error) {
 	filter := middleware.GetFilterContext(ctx)
 
-	if filter.TxHash != nil {
-		logs, err := p.repo.Logs.FindByTxHash(ctx, *filter.TxHash)
-		if err != nil {
-			return nil, err
+	if filter.TxHash == nil {
+		if filter.ChainID == nil {
+			return nil, errors.New("chainId query parameter is missing")
 		}
-		if filter.ChainID != nil {
-			newLogs := make([]*entity.Log, 0, len(logs))
-			for _, log := range logs {
-				if log.ChainID == *filter.ChainID {
-					newLogs = append(newLogs, log)
-				}
-			}
-			logs = newLogs
+		if filter.FromBlock == nil || filter.ToBlock == nil {
+			return nil, errors.New("block query parameters are missing")
 		}
-		return logs, nil
 	}
-
-	if filter.ChainID == nil {
-		return nil, errors.New("chainId query parameter is missing")
-	}
-	if filter.FromBlock == nil || filter.ToBlock == nil {
-		return nil, errors.New("block query parameters are missing")
-	}
-	return p.repo.Logs.FindByBlockRange(ctx, *filter.ChainID, nil, *filter.FromBlock, *filter.ToBlock)
+	return p.repo.Logs.Find(ctx, entity.LogsFilter{
+		ChainID:   filter.ChainID,
+		FromBlock: filter.FromBlock,
+		ToBlock:   filter.ToBlock,
+		TxHash:    filter.TxHash,
+	})
 }
 
 func (p *Presenter) GetMessages(w http.ResponseWriter, r *http.Request) {

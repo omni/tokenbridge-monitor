@@ -46,6 +46,11 @@ const (
 	ValidatorRemoved = "event ValidatorRemoved(address indexed validator)"
 )
 
+var (
+	ErcToNativeTransferEventSignature                  = ErcToNativeABI.Events["Transfer"].ID
+	ErcToNativeUserRequestForAffirmationEventSignature = ErcToNativeABI.Events["UserRequestForAffirmation"].ID
+)
+
 func MustReadABI(rawJSON string) abi.ABI {
 	res, err := abi.JSON(strings.NewReader(rawJSON))
 	if err != nil {
