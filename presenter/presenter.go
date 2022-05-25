@@ -293,33 +293,7 @@ func (p *Presenter) searchSentMessage(ctx context.Context, log *entity.Log) (*Se
 		return nil, err
 	}
 
-	var messageInfo interface{}
-	var events []*EventInfo
-	msg, err := p.repo.Messages.FindByMsgHash(ctx, sent.BridgeID, sent.MsgHash)
-	if err != nil && errors.Is(err, db.ErrNotFound) {
-		ercToNativeMsg, err2 := p.repo.ErcToNativeMessages.FindByMsgHash(ctx, sent.BridgeID, sent.MsgHash)
-		if err2 != nil {
-			return nil, err2
-		}
-		messageInfo = NewErcToNativeMessageInfo(ercToNativeMsg)
-		events, err = p.buildMessageEvents(ctx, ercToNativeMsg.BridgeID, ercToNativeMsg.MsgHash, ercToNativeMsg.MsgHash)
-		if err != nil {
-			return nil, err
-		}
-	} else if err != nil {
-		return nil, err
-	} else {
-		messageInfo = NewMessageInfo(msg)
-		events, err = p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &SearchResult{
-		Message:       messageInfo,
-		RelatedEvents: events,
-	}, nil
+	return p.buildSearchResultForMessage(ctx, sent.BridgeID, &sent.MsgHash, nil)
 }
 
 func (p *Presenter) searchSignedMessage(ctx context.Context, log *entity.Log) (*SearchResult, error) {
@@ -328,32 +302,7 @@ func (p *Presenter) searchSignedMessage(ctx context.Context, log *entity.Log) (*
 		return nil, err
 	}
 
-	var messageInfo interface{}
-	var events []*EventInfo
-	msg, err := p.repo.Messages.FindByMsgHash(ctx, sig.BridgeID, sig.MsgHash)
-	if err != nil && errors.Is(err, db.ErrNotFound) {
-		ercToNativeMsg, err2 := p.repo.ErcToNativeMessages.FindByMsgHash(ctx, sig.BridgeID, sig.MsgHash)
-		if err2 != nil {
-			return nil, err2
-		}
-		messageInfo = NewErcToNativeMessageInfo(ercToNativeMsg)
-		events, err = p.buildMessageEvents(ctx, ercToNativeMsg.BridgeID, ercToNativeMsg.MsgHash, ercToNativeMsg.MsgHash)
-		if err != nil {
-			return nil, err
-		}
-	} else if err != nil {
-		return nil, err
-	} else {
-		messageInfo = NewMessageInfo(msg)
-		events, err = p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &SearchResult{
-		Message:       messageInfo,
-		RelatedEvents: events,
-	}, nil
+	return p.buildSearchResultForMessage(ctx, sig.BridgeID, &sig.MsgHash, nil)
 }
 
 func (p *Presenter) searchExecutedMessage(ctx context.Context, log *entity.Log) (*SearchResult, error) {
@@ -362,11 +311,27 @@ func (p *Presenter) searchExecutedMessage(ctx context.Context, log *entity.Log) 
 		return nil, err
 	}
 
+	return p.buildSearchResultForMessage(ctx, executed.BridgeID, nil, &executed.MessageID)
+}
+
+func (p *Presenter) buildSearchResultForMessage(ctx context.Context, bridgeID string, msgHash, messageID *common.Hash) (*SearchResult, error) {
+	if msgHash == nil && messageID == nil {
+		return nil, errors.New("msgHash and messageID can't be both nil")
+	}
 	var messageInfo interface{}
 	var events []*EventInfo
-	msg, err := p.repo.Messages.FindByMessageID(ctx, executed.BridgeID, executed.MessageID)
+	var msg *entity.Message
+	var err error
+	var searchID common.Hash
+	if msgHash != nil {
+		searchID = *msgHash
+		msg, err = p.repo.Messages.FindByMsgHash(ctx, bridgeID, *msgHash)
+	} else {
+		searchID = *messageID
+		msg, err = p.repo.Messages.FindByMessageID(ctx, bridgeID, *messageID)
+	}
 	if err != nil && errors.Is(err, db.ErrNotFound) {
-		ercToNativeMsg, err2 := p.repo.ErcToNativeMessages.FindByMsgHash(ctx, executed.BridgeID, executed.MessageID)
+		ercToNativeMsg, err2 := p.repo.ErcToNativeMessages.FindByMsgHash(ctx, bridgeID, searchID)
 		if err2 != nil {
 			return nil, err2
 		}
@@ -396,18 +361,7 @@ func (p *Presenter) searchSentInformationRequest(ctx context.Context, log *entit
 		return nil, err
 	}
 
-	req, err := p.repo.InformationRequests.FindByMessageID(ctx, sent.BridgeID, sent.MessageID)
-	if err != nil {
-		return nil, err
-	}
-	events, err := p.buildInformationRequestEvents(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	return &SearchResult{
-		Message:       NewInformationRequestInfo(req),
-		RelatedEvents: events,
-	}, nil
+	return p.buildSearchResultForInformationRequest(ctx, sent.BridgeID, sent.MessageID)
 }
 
 func (p *Presenter) searchSignedInformationRequest(ctx context.Context, log *entity.Log) (*SearchResult, error) {
@@ -416,18 +370,7 @@ func (p *Presenter) searchSignedInformationRequest(ctx context.Context, log *ent
 		return nil, err
 	}
 
-	req, err := p.repo.InformationRequests.FindByMessageID(ctx, signed.BridgeID, signed.MessageID)
-	if err != nil {
-		return nil, err
-	}
-	events, err := p.buildInformationRequestEvents(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	return &SearchResult{
-		Message:       NewInformationRequestInfo(req),
-		RelatedEvents: events,
-	}, nil
+	return p.buildSearchResultForInformationRequest(ctx, signed.BridgeID, signed.MessageID)
 }
 
 func (p *Presenter) searchExecutedInformationRequest(ctx context.Context, log *entity.Log) (*SearchResult, error) {
@@ -436,7 +379,11 @@ func (p *Presenter) searchExecutedInformationRequest(ctx context.Context, log *e
 		return nil, err
 	}
 
-	req, err := p.repo.InformationRequests.FindByMessageID(ctx, executed.BridgeID, executed.MessageID)
+	return p.buildSearchResultForInformationRequest(ctx, executed.BridgeID, executed.MessageID)
+}
+
+func (p *Presenter) buildSearchResultForInformationRequest(ctx context.Context, bridgeID string, messageID common.Hash) (*SearchResult, error) {
+	req, err := p.repo.InformationRequests.FindByMessageID(ctx, bridgeID, messageID)
 	if err != nil {
 		return nil, err
 	}
