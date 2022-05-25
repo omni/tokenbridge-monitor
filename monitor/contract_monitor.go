@@ -32,6 +32,8 @@ const (
 	defaultEventHandlersMapCap = 20
 )
 
+var ErrIncompatibleABI = errors.New("incompatible ABI")
+
 type ContractMonitor struct {
 	bridgeCfg            *config.BridgeConfig
 	cfg                  *config.BridgeSideConfig
@@ -119,7 +121,7 @@ func (m *ContractMonitor) VerifyEventHandlersABI() error {
 	events := m.contract.AllEvents()
 	for e := range m.eventHandlers {
 		if !events[e] {
-			return fmt.Errorf("contract does not have %s event in its ABI", e)
+			return fmt.Errorf("contract does not have %s event in its ABI: %w", e, ErrIncompatibleABI)
 		}
 	}
 	return nil
@@ -136,9 +138,10 @@ func (m *ContractMonitor) Start(ctx context.Context) {
 	go m.StartLogsFetcher(ctx)
 }
 
+//nolint:cyclop
 func (m *ContractMonitor) ProcessBlockRange(ctx context.Context, fromBlock, toBlock uint) error {
 	if toBlock > m.logsCursor.LastProcessedBlock {
-		return errors.New("can't manually process logs further then current lastProcessedBlock")
+		return fmt.Errorf("can't manually process logs further then current lastProcessedBlock: %w", config.ErrInvalidConfig)
 	}
 
 	wg := sync.WaitGroup{}
@@ -378,51 +381,61 @@ func (m *ContractMonitor) StartLogsProcessor(ctx context.Context) {
 			if logs == nil {
 				continue
 			}
-			wg := new(sync.WaitGroup)
-			wg.Add(2)
-			go func() {
-				defer wg.Done()
-				for {
-					err := m.tryToGetBlockTimestamp(ctx, logs.BlockNumber)
-					if err != nil {
-						m.logger.WithError(err).WithFields(logrus.Fields{
-							"block_number": logs.BlockNumber,
-						}).Error("failed to get block timestamp, retrying")
-						continue
-					}
-					return
-				}
-			}()
-
-			go func() {
-				defer wg.Done()
-				for {
-					err := m.tryToProcessLogsBatch(ctx, logs)
-					if err != nil {
-						m.logger.WithError(err).WithFields(logrus.Fields{
-							"block_number": logs.BlockNumber,
-							"count":        len(logs.Logs),
-						}).Error("failed to process logs batch, retrying")
-						continue
-					}
-					return
-				}
-			}()
-			wg.Wait()
-
-			for {
-				err := m.recordProcessedBlockNumber(ctx, logs.BlockNumber)
-				if err != nil {
-					m.logger.WithError(err).WithField("block_number", logs.BlockNumber).
-						Error("failed to update latest processed block number, retrying")
-					if utils.ContextSleep(ctx, 10*time.Second) == nil {
-						return
-					}
-					continue
-				}
-				break
-			}
+			m.processLogsBatch(ctx, logs)
 		}
+	}
+}
+
+func (m *ContractMonitor) processLogsBatch(ctx context.Context, logs *LogsBatch) {
+	wg := new(sync.WaitGroup)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for {
+			err := m.tryToGetBlockTimestamp(ctx, logs.BlockNumber)
+			if err != nil {
+				m.logger.WithError(err).WithFields(logrus.Fields{
+					"block_number": logs.BlockNumber,
+				}).Error("failed to get block timestamp, retrying")
+				if utils.ContextSleep(ctx, time.Second) == nil {
+					return
+				}
+				continue
+			}
+			return
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for {
+			err := m.tryToProcessLogsBatch(ctx, logs)
+			if err != nil {
+				m.logger.WithError(err).WithFields(logrus.Fields{
+					"block_number": logs.BlockNumber,
+					"count":        len(logs.Logs),
+				}).Error("failed to process logs batch, retrying")
+				if utils.ContextSleep(ctx, time.Second) == nil {
+					return
+				}
+				continue
+			}
+			return
+		}
+	}()
+	wg.Wait()
+
+	for {
+		err := m.recordProcessedBlockNumber(ctx, logs.BlockNumber)
+		if err != nil {
+			m.logger.WithError(err).WithField("block_number", logs.BlockNumber).
+				Error("failed to update latest processed block number, retrying")
+			if utils.ContextSleep(ctx, 10*time.Second) == nil {
+				return
+			}
+			continue
+		}
+		break
 	}
 }
 

@@ -73,40 +73,49 @@ type Job struct {
 func (j *Job) Start(ctx context.Context, isSynced func() bool) {
 	ticker := time.NewTicker(j.Interval)
 	for {
-		if isSynced() {
-			timeoutCtx, cancel := context.WithTimeout(ctx, j.Timeout)
-			start := time.Now()
-			alerts, err := j.Func(timeoutCtx, j.Params)
-			cancel()
-			if err != nil {
-				j.logger.WithError(err).Error("failed to process alert job")
-			} else {
-				j.Metric.Reset()
-				values, err2 := ConvertToAlertMetricValues(alerts)
-				if err2 != nil {
-					j.logger.WithError(err2).Error("can't convert to alert metric values")
-				} else if len(values) == 0 {
-					j.logger.WithField("duration", time.Since(start)).Info("no alerts has been found")
-				} else {
-					j.logger.WithFields(logrus.Fields{
-						"count":    len(values),
-						"duration": time.Since(start),
-					}).Warn("found some possible alerts")
-					for _, v := range values {
-						j.Metric.With(v.Labels()).Set(v.Value())
-					}
-				}
-			}
-		} else {
-			j.logger.Warn("bridge monitor is not synchronized, skipping alert job iteration")
+		err := j.Execute(ctx, isSynced)
+		if err != nil {
+			j.logger.WithError(err).Error("can't execute alert job")
 		}
 
 		select {
 		case <-ticker.C:
-			continue
 		case <-ctx.Done():
 			ticker.Stop()
 			return
 		}
 	}
+}
+
+func (j *Job) Execute(ctx context.Context, isSynced func() bool) error {
+	if !isSynced() {
+		j.logger.Warn("bridge monitor is not synchronized, skipping alert job iteration")
+		return nil
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, j.Timeout)
+	start := time.Now()
+	alerts, err := j.Func(timeoutCtx, j.Params)
+	cancel()
+	if err != nil {
+		return fmt.Errorf("failed to process alert job: %w", err)
+	}
+
+	j.Metric.Reset()
+	values, err := ConvertToAlertMetricValues(alerts)
+	if err != nil {
+		return fmt.Errorf("can't convert to alert metric values: %w", err)
+	}
+	if len(values) == 0 {
+		j.logger.WithField("duration", time.Since(start)).Info("no alerts has been found")
+		return nil
+	}
+	j.logger.WithFields(logrus.Fields{
+		"count":    len(values),
+		"duration": time.Since(start),
+	}).Warn("found some possible alerts")
+	for _, v := range values {
+		j.Metric.With(v.Labels()).Set(v.Value())
+	}
+	return nil
 }

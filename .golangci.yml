@@ -12,14 +12,9 @@ linters:
     - nlreturn
     - gochecknoglobals
     - lll
-    - goerr113
     - ireturn
     - exhaustivestruct
     - exhaustruct
-    - cyclop
-    - wsl
-    - nestif
-    - gocognit
 linters-settings:
   gci:
     sections:
@@ -45,3 +40,18 @@ linters-settings:
       - ok bool
       - wg *sync.WaitGroup
       - i int
+  wsl:
+    allow-cuddle-declarations: true
+issues:
+  exclude:
+    - .* should only be cuddled with .*
+    - only one cuddle assignment allowed before .* statement
+    - .* should not be cuddled .*
+    - go statements can only invoke functions assigned on line above
+    - only cuddled expressions if assigning variable or using from line above
+    - append only allowed to cuddle with appended value
+    - for statement without condition should never be cuddled
+  exclude-rules:
+    - linters:
+        - cyclop
+      path: cmd

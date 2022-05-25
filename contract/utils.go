@@ -1,6 +1,7 @@
 package contract
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/poanetwork/tokenbridge-monitor/entity"
 )
+
+var ErrInvalidEvent = errors.New("invalid event")
 
 func Indexed(args abi.Arguments) abi.Arguments {
 	var indexed abi.Arguments
@@ -48,7 +51,7 @@ func DecodeEventLog(event *abi.Event, topics []common.Hash, data []byte) (map[st
 func ParseLog(contractABI abi.ABI, log *entity.Log) (string, map[string]interface{}, error) {
 	topics := log.Topics()
 	if len(topics) == 0 {
-		return "", nil, fmt.Errorf("cannot process event without topics")
+		return "", nil, fmt.Errorf("cannot process event without topics: %w", ErrInvalidEvent)
 	}
 	event := FindMatchingEventABI(contractABI, topics)
 	if event == nil {

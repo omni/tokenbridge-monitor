@@ -20,6 +20,12 @@ import (
 	"github.com/poanetwork/tokenbridge-monitor/repository"
 )
 
+var (
+	ErrMissingChainID             = errors.New("chainId query parameter is missing")
+	ErrMissingBlockQueryParams    = errors.New("block query parameters are missing")
+	ErrMissingMsgHashAndMessageID = errors.New("msgHash and messageID can't be both nil")
+)
+
 type Presenter struct {
 	logger logging.Logger
 	repo   *repository.Repo
@@ -79,22 +85,16 @@ func (p *Presenter) getBridgeSideInfo(ctx context.Context, bridgeID string, cfg 
 		return nil, fmt.Errorf("failed to get home bridge cursor: %w", err)
 	}
 
-	var lastFetchedBlockTime, lastProcessedBlockTime time.Time
-	bt, err := p.repo.BlockTimestamps.GetByBlockNumber(ctx, cfg.Chain.ChainID, cursor.LastFetchedBlock)
-	if err != nil && !errors.Is(err, db.ErrNotFound) {
-		return nil, fmt.Errorf("failed to get home bridge cursor: %w", err)
-	} else if err == nil {
-		lastFetchedBlockTime = bt.Timestamp
+	lastFetchedBlockTime, err := p.getBlockTimeOrDefault(ctx, cfg.Chain.ChainID, cursor.LastFetchedBlock)
+	if err != nil {
+		return nil, err
 	}
+	lastProcessedBlockTime := lastFetchedBlockTime
 
-	if cursor.LastFetchedBlock == cursor.LastProcessedBlock {
-		lastProcessedBlockTime = lastFetchedBlockTime
-	} else {
-		bt, err = p.repo.BlockTimestamps.GetByBlockNumber(ctx, cfg.Chain.ChainID, cursor.LastProcessedBlock)
-		if err != nil && !errors.Is(err, db.ErrNotFound) {
-			return nil, fmt.Errorf("failed to get home bridge cursor: %w", err)
-		} else if err == nil {
-			lastProcessedBlockTime = bt.Timestamp
+	if cursor.LastFetchedBlock != cursor.LastProcessedBlock {
+		lastProcessedBlockTime, err = p.getBlockTimeOrDefault(ctx, cfg.Chain.ChainID, cursor.LastProcessedBlock)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -117,6 +117,16 @@ func (p *Presenter) getBridgeSideInfo(ctx context.Context, bridgeID string, cfg 
 		LastProcessedBlockTime: lastProcessedBlockTime,
 		Validators:             validatorAddresses,
 	}, nil
+}
+
+func (p *Presenter) getBlockTimeOrDefault(ctx context.Context, chainID string, blockNumber uint) (time.Time, error) {
+	bt, err := p.repo.BlockTimestamps.GetByBlockNumber(ctx, chainID, blockNumber)
+	if err != nil && !errors.Is(err, db.ErrNotFound) {
+		return time.Time{}, fmt.Errorf("failed to get block timestamp: %w", err)
+	} else if err == nil {
+		return bt.Timestamp, nil
+	}
+	return time.Time{}, nil
 }
 
 func (p *Presenter) GetBridgeConfig(w http.ResponseWriter, r *http.Request) {
@@ -205,10 +215,10 @@ func (p *Presenter) getFilteredLogs(ctx context.Context) ([]*entity.Log, error) 
 
 	if filter.TxHash == nil {
 		if filter.ChainID == nil {
-			return nil, errors.New("chainId query parameter is missing")
+			return nil, ErrMissingChainID
 		}
 		if filter.FromBlock == nil || filter.ToBlock == nil {
-			return nil, errors.New("block query parameters are missing")
+			return nil, ErrMissingBlockQueryParams
 		}
 	}
 	return p.repo.Logs.Find(ctx, entity.LogsFilter{
@@ -316,10 +326,8 @@ func (p *Presenter) searchExecutedMessage(ctx context.Context, log *entity.Log) 
 
 func (p *Presenter) buildSearchResultForMessage(ctx context.Context, bridgeID string, msgHash, messageID *common.Hash) (*SearchResult, error) {
 	if msgHash == nil && messageID == nil {
-		return nil, errors.New("msgHash and messageID can't be both nil")
+		return nil, ErrMissingMsgHashAndMessageID
 	}
-	var messageInfo interface{}
-	var events []*EventInfo
 	var msg *entity.Message
 	var err error
 	var searchID common.Hash
@@ -330,27 +338,29 @@ func (p *Presenter) buildSearchResultForMessage(ctx context.Context, bridgeID st
 		searchID = *messageID
 		msg, err = p.repo.Messages.FindByMessageID(ctx, bridgeID, *messageID)
 	}
-	if err != nil && errors.Is(err, db.ErrNotFound) {
+	if err != nil && !errors.Is(err, db.ErrNotFound) {
+		return nil, err
+	}
+	if errors.Is(err, db.ErrNotFound) {
 		ercToNativeMsg, err2 := p.repo.ErcToNativeMessages.FindByMsgHash(ctx, bridgeID, searchID)
 		if err2 != nil {
 			return nil, err2
 		}
-		messageInfo = NewErcToNativeMessageInfo(ercToNativeMsg)
-		events, err = p.buildMessageEvents(ctx, ercToNativeMsg.BridgeID, ercToNativeMsg.MsgHash, ercToNativeMsg.MsgHash)
-		if err != nil {
-			return nil, err
+		events, err2 := p.buildMessageEvents(ctx, ercToNativeMsg.BridgeID, ercToNativeMsg.MsgHash, ercToNativeMsg.MsgHash)
+		if err2 != nil {
+			return nil, err2
 		}
-	} else if err != nil {
+		return &SearchResult{
+			Message:       NewErcToNativeMessageInfo(ercToNativeMsg),
+			RelatedEvents: events,
+		}, nil
+	}
+	events, err := p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
+	if err != nil {
 		return nil, err
-	} else {
-		messageInfo = NewMessageInfo(msg)
-		events, err = p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
-		if err != nil {
-			return nil, err
-		}
 	}
 	return &SearchResult{
-		Message:       messageInfo,
+		Message:       NewMessageInfo(msg),
 		RelatedEvents: events,
 	}, nil
 }
@@ -397,6 +407,7 @@ func (p *Presenter) buildSearchResultForInformationRequest(ctx context.Context, 
 	}, nil
 }
 
+//nolint:cyclop
 func (p *Presenter) buildMessageEvents(ctx context.Context, bridgeID string, msgHash, messageID common.Hash) ([]*EventInfo, error) {
 	sent, err := p.repo.SentMessages.FindByMsgHash(ctx, bridgeID, msgHash)
 	if err != nil && !errors.Is(err, db.ErrNotFound) {

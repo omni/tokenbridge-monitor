@@ -52,6 +52,7 @@ func NewLog(chainID string, log types.Log) *Log {
 		LogIndex:        log.Index,
 		TransactionHash: log.TxHash,
 	}
+	//nolint:nestif
 	if len(log.Topics) > 0 {
 		res.Topic0 = &log.Topics[0]
 		if len(log.Topics) > 1 {
@@ -69,6 +70,7 @@ func NewLog(chainID string, log types.Log) *Log {
 
 func (l *Log) Topics() []common.Hash {
 	topics := make([]common.Hash, 0, 4)
+	//nolint:nestif
 	if l.Topic0 != nil {
 		topics = append(topics, *l.Topic0)
 		if l.Topic1 != nil {

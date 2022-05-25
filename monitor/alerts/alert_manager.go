@@ -15,6 +15,7 @@ type AlertManager struct {
 	jobs   map[string]*Job
 }
 
+//nolint:cyclop
 func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig) (*AlertManager, error) {
 	provider := NewDBAlertsProvider(db)
 	jobs := make(map[string]*Job, len(cfg.Alerts))
@@ -113,7 +114,7 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 				Metric:   NewAlertLastValidatorActivity(cfg.ID),
 			}
 		default:
-			return nil, fmt.Errorf("unknown alert type %q", name)
+			return nil, fmt.Errorf("unknown alert type %q: %w", name, config.ErrInvalidConfig)
 		}
 		jobs[name].Params = &AlertJobParams{
 			Bridge:                  cfg.ID,

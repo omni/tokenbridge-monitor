@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -10,6 +11,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	ErrNonEmptyTokenList = errors.New("non-empty token address list")
+	ErrEmptyTokenList    = errors.New("empty token address list")
+	ErrInvalidConfig     = errors.New("invalid config")
 )
 
 type RPCConfig struct {
@@ -104,44 +111,49 @@ func readYamlConfig(cfg *Config) error {
 }
 
 func (cfg *Config) init() error {
-	for id, bridge := range cfg.Bridges {
-		bridge.ID = id
-		if bridge.Home.MaxBlockRangeSize <= 0 {
-			bridge.Home.MaxBlockRangeSize = 1000
+	for bridgeID, bridge := range cfg.Bridges {
+		bridge.ID = bridgeID
+		err := bridge.Home.init(cfg)
+		if err != nil {
+			return fmt.Errorf("can't init home bridge config for %s: %w", bridgeID, err)
 		}
-		if bridge.Foreign.MaxBlockRangeSize <= 0 {
-			bridge.Foreign.MaxBlockRangeSize = 1000
+		err = bridge.Foreign.init(cfg)
+		if err != nil {
+			return fmt.Errorf("can't init foreign bridge config for %s: %w", bridgeID, err)
 		}
 		if len(bridge.Home.ErcToNativeTokens) > 0 {
-			return fmt.Errorf("non-empty home token address list")
+			return fmt.Errorf("%s home config error: %w", bridgeID, ErrNonEmptyTokenList)
 		}
-		switch bridge.BridgeMode {
-		case BridgeModeErcToNative:
+		if bridge.BridgeMode == BridgeModeErcToNative {
 			if len(bridge.Foreign.ErcToNativeTokens) == 0 {
-				return fmt.Errorf("empty foreign token address list in ERC_TO_NATIVE mode")
+				return fmt.Errorf("%s foreign config error: %w", bridgeID, ErrEmptyTokenList)
 			}
-			for i, tokenCfg := range bridge.Foreign.ErcToNativeTokens {
-				if tokenCfg.StartBlock == 0 {
-					bridge.Foreign.ErcToNativeTokens[i].StartBlock = bridge.Foreign.StartBlock
-				}
-				if tokenCfg.EndBlock == 0 {
-					bridge.Foreign.ErcToNativeTokens[i].EndBlock = math.MaxUint32
-				}
-			}
-		case BridgeModeArbitraryMessage:
-		default:
-			bridge.BridgeMode = BridgeModeArbitraryMessage
+		} else {
 			if len(bridge.Foreign.ErcToNativeTokens) > 0 {
-				return fmt.Errorf("non-empty foreign token address list in AMB mode")
+				return fmt.Errorf("%s foreign config error: %w", bridgeID, ErrNonEmptyTokenList)
 			}
+			bridge.BridgeMode = BridgeModeArbitraryMessage
 		}
-		for _, side := range [2]*BridgeSideConfig{bridge.Home, bridge.Foreign} {
-			chainName := side.ChainName
-			var ok bool
-			side.Chain, ok = cfg.Chains[chainName]
-			if !ok {
-				return fmt.Errorf("unknown chain in config %q", chainName)
-			}
+	}
+	return nil
+}
+
+func (cfg *BridgeSideConfig) init(parent *Config) error {
+	if cfg.MaxBlockRangeSize <= 0 {
+		cfg.MaxBlockRangeSize = 1000
+	}
+	chainName := cfg.ChainName
+	var ok bool
+	cfg.Chain, ok = parent.Chains[chainName]
+	if !ok {
+		return fmt.Errorf("unknown chain in config %q: %w", chainName, ErrInvalidConfig)
+	}
+	for i, tokenCfg := range cfg.ErcToNativeTokens {
+		if tokenCfg.StartBlock == 0 {
+			cfg.ErcToNativeTokens[i].StartBlock = cfg.StartBlock
+		}
+		if tokenCfg.EndBlock == 0 {
+			cfg.ErcToNativeTokens[i].EndBlock = math.MaxUint32
 		}
 	}
 	return nil

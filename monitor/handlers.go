@@ -102,10 +102,8 @@ func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log 
 	if err != nil {
 		return fmt.Errorf("failed to get transaction logs for %s: %w", log.TransactionHash, err)
 	}
-	for _, l := range logs {
-		if l.Topic0 != nil && *l.Topic0 == abi.ErcToNativeUserRequestForAffirmationEventSignature {
-			return nil
-		}
+	if len(logs) > 0 {
+		return nil
 	}
 
 	valueBytes := common.BigToHash(value)

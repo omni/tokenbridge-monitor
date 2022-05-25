@@ -2,6 +2,7 @@ package ethclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -12,6 +13,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+)
+
+var (
+	ErrIncompatibleChainID = errors.New("rpc url returned incompatible chainID")
+	ErrNodeIsNotSynced     = errors.New("node is not synced to the requested block")
+	ErrInvalidLogsQuery    = errors.New("invalid logs filter query")
 )
 
 type Client interface {
@@ -56,7 +63,7 @@ func NewClient(url string, timeout time.Duration, chainID string) (Client, error
 		return nil, fmt.Errorf("can't get chainID: %w", err)
 	}
 	if rpcChainID.String() != chainID {
-		return nil, fmt.Errorf("rpc url retunrned different chainID, expected %s, got %s", chainID, rpcChainID)
+		return nil, fmt.Errorf("received chainID %s != expected %s: %w", rpcChainID, chainID, ErrIncompatibleChainID)
 	}
 	client.signer = types.NewLondonSigner(rpcChainID)
 	return client, nil
@@ -133,7 +140,7 @@ func (c *rpcClient) FilterLogsSafe(ctx context.Context, q ethereum.FilterQuery) 
 		return nil, fmt.Errorf("can't request block number: %w", err)
 	}
 	if uint64(blockNumber) < q.ToBlock.Uint64() {
-		return nil, fmt.Errorf("node is not synced, current block %d is older than toBlock %d in the query", blockNumber, q.ToBlock.Uint64())
+		return nil, fmt.Errorf("current block %d is older than toBlock %s in the query: %w", blockNumber, q.ToBlock, ErrNodeIsNotSynced)
 	}
 	return logs, nil
 }
@@ -178,7 +185,7 @@ func toFilterArg(q ethereum.FilterQuery) (interface{}, error) {
 		"topics":  q.Topics,
 	}
 	if q.BlockHash != nil {
-		return nil, fmt.Errorf("logs query from BlockHash is not supported")
+		return nil, ErrInvalidLogsQuery
 	}
 	if q.FromBlock == nil {
 		arg["fromBlock"] = "0x0"
@@ -186,7 +193,7 @@ func toFilterArg(q ethereum.FilterQuery) (interface{}, error) {
 		arg["fromBlock"] = hexutil.EncodeBig(q.FromBlock)
 	}
 	if q.ToBlock == nil || q.ToBlock.Int64() <= 0 {
-		return nil, fmt.Errorf("only positive toBlock is supported")
+		return nil, fmt.Errorf("only positive toBlock is supported: %w", ErrInvalidLogsQuery)
 	}
 	arg["toBlock"] = hexutil.EncodeBig(q.ToBlock)
 	return arg, nil

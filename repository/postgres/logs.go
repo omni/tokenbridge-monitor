@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -11,6 +12,8 @@ import (
 )
 
 type logsRepo basePostgresRepo
+
+var ErrInvalidPostgresResult = errors.New("postgres returned invalid result")
 
 func NewLogsRepo(table string, db *db.DB) entity.LogsRepo {
 	return (*logsRepo)(newBasePostgresRepo(table, db))
@@ -36,7 +39,7 @@ func (r *logsRepo) Ensure(ctx context.Context, logs ...*entity.Log) error {
 		return fmt.Errorf("can't get inserted log: %w", err)
 	}
 	if len(ids) != len(logs) {
-		return fmt.Errorf("returned different number of ids then inserted, expected %d, got %d", len(logs), len(ids))
+		return fmt.Errorf("returned different number of ids then inserted, expected %d, got %d: %w", len(logs), len(ids), ErrInvalidPostgresResult)
 	}
 	for i, id := range ids {
 		logs[i].ID = id
@@ -61,6 +64,7 @@ func (r *logsRepo) GetByID(ctx context.Context, id uint) (*entity.Log, error) {
 	return log, nil
 }
 
+//nolint:cyclop
 func (r *logsRepo) Find(ctx context.Context, filter entity.LogsFilter) ([]*entity.Log, error) {
 	cond := sq.And{}
 	if filter.ChainID != nil {
