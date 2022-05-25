@@ -108,6 +108,13 @@ func (m *Monitor) Start(ctx context.Context) {
 	go m.alertManager.Start(ctx, m.IsSynced)
 }
 
+func (m *Monitor) ProcessBlockRange(ctx context.Context, home bool, fromBlock, toBlock uint) error {
+	if home {
+		return m.homeMonitor.ProcessBlockRange(ctx, fromBlock, toBlock)
+	}
+	return m.foreignMonitor.ProcessBlockRange(ctx, fromBlock, toBlock)
+}
+
 func (m *Monitor) IsSynced() bool {
 	return m.homeMonitor.IsSynced() && m.foreignMonitor.IsSynced()
 }

@@ -25,6 +25,13 @@ services:
       - .env
     volumes:
       - ./config.yml:/app/config.yml
+  reprocess_block_range:
+    build: .
+    entrypoint: [ "./reprocess_block_range" ]
+    env_file:
+      - .env
+    volumes:
+      - ./config.yml:/app/config.yml
   grafana:
     image: grafana/grafana:8.1.5
     volumes:

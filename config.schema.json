@@ -230,25 +230,6 @@
         "max_block_range_size": {
           "type": "integer"
         },
-        "refetch_events": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "properties": {
-              "event": {
-                "type": "string"
-              },
-              "start_block": {
-                "type": "integer"
-              },
-              "end_block": {
-                "type": "integer"
-              }
-            },
-            "additionalProperties": false
-          }
-        },
         "whitelisted_senders": {
           "type": "array",
           "minItems": 1,

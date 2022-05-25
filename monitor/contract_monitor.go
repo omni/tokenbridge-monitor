@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
@@ -137,6 +136,57 @@ func (m *ContractMonitor) Start(ctx context.Context) {
 	go m.StartLogsFetcher(ctx)
 }
 
+func (m *ContractMonitor) ProcessBlockRange(ctx context.Context, fromBlock, toBlock uint) error {
+	if toBlock > m.logsCursor.LastProcessedBlock {
+		return errors.New("can't manually process logs further then current lastProcessedBlock")
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	m.blocksRangeChan <- nil
+	go func() {
+		defer wg.Done()
+
+		batches := SplitBlockRange(fromBlock, toBlock, m.cfg.MaxBlockRangeSize)
+		for _, batch := range batches {
+			m.logger.WithFields(logrus.Fields{
+				"from_block": batch.From,
+				"to_block":   batch.To,
+			}).Info("scheduling new block range logs search")
+			select {
+			case m.blocksRangeChan <- batch:
+			case <-ctx.Done():
+				return
+			}
+		}
+		m.blocksRangeChan <- nil
+	}()
+
+	go m.StartLogsFetcher(ctx)
+	go m.StartLogsProcessor(ctx)
+
+	finishedFetching := false
+	for {
+		if !finishedFetching && len(m.blocksRangeChan) == 0 {
+			// last nil from m.blocksRangeChan was consumed, meaning that all previous values were already handled
+			// and log batches were sent to processing queue
+			m.logger.Info("all block ranges were processed, submitting stub logs batch")
+			finishedFetching = true
+			m.logsChan <- nil
+		}
+		if finishedFetching && len(m.logsChan) == 0 {
+			// last nil from m.logsChan was consumed, meaning that all previous values were already processed
+			// there is nothing to process, so exit
+			m.logger.Info("all logs batches were processed, exiting")
+			return nil
+		}
+
+		if utils.ContextSleep(ctx, time.Second) == nil {
+			return ctx.Err()
+		}
+	}
+}
+
 func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, toBlock uint) {
 	m.logger.WithFields(logrus.Fields{
 		"from_block": fromBlock,
@@ -167,10 +217,6 @@ func (m *ContractMonitor) LoadUnprocessedLogs(ctx context.Context, fromBlock, to
 func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
 	m.logger.Info("starting new blocks tracker")
 
-	if len(m.cfg.RefetchEvents) > 0 {
-		m.RefetchEvents(start - 1)
-	}
-
 	for {
 		head, err := m.client.BlockNumber(ctx)
 		if err != nil {
@@ -196,33 +242,6 @@ func (m *ContractMonitor) StartBlockFetcher(ctx context.Context, start uint) {
 	}
 }
 
-func (m *ContractMonitor) RefetchEvents(lastFetchedBlock uint) {
-	m.logger.Info("refetching old events")
-	for _, job := range m.cfg.RefetchEvents {
-		fromBlock := job.StartBlock
-		if fromBlock < m.cfg.StartBlock {
-			fromBlock = m.cfg.StartBlock
-		}
-		toBlock := job.EndBlock
-		if toBlock == 0 || toBlock > lastFetchedBlock {
-			toBlock = lastFetchedBlock
-		}
-
-		batches := SplitBlockRange(fromBlock, toBlock, m.cfg.MaxBlockRangeSize)
-		for _, batch := range batches {
-			m.logger.WithFields(logrus.Fields{
-				"from_block": batch.From,
-				"to_block":   batch.To,
-			}).Info("scheduling new block range logs search")
-			if job.Event != "" {
-				topic := crypto.Keccak256Hash([]byte(job.Event))
-				batch.Topic = &topic
-			}
-			m.blocksRangeChan <- batch
-		}
-	}
-}
-
 func (m *ContractMonitor) StartLogsFetcher(ctx context.Context) {
 	m.logger.Info("starting logs fetcher")
 	for {
@@ -230,6 +249,9 @@ func (m *ContractMonitor) StartLogsFetcher(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case blocksRange := <-m.blocksRangeChan:
+			if blocksRange == nil {
+				continue
+			}
 			for {
 				err := m.tryToFetchLogs(ctx, blocksRange)
 				if err != nil {
@@ -255,9 +277,6 @@ func (m *ContractMonitor) buildFilterQueries(blocksRange *BlocksRange) []ethereu
 		ToBlock:   big.NewInt(int64(blocksRange.To)),
 		Addresses: []common.Address{m.cfg.Address, m.cfg.ValidatorContractAddress},
 	}
-	if blocksRange.Topic != nil {
-		q.Topics = [][]common.Hash{{*blocksRange.Topic}}
-	}
 	queries = append(queries, q)
 	if m.bridgeCfg.BridgeMode == config.BridgeModeErcToNative {
 		for _, token := range m.cfg.ErcToNativeTokens {
@@ -269,9 +288,6 @@ func (m *ContractMonitor) buildFilterQueries(blocksRange *BlocksRange) []ethereu
 				ToBlock:   big.NewInt(int64(blocksRange.To)),
 				Addresses: []common.Address{token.Address},
 				Topics:    [][]common.Hash{{}, {}, {m.cfg.Address.Hash()}},
-			}
-			if blocksRange.Topic != nil {
-				q.Topics[0] = []common.Hash{*blocksRange.Topic}
 			}
 			if token.StartBlock > blocksRange.From {
 				q.FromBlock = big.NewInt(int64(token.StartBlock))
@@ -359,6 +375,9 @@ func (m *ContractMonitor) StartLogsProcessor(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case logs := <-m.logsChan:
+			if logs == nil {
+				continue
+			}
 			wg := new(sync.WaitGroup)
 			wg.Add(2)
 			go func() {

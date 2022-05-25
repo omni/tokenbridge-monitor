@@ -102,6 +102,14 @@ services:
       - .env
     volumes:
       - ./config.yml:/app/config.yml
+  reprocess_block_range:
+    container_name: fix_block_timestamps
+    image: ghcr.io/poanetwork/tokenbridge-monitor:v0.0.28
+    entrypoint: [ "./reprocess_block_range" ]
+    env_file:
+      - .env
+    volumes:
+      - ./config.yml:/app/config.yml
 volumes:
   db:
   grafana-storage:
