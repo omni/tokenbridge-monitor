@@ -101,10 +101,3 @@ type TxInfo struct {
 	Timestamp   time.Time
 	Link        string
 }
-
-type FilterContext struct {
-	ChainID   *string
-	FromBlock *uint
-	ToBlock   *uint
-	TxHash    *common.Hash
-}

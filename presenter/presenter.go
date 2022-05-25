@@ -2,32 +2,22 @@ package presenter
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/poanetwork/tokenbridge-monitor/config"
 	"github.com/poanetwork/tokenbridge-monitor/db"
 	"github.com/poanetwork/tokenbridge-monitor/entity"
 	"github.com/poanetwork/tokenbridge-monitor/logging"
+	"github.com/poanetwork/tokenbridge-monitor/presenter/http/middleware"
+	"github.com/poanetwork/tokenbridge-monitor/presenter/http/render"
 	"github.com/poanetwork/tokenbridge-monitor/repository"
-)
-
-type ctxKey int
-
-const (
-	BridgeCfgCtxKey ctxKey = iota
-	ChainCfgCtxKey
-	BlockNumberCtxKey
-	TxHashCtxKey
-	FilterCtxKey
 )
 
 type Presenter struct {
@@ -48,143 +38,39 @@ func NewPresenter(logger logging.Logger, repo *repository.Repo, cfg *config.Conf
 
 func (p *Presenter) Serve(addr string) error {
 	p.logger.WithField("addr", addr).Info("starting presenter service")
-	p.root.Use(middleware.Throttle(5))
-	p.root.Use(middleware.RequestID)
-	p.root.Use(NewRequestLogger(p.logger))
+	p.root.Use(chimiddleware.Throttle(5))
+	p.root.Use(chimiddleware.RequestID)
+	p.root.Use(middleware.NewLoggerMiddleware(p.logger))
+	p.root.Use(middleware.Recoverer)
 	registerSearchRoutes := func(r chi.Router) {
-		r.Use(p.GetFilterMiddleware)
+		r.Use(middleware.GetFilterMiddleware)
 		r.Get("/", p.GetMessages)
 		r.Get("/logs", p.GetLogs)
 		r.Get("/messages", p.GetMessages)
 	}
 	p.root.Route("/bridge/{bridgeID:[0-9a-zA-Z_\\-]+}", func(r chi.Router) {
-		r.Use(p.GetBridgeConfigMiddleware)
+		r.Use(middleware.GetBridgeConfigMiddleware(p.cfg))
 		r.Get("/", p.GetBridgeInfo)
 		r.Get("/info", p.GetBridgeInfo)
 		r.Get("/config", p.GetBridgeConfig)
 		r.Get("/validators", p.GetBridgeValidators)
 	})
 	p.root.Route("/chain/{chainID:[0-9]+}", func(r chi.Router) {
-		r.Use(p.GetChainConfigMiddleware)
+		r.Use(middleware.GetChainConfigMiddleware(p.cfg))
 		r.Route("/block/{blockNumber:[0-9]+}", func(r2 chi.Router) {
-			r2.Use(p.GetBlockNumberMiddleware)
+			r2.Use(middleware.GetBlockNumberMiddleware)
 			r2.Group(registerSearchRoutes)
 		})
 		r.Route("/tx/{txHash:0x[0-9a-fA-F]{64}}", func(r2 chi.Router) {
-			r2.Use(p.GetTxHashMiddleware)
+			r2.Use(middleware.GetTxHashMiddleware)
 			r2.Group(registerSearchRoutes)
 		})
 	})
 	p.root.Route("/tx/{txHash:0x[0-9a-fA-F]{64}}", func(r chi.Router) {
-		r.Use(p.GetTxHashMiddleware)
+		r.Use(middleware.GetTxHashMiddleware)
 		r.Group(registerSearchRoutes)
 	})
 	return http.ListenAndServe(addr, p.root)
-}
-
-func (p *Presenter) JSON(w http.ResponseWriter, r *http.Request, status int, res interface{}) {
-	enc := json.NewEncoder(w)
-
-	if pretty, _ := strconv.ParseBool(chi.URLParam(r, "pretty")); pretty {
-		enc.SetIndent("", "  ")
-	}
-
-	w.WriteHeader(status)
-	if err := enc.Encode(res); err != nil {
-		p.Error(w, r, fmt.Errorf("failed to marshal JSON result: %w", err))
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-}
-
-func (p *Presenter) Error(w http.ResponseWriter, r *http.Request, err error) {
-	w.WriteHeader(http.StatusInternalServerError)
-	_, err = w.Write([]byte(err.Error()))
-	p.logger.WithError(err).Error("request handling failed")
-	if err != nil {
-		p.logger.WithError(err).Error("can't write error response")
-	}
-}
-
-func (p *Presenter) GetBridgeConfigMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bridgeID := chi.URLParam(r, "bridgeID")
-
-		cfg, ok := p.cfg.Bridges[bridgeID]
-		if !ok || cfg == nil {
-			p.JSON(w, r, http.StatusNotFound, fmt.Sprintf("bridge with id %s not found", bridgeID))
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), BridgeCfgCtxKey, cfg)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func (p *Presenter) GetChainConfigMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		chainID := chi.URLParam(r, "chainID")
-
-		var cfg *config.ChainConfig
-		for _, chainCfg := range p.cfg.Chains {
-			if chainCfg.ChainID == chainID {
-				cfg = chainCfg
-				break
-			}
-		}
-		if cfg == nil {
-			p.JSON(w, r, http.StatusNotFound, fmt.Sprintf("chain with id %s not found", chainID))
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), ChainCfgCtxKey, cfg)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func (p *Presenter) GetBlockNumberMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		blockNumber, err := strconv.ParseUint(chi.URLParam(r, "blockNumber"), 10, 32)
-		if err != nil {
-			p.Error(w, r, fmt.Errorf("failed to parse blockNumber: %w", err))
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), BlockNumberCtxKey, uint(blockNumber))
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func (p *Presenter) GetTxHashMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		txHash := chi.URLParam(r, "txHash")
-
-		ctx := context.WithValue(r.Context(), TxHashCtxKey, common.HexToHash(txHash))
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func (p *Presenter) GetFilterMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-
-		filter := &FilterContext{}
-
-		if cfg, ok := ctx.Value(ChainCfgCtxKey).(*config.ChainConfig); ok {
-			filter.ChainID = &cfg.ChainID
-		}
-		if blockNumber, ok := ctx.Value(BlockNumberCtxKey).(uint); ok {
-			filter.FromBlock = &blockNumber
-			filter.ToBlock = &blockNumber
-		}
-		if txHash, ok := ctx.Value(TxHashCtxKey).(common.Hash); ok {
-			filter.TxHash = &txHash
-		}
-
-		ctx = context.WithValue(ctx, FilterCtxKey, filter)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
 }
 
 func (p *Presenter) getBridgeSideInfo(ctx context.Context, bridgeID string, cfg *config.BridgeSideConfig) (*BridgeSideInfo, error) {
@@ -234,28 +120,27 @@ func (p *Presenter) getBridgeSideInfo(ctx context.Context, bridgeID string, cfg 
 }
 
 func (p *Presenter) GetBridgeConfig(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	cfg, _ := ctx.Value(BridgeCfgCtxKey).(*config.BridgeConfig)
+	cfg := middleware.BridgeConfig(r.Context())
 
-	p.JSON(w, r, http.StatusOK, cfg)
+	render.JSON(w, r, http.StatusOK, cfg)
 }
 
 func (p *Presenter) GetBridgeInfo(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	cfg, _ := ctx.Value(BridgeCfgCtxKey).(*config.BridgeConfig)
+	cfg := middleware.BridgeConfig(ctx)
 
 	homeInfo, err := p.getBridgeSideInfo(ctx, cfg.ID, cfg.Home)
 	if err != nil {
-		p.Error(w, r, fmt.Errorf("failed to get home bridge info: %w", err))
+		render.Error(w, r, fmt.Errorf("failed to get home bridge info: %w", err))
 		return
 	}
 	foreignInfo, err := p.getBridgeSideInfo(ctx, cfg.ID, cfg.Foreign)
 	if err != nil {
-		p.Error(w, r, fmt.Errorf("failed to get foreign bridge info: %w", err))
+		render.Error(w, r, fmt.Errorf("failed to get foreign bridge info: %w", err))
 		return
 	}
 
-	p.JSON(w, r, http.StatusOK, &BridgeInfo{
+	render.JSON(w, r, http.StatusOK, &BridgeInfo{
 		BridgeID: cfg.ID,
 		Mode:     cfg.BridgeMode,
 		Home:     homeInfo,
@@ -265,17 +150,17 @@ func (p *Presenter) GetBridgeInfo(w http.ResponseWriter, r *http.Request) {
 
 func (p *Presenter) GetBridgeValidators(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	cfg, _ := ctx.Value(BridgeCfgCtxKey).(*config.BridgeConfig)
+	cfg := middleware.BridgeConfig(ctx)
 
 	homeValidators, err := p.repo.BridgeValidators.FindActiveValidators(ctx, cfg.ID, cfg.Home.Chain.ChainID)
 	if err != nil {
-		p.Error(w, r, fmt.Errorf("failed to find home validators: %w", err))
+		render.Error(w, r, fmt.Errorf("failed to find home validators: %w", err))
 		return
 	}
 
 	foreignValidators, err := p.repo.BridgeValidators.FindActiveValidators(ctx, cfg.ID, cfg.Home.Chain.ChainID)
 	if err != nil {
-		p.Error(w, r, fmt.Errorf("failed to find home validators: %w", err))
+		render.Error(w, r, fmt.Errorf("failed to find home validators: %w", err))
 		return
 	}
 
@@ -299,24 +184,24 @@ func (p *Presenter) GetBridgeValidators(w http.ResponseWriter, r *http.Request) 
 		confirmation, err2 := p.repo.SignedMessages.FindLatest(ctx, cfg.ID, cfg.Home.Chain.ChainID, val.Address)
 		if err2 != nil {
 			if !errors.Is(err, db.ErrNotFound) {
-				p.Error(w, r, fmt.Errorf("failed to find latest validator confirmation: %w", err))
+				render.Error(w, r, fmt.Errorf("failed to find latest validator confirmation: %w", err))
 				return
 			}
 		} else {
 			valInfo.LastConfirmation, err = p.getTxInfo(ctx, confirmation.LogID)
 			if err != nil {
-				p.Error(w, r, fmt.Errorf("failed to get tx info: %w", err))
+				render.Error(w, r, fmt.Errorf("failed to get tx info: %w", err))
 				return
 			}
 		}
 		res.Validators = append(res.Validators, valInfo)
 	}
 
-	p.JSON(w, r, http.StatusOK, res)
+	render.JSON(w, r, http.StatusOK, res)
 }
 
 func (p *Presenter) getFilteredLogs(ctx context.Context) ([]*entity.Log, error) {
-	filter, _ := ctx.Value(FilterCtxKey).(*FilterContext)
+	filter := middleware.GetFilterContext(ctx)
 
 	if filter.TxHash != nil {
 		logs, err := p.repo.Logs.FindByTxHash(ctx, *filter.TxHash)
@@ -347,18 +232,18 @@ func (p *Presenter) getFilteredLogs(ctx context.Context) ([]*entity.Log, error) 
 func (p *Presenter) GetMessages(w http.ResponseWriter, r *http.Request) {
 	logs, err := p.getFilteredLogs(r.Context())
 	if err != nil {
-		p.Error(w, r, fmt.Errorf("can't filter logs: %w", err))
+		render.Error(w, r, fmt.Errorf("can't filter logs: %w", err))
 		return
 	}
 
 	res := p.searchForMessagesInLogs(r.Context(), logs)
-	p.JSON(w, r, http.StatusOK, res)
+	render.JSON(w, r, http.StatusOK, res)
 }
 
 func (p *Presenter) GetLogs(w http.ResponseWriter, r *http.Request) {
 	logs, err := p.getFilteredLogs(r.Context())
 	if err != nil {
-		p.Error(w, r, fmt.Errorf("can't filter logs: %w", err))
+		render.Error(w, r, fmt.Errorf("can't filter logs: %w", err))
 		return
 	}
 
@@ -378,7 +263,7 @@ func (p *Presenter) GetLogs(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	p.JSON(w, r, http.StatusOK, res)
+	render.JSON(w, r, http.StatusOK, res)
 }
 
 func (p *Presenter) searchForMessagesInLogs(ctx context.Context, logs []*entity.Log) []*SearchResult {
@@ -426,7 +311,7 @@ func (p *Presenter) searchSentMessage(ctx context.Context, log *entity.Log) (*Se
 		if err2 != nil {
 			return nil, err2
 		}
-		messageInfo = ercToNativeMessageToInfo(ercToNativeMsg)
+		messageInfo = NewErcToNativeMessageInfo(ercToNativeMsg)
 		events, err = p.buildMessageEvents(ctx, ercToNativeMsg.BridgeID, ercToNativeMsg.MsgHash, ercToNativeMsg.MsgHash)
 		if err != nil {
 			return nil, err
@@ -434,7 +319,7 @@ func (p *Presenter) searchSentMessage(ctx context.Context, log *entity.Log) (*Se
 	} else if err != nil {
 		return nil, err
 	} else {
-		messageInfo = messageToInfo(msg)
+		messageInfo = NewMessageInfo(msg)
 		events, err = p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
 		if err != nil {
 			return nil, err
@@ -461,7 +346,7 @@ func (p *Presenter) searchSignedMessage(ctx context.Context, log *entity.Log) (*
 		if err2 != nil {
 			return nil, err2
 		}
-		messageInfo = ercToNativeMessageToInfo(ercToNativeMsg)
+		messageInfo = NewErcToNativeMessageInfo(ercToNativeMsg)
 		events, err = p.buildMessageEvents(ctx, ercToNativeMsg.BridgeID, ercToNativeMsg.MsgHash, ercToNativeMsg.MsgHash)
 		if err != nil {
 			return nil, err
@@ -469,7 +354,7 @@ func (p *Presenter) searchSignedMessage(ctx context.Context, log *entity.Log) (*
 	} else if err != nil {
 		return nil, err
 	} else {
-		messageInfo = messageToInfo(msg)
+		messageInfo = NewMessageInfo(msg)
 		events, err = p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
 		if err != nil {
 			return nil, err
@@ -495,7 +380,7 @@ func (p *Presenter) searchExecutedMessage(ctx context.Context, log *entity.Log) 
 		if err2 != nil {
 			return nil, err2
 		}
-		messageInfo = ercToNativeMessageToInfo(ercToNativeMsg)
+		messageInfo = NewErcToNativeMessageInfo(ercToNativeMsg)
 		events, err = p.buildMessageEvents(ctx, ercToNativeMsg.BridgeID, ercToNativeMsg.MsgHash, ercToNativeMsg.MsgHash)
 		if err != nil {
 			return nil, err
@@ -503,7 +388,7 @@ func (p *Presenter) searchExecutedMessage(ctx context.Context, log *entity.Log) 
 	} else if err != nil {
 		return nil, err
 	} else {
-		messageInfo = messageToInfo(msg)
+		messageInfo = NewMessageInfo(msg)
 		events, err = p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
 		if err != nil {
 			return nil, err
@@ -530,7 +415,7 @@ func (p *Presenter) searchSentInformationRequest(ctx context.Context, log *entit
 		return nil, err
 	}
 	return &SearchResult{
-		Message:       informationRequestToInfo(req),
+		Message:       NewInformationRequestInfo(req),
 		RelatedEvents: events,
 	}, nil
 }
@@ -550,7 +435,7 @@ func (p *Presenter) searchSignedInformationRequest(ctx context.Context, log *ent
 		return nil, err
 	}
 	return &SearchResult{
-		Message:       informationRequestToInfo(req),
+		Message:       NewInformationRequestInfo(req),
 		RelatedEvents: events,
 	}, nil
 }
@@ -570,7 +455,7 @@ func (p *Presenter) searchExecutedInformationRequest(ctx context.Context, log *e
 		return nil, err
 	}
 	return &SearchResult{
-		Message:       informationRequestToInfo(req),
+		Message:       NewInformationRequestInfo(req),
 		RelatedEvents: events,
 	}, nil
 }
@@ -687,6 +572,6 @@ func (p *Presenter) getTxInfo(ctx context.Context, logID uint) (*TxInfo, error) 
 	return &TxInfo{
 		BlockNumber: log.BlockNumber,
 		Timestamp:   bt.Timestamp,
-		Link:        logToTxLink(log),
+		Link:        FormatLogTxLinkURL(log),
 	}, nil
 }

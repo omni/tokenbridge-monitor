@@ -262,13 +262,15 @@ func (m *ContractMonitor) buildFilterQueries(blocksRange *BlocksRange) []ethereu
 			if token.EndBlock > 0 && blocksRange.From > token.EndBlock {
 				continue
 			}
-			q = ethereum.FilterQuery{}
-			if blocksRange.Topic != nil {
-				q.Topics = [][]common.Hash{{*blocksRange.Topic}, {}, {m.cfg.Address.Hash()}}
-			} else {
-				q.Topics = [][]common.Hash{{}, {}, {m.cfg.Address.Hash()}}
+			q = ethereum.FilterQuery{
+				FromBlock: big.NewInt(int64(blocksRange.From)),
+				ToBlock:   big.NewInt(int64(blocksRange.To)),
+				Addresses: []common.Address{token.Address},
+				Topics:    [][]common.Hash{{}, {}, {m.cfg.Address.Hash()}},
 			}
-			q.Addresses = []common.Address{token.Address}
+			if blocksRange.Topic != nil {
+				q.Topics[0] = []common.Hash{*blocksRange.Topic}
+			}
 			if token.StartBlock > 0 && token.StartBlock > blocksRange.From {
 				q.FromBlock = big.NewInt(int64(token.StartBlock))
 			}

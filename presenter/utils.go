@@ -16,14 +16,14 @@ var formats = map[string]string{
 	"100": "https://blockscout.com/xdai/mainnet/tx/%s",
 }
 
-func logToTxLink(log *entity.Log) string {
+func FormatLogTxLinkURL(log *entity.Log) string {
 	if format, ok := formats[log.ChainID]; ok {
 		return fmt.Sprintf(format, log.TransactionHash)
 	}
 	return log.TransactionHash.String()
 }
 
-func messageToInfo(msg *entity.Message) *MessageInfo {
+func NewMessageInfo(msg *entity.Message) *MessageInfo {
 	return &MessageInfo{
 		BridgeID:  msg.BridgeID,
 		MsgHash:   msg.MsgHash,
@@ -35,7 +35,7 @@ func messageToInfo(msg *entity.Message) *MessageInfo {
 	}
 }
 
-func informationRequestToInfo(req *entity.InformationRequest) *InformationRequestInfo {
+func NewInformationRequestInfo(req *entity.InformationRequest) *InformationRequestInfo {
 	return &InformationRequestInfo{
 		BridgeID:  req.BridgeID,
 		MessageID: req.MessageID,
@@ -45,7 +45,7 @@ func informationRequestToInfo(req *entity.InformationRequest) *InformationReques
 	}
 }
 
-func ercToNativeMessageToInfo(req *entity.ErcToNativeMessage) *ErcToNativeMessageInfo {
+func NewErcToNativeMessageInfo(req *entity.ErcToNativeMessage) *ErcToNativeMessageInfo {
 	return &ErcToNativeMessageInfo{
 		BridgeID:  req.BridgeID,
 		MsgHash:   req.MsgHash,
