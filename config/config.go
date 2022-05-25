@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"time"
 
@@ -126,6 +127,14 @@ func (cfg *Config) init() error {
 			if len(bridge.Foreign.ErcToNativeTokens) == 0 {
 				return fmt.Errorf("empty foreign token address list in ERC_TO_NATIVE mode")
 			}
+			for i, tokenCfg := range bridge.Foreign.ErcToNativeTokens {
+				if tokenCfg.StartBlock == 0 {
+					bridge.Foreign.ErcToNativeTokens[i].StartBlock = bridge.Foreign.StartBlock
+				}
+				if tokenCfg.EndBlock == 0 {
+					bridge.Foreign.ErcToNativeTokens[i].EndBlock = math.MaxUint32
+				}
+			}
 		case BridgeModeArbitraryMessage:
 		default:
 			bridge.BridgeMode = BridgeModeArbitraryMessage
@@ -152,10 +161,7 @@ func (cfg *BridgeSideConfig) ContractAddresses(fromBlock, toBlock uint) []common
 func (cfg *BridgeSideConfig) ErcToNativeTokenAddresses(fromBlock, toBlock uint) []common.Address {
 	addresses := make([]common.Address, 0, len(cfg.ErcToNativeTokens))
 	for _, token := range cfg.ErcToNativeTokens {
-		if token.StartBlock > 0 && toBlock < token.StartBlock {
-			continue
-		}
-		if token.EndBlock > 0 && fromBlock > token.EndBlock {
+		if toBlock < token.StartBlock || fromBlock > token.EndBlock {
 			continue
 		}
 		addresses = append(addresses, token.Address)

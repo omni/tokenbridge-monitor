@@ -261,10 +261,7 @@ func (m *ContractMonitor) buildFilterQueries(blocksRange *BlocksRange) []ethereu
 	queries = append(queries, q)
 	if m.bridgeCfg.BridgeMode == config.BridgeModeErcToNative {
 		for _, token := range m.cfg.ErcToNativeTokens {
-			if token.StartBlock > 0 && blocksRange.To < token.StartBlock {
-				continue
-			}
-			if token.EndBlock > 0 && blocksRange.From > token.EndBlock {
+			if blocksRange.To < token.StartBlock || blocksRange.From > token.EndBlock {
 				continue
 			}
 			q = ethereum.FilterQuery{
@@ -276,10 +273,10 @@ func (m *ContractMonitor) buildFilterQueries(blocksRange *BlocksRange) []ethereu
 			if blocksRange.Topic != nil {
 				q.Topics[0] = []common.Hash{*blocksRange.Topic}
 			}
-			if token.StartBlock > 0 && token.StartBlock > blocksRange.From {
+			if token.StartBlock > blocksRange.From {
 				q.FromBlock = big.NewInt(int64(token.StartBlock))
 			}
-			if token.EndBlock > 0 && token.EndBlock < blocksRange.To {
+			if token.EndBlock < blocksRange.To {
 				q.ToBlock = big.NewInt(int64(token.EndBlock))
 			}
 			queries = append(queries, q)
