@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/poanetwork/tokenbridge-monitor/config"
-	"github.com/poanetwork/tokenbridge-monitor/contract/abi"
+	"github.com/poanetwork/tokenbridge-monitor/contract/bridgeabi"
 	"github.com/poanetwork/tokenbridge-monitor/db"
 	"github.com/poanetwork/tokenbridge-monitor/ethclient"
 	"github.com/poanetwork/tokenbridge-monitor/logging"
@@ -63,42 +63,42 @@ func NewMonitor(ctx context.Context, logger logging.Logger, dbConn *db.DB, repo 
 
 func (m *Monitor) RegisterErcToNativeEventHandlers() {
 	handlers := NewBridgeEventHandler(m.repo, m.cfg, m.homeMonitor.client)
-	m.homeMonitor.RegisterEventHandler(abi.ErcToNativeUserRequestForSignature, handlers.HandleErcToNativeUserRequestForSignature)
-	m.homeMonitor.RegisterEventHandler(abi.SignedForUserRequest, handlers.HandleSignedForUserRequest)
-	m.homeMonitor.RegisterEventHandler(abi.CollectedSignatures, handlers.HandleCollectedSignatures)
-	m.homeMonitor.RegisterEventHandler(abi.ErcToNativeSignedForAffirmation, handlers.HandleErcToNativeSignedForAffirmation)
-	m.homeMonitor.RegisterEventHandler(abi.ErcToNativeAffirmationCompleted, handlers.HandleErcToNativeAffirmationCompleted)
-	m.homeMonitor.RegisterEventHandler(abi.ValidatorAdded, handlers.HandleValidatorAdded)
-	m.homeMonitor.RegisterEventHandler(abi.ValidatorRemoved, handlers.HandleValidatorRemoved)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.ErcToNativeUserRequestForSignature, handlers.HandleErcToNativeUserRequestForSignature)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.SignedForUserRequest, handlers.HandleSignedForUserRequest)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.CollectedSignatures, handlers.HandleCollectedSignatures)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.ErcToNativeSignedForAffirmation, handlers.HandleErcToNativeSignedForAffirmation)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.ErcToNativeAffirmationCompleted, handlers.HandleErcToNativeAffirmationCompleted)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.ValidatorAdded, handlers.HandleValidatorAdded)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.ValidatorRemoved, handlers.HandleValidatorRemoved)
 
-	m.foreignMonitor.RegisterEventHandler(abi.ErcToNativeUserRequestForAffirmation, handlers.HandleErcToNativeUserRequestForAffirmation)
-	m.foreignMonitor.RegisterEventHandler(abi.ErcToNativeTransfer, handlers.HandleErcToNativeTransfer)
-	m.foreignMonitor.RegisterEventHandler(abi.ErcToNativeRelayedMessage, handlers.HandleErcToNativeRelayedMessage)
-	m.foreignMonitor.RegisterEventHandler(abi.ValidatorAdded, handlers.HandleValidatorAdded)
-	m.foreignMonitor.RegisterEventHandler(abi.ValidatorRemoved, handlers.HandleValidatorRemoved)
+	m.foreignMonitor.RegisterEventHandler(bridgeabi.ErcToNativeUserRequestForAffirmation, handlers.HandleErcToNativeUserRequestForAffirmation)
+	m.foreignMonitor.RegisterEventHandler(bridgeabi.ErcToNativeTransfer, handlers.HandleErcToNativeTransfer)
+	m.foreignMonitor.RegisterEventHandler(bridgeabi.ErcToNativeRelayedMessage, handlers.HandleErcToNativeRelayedMessage)
+	m.foreignMonitor.RegisterEventHandler(bridgeabi.ValidatorAdded, handlers.HandleValidatorAdded)
+	m.foreignMonitor.RegisterEventHandler(bridgeabi.ValidatorRemoved, handlers.HandleValidatorRemoved)
 }
 
 func (m *Monitor) RegisterAMBEventHandlers() {
 	handlers := NewBridgeEventHandler(m.repo, m.cfg, m.homeMonitor.client)
-	m.homeMonitor.RegisterEventHandler(abi.UserRequestForSignature, handlers.HandleUserRequestForSignature)
-	m.homeMonitor.RegisterEventHandler(abi.LegacyUserRequestForSignature, handlers.HandleLegacyUserRequestForSignature)
-	m.homeMonitor.RegisterEventHandler(abi.SignedForUserRequest, handlers.HandleSignedForUserRequest)
-	m.homeMonitor.RegisterEventHandler(abi.CollectedSignatures, handlers.HandleCollectedSignatures)
-	m.homeMonitor.RegisterEventHandler(abi.SignedForAffirmation, handlers.HandleSignedForUserRequest)
-	m.homeMonitor.RegisterEventHandler(abi.AffirmationCompleted, handlers.HandleAffirmationCompleted)
-	m.homeMonitor.RegisterEventHandler(abi.LegacyAffirmationCompleted, handlers.HandleAffirmationCompleted)
-	m.homeMonitor.RegisterEventHandler(abi.UserRequestForInformation, handlers.HandleUserRequestForInformation)
-	m.homeMonitor.RegisterEventHandler(abi.SignedForInformation, handlers.HandleSignedForInformation)
-	m.homeMonitor.RegisterEventHandler(abi.InformationRetrieved, handlers.HandleInformationRetrieved)
-	m.homeMonitor.RegisterEventHandler(abi.ValidatorAdded, handlers.HandleValidatorAdded)
-	m.homeMonitor.RegisterEventHandler(abi.ValidatorRemoved, handlers.HandleValidatorRemoved)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.UserRequestForSignature, handlers.HandleUserRequestForSignature)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.LegacyUserRequestForSignature, handlers.HandleLegacyUserRequestForSignature)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.SignedForUserRequest, handlers.HandleSignedForUserRequest)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.CollectedSignatures, handlers.HandleCollectedSignatures)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.SignedForAffirmation, handlers.HandleSignedForUserRequest)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.AffirmationCompleted, handlers.HandleAffirmationCompleted)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.LegacyAffirmationCompleted, handlers.HandleAffirmationCompleted)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.UserRequestForInformation, handlers.HandleUserRequestForInformation)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.SignedForInformation, handlers.HandleSignedForInformation)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.InformationRetrieved, handlers.HandleInformationRetrieved)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.ValidatorAdded, handlers.HandleValidatorAdded)
+	m.homeMonitor.RegisterEventHandler(bridgeabi.ValidatorRemoved, handlers.HandleValidatorRemoved)
 
-	m.foreignMonitor.RegisterEventHandler(abi.UserRequestForAffirmation, handlers.HandleUserRequestForAffirmation)
-	m.foreignMonitor.RegisterEventHandler(abi.LegacyUserRequestForAffirmation, handlers.HandleLegacyUserRequestForAffirmation)
-	m.foreignMonitor.RegisterEventHandler(abi.RelayedMessage, handlers.HandleRelayedMessage)
-	m.foreignMonitor.RegisterEventHandler(abi.LegacyRelayedMessage, handlers.HandleRelayedMessage)
-	m.foreignMonitor.RegisterEventHandler(abi.ValidatorAdded, handlers.HandleValidatorAdded)
-	m.foreignMonitor.RegisterEventHandler(abi.ValidatorRemoved, handlers.HandleValidatorRemoved)
+	m.foreignMonitor.RegisterEventHandler(bridgeabi.UserRequestForAffirmation, handlers.HandleUserRequestForAffirmation)
+	m.foreignMonitor.RegisterEventHandler(bridgeabi.LegacyUserRequestForAffirmation, handlers.HandleLegacyUserRequestForAffirmation)
+	m.foreignMonitor.RegisterEventHandler(bridgeabi.RelayedMessage, handlers.HandleRelayedMessage)
+	m.foreignMonitor.RegisterEventHandler(bridgeabi.LegacyRelayedMessage, handlers.HandleRelayedMessage)
+	m.foreignMonitor.RegisterEventHandler(bridgeabi.ValidatorAdded, handlers.HandleValidatorAdded)
+	m.foreignMonitor.RegisterEventHandler(bridgeabi.ValidatorRemoved, handlers.HandleValidatorRemoved)
 }
 
 func (m *Monitor) Start(ctx context.Context) {

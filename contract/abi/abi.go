@@ -1,60 +1,91 @@
 package abi
 
-//nolint:golint
 import (
-	_ "embed"
+	"errors"
+	"fmt"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	gethabi "github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/poanetwork/tokenbridge-monitor/entity"
 )
 
-//go:embed amb.json
-var arbitraryMessageJSONABI string
+type ABI struct {
+	gethabi.ABI
+}
 
-//go:embed erc_to_native.json
-var ercToNativeJSONABI string
+type Event struct {
+	gethabi.Event
+}
 
-var (
-	ArbitraryMessageABI = MustReadABI(arbitraryMessageJSONABI)
-	ErcToNativeABI      = MustReadABI(ercToNativeJSONABI)
-)
+var ErrInvalidEvent = errors.New("invalid event")
 
-const (
-	UserRequestForSignature         = "event UserRequestForSignature(bytes32 indexed messageId, bytes encodedData)"
-	LegacyUserRequestForSignature   = "event UserRequestForSignature(bytes encodedData)"
-	UserRequestForAffirmation       = "event UserRequestForAffirmation(bytes32 indexed messageId, bytes encodedData)"
-	LegacyUserRequestForAffirmation = "event UserRequestForAffirmation(bytes encodedData)"
-	UserRequestForInformation       = "event UserRequestForInformation(bytes32 indexed messageId, bytes32 indexed requestSelector, address indexed sender, bytes data)"
-	SignedForUserRequest            = "event SignedForUserRequest(address indexed signer, bytes32 messageHash)"
-	SignedForAffirmation            = "event SignedForAffirmation(address indexed signer, bytes32 messageHash)"
-	SignedForInformation            = "event SignedForInformation(address indexed signer, bytes32 indexed messageId)"
-	CollectedSignatures             = "event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash, uint256 NumberOfCollectedSignatures)"
-	AffirmationCompleted            = "event AffirmationCompleted(address indexed sender, address indexed executor, bytes32 indexed messageId, bool status)"
-	LegacyAffirmationCompleted      = "event AffirmationCompleted(address sender, address executor, bytes32 messageId, bool status)"
-	RelayedMessage                  = "event RelayedMessage(address indexed sender, address indexed executor, bytes32 indexed messageId, bool status)"
-	LegacyRelayedMessage            = "event RelayedMessage(address sender, address executor, bytes32 messageId, bool status)"
-	InformationRetrieved            = "event InformationRetrieved(bytes32 indexed messageId, bool status, bool callbackStatus)"
-
-	ErcToNativeUserRequestForSignature   = "event UserRequestForSignature(address recipient, uint256 value)"
-	ErcToNativeTransfer                  = "event Transfer(address indexed from, address indexed to, uint256 value)"
-	ErcToNativeRelayedMessage            = "event RelayedMessage(address recipient, uint256 value, bytes32 transactionHash)"
-	ErcToNativeUserRequestForAffirmation = "event UserRequestForAffirmation(address recipient, uint256 value)"
-	ErcToNativeAffirmationCompleted      = "event AffirmationCompleted(address recipient, uint256 value, bytes32 transactionHash)"
-	ErcToNativeSignedForAffirmation      = "event SignedForAffirmation(address indexed signer, bytes32 transactionHash)"
-
-	ValidatorAdded   = "event ValidatorAdded(address indexed validator)"
-	ValidatorRemoved = "event ValidatorRemoved(address indexed validator)"
-)
-
-var (
-	ErcToNativeTransferEventSignature                  = ErcToNativeABI.Events["Transfer"].ID
-	ErcToNativeUserRequestForAffirmationEventSignature = ErcToNativeABI.Events["UserRequestForAffirmation"].ID
-)
-
-func MustReadABI(rawJSON string) abi.ABI {
-	res, err := abi.JSON(strings.NewReader(rawJSON))
+func MustReadABI(rawJSON string) ABI {
+	res, err := gethabi.JSON(strings.NewReader(rawJSON))
 	if err != nil {
 		panic(err)
 	}
-	return res
+	return ABI{res}
+}
+
+func (abi *ABI) AllEvents() map[string]bool {
+	events := make(map[string]bool, len(abi.Events))
+	for _, event := range abi.Events {
+		events[event.String()] = true
+	}
+	return events
+}
+
+func (abi *ABI) FindMatchingEventABI(topics []common.Hash) *Event {
+	for _, e := range abi.Events {
+		if e.ID == topics[0] {
+			indexed := Indexed(e.Inputs)
+			if len(indexed) == len(topics)-1 {
+				return &Event{e}
+			}
+		}
+	}
+	return nil
+}
+
+func (abi *ABI) ParseLog(log *entity.Log) (string, map[string]interface{}, error) {
+	topics := log.Topics()
+	if len(topics) == 0 {
+		return "", nil, fmt.Errorf("cannot process event without topics: %w", ErrInvalidEvent)
+	}
+	event := abi.FindMatchingEventABI(topics)
+	if event == nil {
+		return "", nil, nil
+	}
+
+	res, err := event.DecodeLogData(topics, log.Data)
+	if err != nil {
+		return "", nil, fmt.Errorf("can't decode event log data: %w", err)
+	}
+	return event.String(), res, nil
+}
+
+func (event *Event) DecodeLogData(topics []common.Hash, data []byte) (map[string]interface{}, error) {
+	indexed := Indexed(event.Inputs)
+	values := make(map[string]interface{})
+	if len(indexed) < len(event.Inputs) {
+		if err := event.Inputs.UnpackIntoMap(values, data); err != nil {
+			return nil, fmt.Errorf("can't unpack data: %w", err)
+		}
+	}
+	if err := gethabi.ParseTopicsIntoMap(values, indexed, topics[1:]); err != nil {
+		return nil, fmt.Errorf("can't unpack topics: %w", err)
+	}
+	return values, nil
+}
+
+func Indexed(args gethabi.Arguments) gethabi.Arguments {
+	var indexed gethabi.Arguments
+	for _, arg := range args {
+		if arg.Indexed {
+			indexed = append(indexed, arg)
+		}
+	}
+	return indexed
 }

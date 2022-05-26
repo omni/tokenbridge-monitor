@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/poanetwork/tokenbridge-monitor/config"
-	"github.com/poanetwork/tokenbridge-monitor/contract/abi"
+	"github.com/poanetwork/tokenbridge-monitor/contract/bridgeabi"
 	"github.com/poanetwork/tokenbridge-monitor/db"
 	"github.com/poanetwork/tokenbridge-monitor/entity"
 	"github.com/poanetwork/tokenbridge-monitor/ethclient"
@@ -96,7 +96,7 @@ func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log 
 		FromBlock: &log.BlockNumber,
 		ToBlock:   &log.BlockNumber,
 		TxHash:    &log.TransactionHash,
-		Topic0:    &abi.ErcToNativeUserRequestForAffirmationEventSignature,
+		Topic0:    &bridgeabi.ErcToNativeUserRequestForAffirmationEventSignature,
 	}
 	logs, err := p.repo.Logs.Find(ctx, filter)
 	if err != nil {
@@ -153,7 +153,7 @@ func (p *BridgeEventHandler) HandleErcToNativeUserRequestForAffirmation(ctx cont
 		FromBlock:  &log.BlockNumber,
 		ToBlock:    &log.BlockNumber,
 		TxHash:     &log.TransactionHash,
-		Topic0:     &abi.ErcToNativeTransferEventSignature,
+		Topic0:     &bridgeabi.ErcToNativeTransferEventSignature,
 		Topic2:     hashPtr(p.cfg.Foreign.Address.Hash()),
 		DataLength: uintPtr(32),
 	}

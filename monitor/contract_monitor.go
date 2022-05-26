@@ -118,7 +118,7 @@ func (m *ContractMonitor) RegisterEventHandler(event string, handler EventHandle
 }
 
 func (m *ContractMonitor) VerifyEventHandlersABI() error {
-	events := m.contract.AllEvents()
+	events := m.contract.ABI.AllEvents()
 	for e := range m.eventHandlers {
 		if !events[e] {
 			return fmt.Errorf("contract does not have %s event in its ABI: %w", e, ErrIncompatibleABI)
@@ -466,7 +466,7 @@ func (m *ContractMonitor) tryToProcessLogsBatch(ctx context.Context, batch *Logs
 		"block_number": batch.BlockNumber,
 	}).Debug("processing logs batch")
 	for _, log := range batch.Logs {
-		event, data, err := m.contract.ParseLog(log)
+		event, data, err := m.contract.ABI.ParseLog(log)
 		if err != nil {
 			return fmt.Errorf("can't parse log: %w", err)
 		}
