@@ -77,10 +77,7 @@ func (r *bridgeValidatorsRepo) FindActiveValidators(ctx context.Context, bridgeI
 	vals := make([]*entity.BridgeValidator, 0, 10)
 	err = r.db.SelectContext(ctx, &vals, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("can't get bridge validator: %w", err)
+		return nil, fmt.Errorf("can't get bridge validators: %w", err)
 	}
 	return vals, nil
 }

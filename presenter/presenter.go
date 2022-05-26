@@ -122,11 +122,12 @@ func (p *Presenter) getBridgeSideInfo(ctx context.Context, bridgeID string, cfg 
 func (p *Presenter) getBlockTimeOrDefault(ctx context.Context, chainID string, blockNumber uint) (time.Time, error) {
 	bt, err := p.repo.BlockTimestamps.GetByBlockNumber(ctx, chainID, blockNumber)
 	if err != nil && !errors.Is(err, db.ErrNotFound) {
+		if errors.Is(err, db.ErrNotFound) {
+			return time.Time{}, nil
+		}
 		return time.Time{}, fmt.Errorf("failed to get block timestamp: %w", err)
-	} else if err == nil {
-		return bt.Timestamp, nil
 	}
-	return time.Time{}, nil
+	return bt.Timestamp, nil
 }
 
 func (p *Presenter) GetBridgeConfig(w http.ResponseWriter, r *http.Request) {
