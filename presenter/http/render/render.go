@@ -6,15 +6,13 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/poanetwork/tokenbridge-monitor/logging"
 )
 
 func JSON(w http.ResponseWriter, r *http.Request, status int, res interface{}) {
 	enc := json.NewEncoder(w)
 
-	if pretty, _ := strconv.ParseBool(chi.URLParam(r, "pretty")); pretty {
+	if pretty, _ := strconv.ParseBool(r.URL.Query().Get("pretty")); pretty {
 		enc.SetIndent("", "  ")
 	}
 
