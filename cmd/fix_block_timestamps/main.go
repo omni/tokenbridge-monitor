@@ -18,7 +18,7 @@ import (
 func main() {
 	logger := logging.New()
 
-	cfg, err := config.ReadConfig()
+	cfg, err := config.ReadConfigFromFile("config.yml")
 	if err != nil {
 		logger.WithError(err).Fatal("can't read config")
 	}

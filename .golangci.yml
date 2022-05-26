@@ -21,9 +21,6 @@ linters-settings:
       - standard
       - default
       - prefix(github.com/poanetwork/tokenbridge-monitor)
-  gocritic:
-    disabled-checks:
-      - ifElseChain
   funlen:
     lines: 130
     statements: 60

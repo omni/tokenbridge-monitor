@@ -119,20 +119,12 @@ func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig)
 		jobs[name].Params = &AlertJobParams{
 			Bridge:                  cfg.ID,
 			HomeChainID:             cfg.Home.Chain.ChainID,
-			HomeStartBlockNumber:    cfg.Home.StartBlock,
+			HomeStartBlockNumber:    alertCfg.HomeStartBlock,
 			HomeBridgeAddress:       cfg.Home.Address,
 			HomeWhitelistedSenders:  cfg.Home.WhitelistedSenders,
 			ForeignChainID:          cfg.Foreign.Chain.ChainID,
-			ForeignStartBlockNumber: cfg.Foreign.StartBlock,
+			ForeignStartBlockNumber: alertCfg.ForeignStartBlock,
 			ForeignBridgeAddress:    cfg.Foreign.Address,
-		}
-		if alertCfg != nil {
-			if alertCfg.HomeStartBlock > 0 {
-				jobs[name].Params.HomeStartBlockNumber = alertCfg.HomeStartBlock
-			}
-			if alertCfg.ForeignStartBlock > 0 {
-				jobs[name].Params.ForeignStartBlockNumber = alertCfg.ForeignStartBlock
-			}
 		}
 	}
 

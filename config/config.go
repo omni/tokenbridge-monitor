@@ -94,18 +94,11 @@ type Config struct {
 	Presenter       *PresenterConfig         `yaml:"presenter"`
 }
 
-func readYamlConfig(cfg *Config) error {
-	blob, err := os.ReadFile("config.yml")
-	if err != nil {
-		return fmt.Errorf("can't access config file: %w", err)
-	}
-	blob = []byte(os.ExpandEnv(string(blob)))
-
+func parseYaml(out *Config, blob []byte) error {
 	dec := yaml.NewDecoder(bytes.NewReader(blob))
 	dec.KnownFields(true)
-	err = dec.Decode(cfg)
-	if err != nil {
-		return fmt.Errorf("can't parse yaml config: %w", err)
+	if err := dec.Decode(out); err != nil {
+		return fmt.Errorf("can't parse yaml: %w", err)
 	}
 	return nil
 }
@@ -113,29 +106,53 @@ func readYamlConfig(cfg *Config) error {
 func (cfg *Config) init() error {
 	for bridgeID, bridge := range cfg.Bridges {
 		bridge.ID = bridgeID
-		err := bridge.Home.init(cfg)
+		err := bridge.init(cfg)
 		if err != nil {
-			return fmt.Errorf("can't init home bridge config for %s: %w", bridgeID, err)
-		}
-		err = bridge.Foreign.init(cfg)
-		if err != nil {
-			return fmt.Errorf("can't init foreign bridge config for %s: %w", bridgeID, err)
-		}
-		if len(bridge.Home.ErcToNativeTokens) > 0 {
-			return fmt.Errorf("%s home config error: %w", bridgeID, ErrNonEmptyTokenList)
-		}
-		if bridge.BridgeMode == BridgeModeErcToNative {
-			if len(bridge.Foreign.ErcToNativeTokens) == 0 {
-				return fmt.Errorf("%s foreign config error: %w", bridgeID, ErrEmptyTokenList)
-			}
-		} else {
-			if len(bridge.Foreign.ErcToNativeTokens) > 0 {
-				return fmt.Errorf("%s foreign config error: %w", bridgeID, ErrNonEmptyTokenList)
-			}
-			bridge.BridgeMode = BridgeModeArbitraryMessage
+			return fmt.Errorf("can't init bridge config for %s: %w", bridgeID, err)
 		}
 	}
 	return nil
+}
+
+func (cfg *BridgeConfig) init(parent *Config) error {
+	err := cfg.Home.init(parent)
+	if err != nil {
+		return fmt.Errorf("can't init home bridge config: %w", err)
+	}
+	err = cfg.Foreign.init(parent)
+	if err != nil {
+		return fmt.Errorf("can't init foreign bridge config: %w", err)
+	}
+	if len(cfg.Home.ErcToNativeTokens) > 0 {
+		return fmt.Errorf("home config error: %w", ErrNonEmptyTokenList)
+	}
+	if cfg.BridgeMode == BridgeModeErcToNative {
+		if len(cfg.Foreign.ErcToNativeTokens) == 0 {
+			return fmt.Errorf("foreign config error: %w", ErrEmptyTokenList)
+		}
+	} else {
+		if len(cfg.Foreign.ErcToNativeTokens) > 0 {
+			return fmt.Errorf("foreign config error: %w", ErrNonEmptyTokenList)
+		}
+		cfg.BridgeMode = BridgeModeArbitraryMessage
+	}
+	for alertName, alertCfg := range cfg.Alerts {
+		if alertCfg == nil {
+			alertCfg = &BridgeAlertConfig{}
+			cfg.Alerts[alertName] = alertCfg
+		}
+		alertCfg.init(cfg)
+	}
+	return nil
+}
+
+func (cfg *BridgeAlertConfig) init(parent *BridgeConfig) {
+	if cfg.HomeStartBlock < parent.Home.StartBlock {
+		cfg.HomeStartBlock = parent.Home.StartBlock
+	}
+	if cfg.ForeignStartBlock < parent.Foreign.StartBlock {
+		cfg.ForeignStartBlock = parent.Foreign.StartBlock
+	}
 }
 
 func (cfg *BridgeSideConfig) init(parent *Config) error {
@@ -174,9 +191,9 @@ func (cfg *BridgeSideConfig) ErcToNativeTokenAddresses(fromBlock, toBlock uint) 
 	return addresses
 }
 
-func ReadConfig() (*Config, error) {
+func ReadConfig(blob []byte) (*Config, error) {
 	cfg := new(Config)
-	err := readYamlConfig(cfg)
+	err := parseYaml(cfg, blob)
 	if err != nil {
 		return nil, err
 	}
@@ -185,4 +202,16 @@ func ReadConfig() (*Config, error) {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+func ReadConfigWithEnv(blob []byte) (*Config, error) {
+	return ReadConfig([]byte(os.ExpandEnv(string(blob))))
+}
+
+func ReadConfigFromFile(path string) (*Config, error) {
+	blob, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("can't read from file: %w", err)
+	}
+	return ReadConfigWithEnv(blob)
 }
