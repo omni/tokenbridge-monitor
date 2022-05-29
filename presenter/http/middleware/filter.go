@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -18,10 +19,13 @@ type ctxKey int
 const (
 	bridgeCfgCtxKey ctxKey = iota
 	chainCfgCtxKey
-	blockNumberCtxKey
+	fromBlockNumberCtxKey
+	toBlockNumberCtxKey
 	txHashCtxKey
 	filterCtxKey
 )
+
+var ErrInvalidBlockNumber = errors.New("invalid block number parameter")
 
 type FilterContext struct {
 	ChainID   *string
@@ -59,6 +63,14 @@ func GetChainConfigMiddleware(cfg *config.Config) func(http.Handler) http.Handle
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			chainID := chi.URLParam(r, "chainID")
 
+			if chainID == "" {
+				chainID = r.URL.Query().Get("chainId")
+				if chainID == "" {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+
 			var chainCfg *config.ChainConfig
 			for _, c := range cfg.Chains {
 				if c.ChainID == chainID {
@@ -79,13 +91,49 @@ func GetChainConfigMiddleware(cfg *config.Config) func(http.Handler) http.Handle
 
 func GetBlockNumberMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		blockNumber, err := strconv.ParseUint(chi.URLParam(r, "blockNumber"), 10, 32)
+		blockNumberStr := chi.URLParam(r, "blockNumber")
+		query := r.URL.Query()
+
+		if blockNumberStr == "" {
+			blockNumberStr = query.Get("blockNumber")
+		}
+
+		var fromBlockStr, toBlockStr string
+		if blockNumberStr == "" {
+			fromBlockStr = query.Get("fromBlock")
+			toBlockStr = query.Get("toBlock")
+			if fromBlockStr == "" || toBlockStr == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+		} else {
+			fromBlockStr = blockNumberStr
+			toBlockStr = blockNumberStr
+		}
+
+		fromBlock, err := strconv.ParseUint(fromBlockStr, 10, 32)
+		if err != nil {
+			render.Error(w, r, fmt.Errorf("failed to parse blockNumber: %w", err))
+			return
+		}
+		toBlock, err := strconv.ParseUint(toBlockStr, 10, 32)
 		if err != nil {
 			render.Error(w, r, fmt.Errorf("failed to parse blockNumber: %w", err))
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), blockNumberCtxKey, uint(blockNumber))
+		if fromBlock > toBlock {
+			render.Error(w, r, fmt.Errorf("fromBlock should be less than toBlock: %w", ErrInvalidBlockNumber))
+			return
+		}
+		if toBlock-fromBlock > 10000 {
+			render.Error(w, r, fmt.Errorf("cannot request more than 10000 blocks in range: %w", ErrInvalidBlockNumber))
+			return
+		}
+
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, fromBlockNumberCtxKey, uint(fromBlock))
+		ctx = context.WithValue(ctx, toBlockNumberCtxKey, uint(toBlock))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -93,6 +141,14 @@ func GetBlockNumberMiddleware(next http.Handler) http.Handler {
 func GetTxHashMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		txHash := chi.URLParam(r, "txHash")
+
+		if txHash == "" {
+			txHash = r.URL.Query().Get("txHash")
+			if txHash == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
 
 		ctx := context.WithValue(r.Context(), txHashCtxKey, common.HexToHash(txHash))
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -108,8 +164,10 @@ func GetFilterMiddleware(next http.Handler) http.Handler {
 		if cfg, ok := ctx.Value(chainCfgCtxKey).(*config.ChainConfig); ok {
 			filter.ChainID = &cfg.ChainID
 		}
-		if blockNumber, ok := ctx.Value(blockNumberCtxKey).(uint); ok {
+		if blockNumber, ok := ctx.Value(fromBlockNumberCtxKey).(uint); ok {
 			filter.FromBlock = &blockNumber
+		}
+		if blockNumber, ok := ctx.Value(toBlockNumberCtxKey).(uint); ok {
 			filter.ToBlock = &blockNumber
 		}
 		if txHash, ok := ctx.Value(txHashCtxKey).(common.Hash); ok {

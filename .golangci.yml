@@ -22,8 +22,8 @@ linters-settings:
       - default
       - prefix(github.com/poanetwork/tokenbridge-monitor)
   funlen:
-    lines: 130
-    statements: 60
+    lines: 60
+    statements: 40
   varnamelen:
     ignore-names:
       - db
@@ -49,6 +49,10 @@ issues:
     - append only allowed to cuddle with appended value
     - for statement without condition should never be cuddled
   exclude-rules:
-    - linters:
+    - path: cmd
+      linters:
         - cyclop
-      path: cmd
+        - funlen
+    - path: '(.+)_test\.go'
+      linters:
+        - funlen

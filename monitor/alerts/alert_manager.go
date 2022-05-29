@@ -15,7 +15,7 @@ type AlertManager struct {
 	jobs   map[string]*Job
 }
 
-//nolint:cyclop
+//nolint:cyclop,funlen
 func NewAlertManager(logger logging.Logger, db *db.DB, cfg *config.BridgeConfig) (*AlertManager, error) {
 	provider := NewDBAlertsProvider(db)
 	jobs := make(map[string]*Job, len(cfg.Alerts))

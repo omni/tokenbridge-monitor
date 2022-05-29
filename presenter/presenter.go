@@ -76,6 +76,14 @@ func (p *Presenter) Serve(addr string) error {
 		r.Use(middleware.GetTxHashMiddleware)
 		r.Group(registerSearchRoutes)
 	})
+	p.root.Group(func(r chi.Router) {
+		r.Use(middleware.GetChainConfigMiddleware(p.cfg))
+		r.Use(middleware.GetBlockNumberMiddleware)
+		r.Use(middleware.GetTxHashMiddleware)
+		r.Use(middleware.GetFilterMiddleware)
+		r.Get("/logs", p.GetLogs)
+		r.Get("/messages", p.GetMessages)
+	})
 	return http.ListenAndServe(addr, p.root)
 }
 
