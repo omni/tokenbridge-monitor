@@ -529,6 +529,6 @@ func (p *Presenter) getTxInfo(ctx context.Context, logID uint) (*TxInfo, error) 
 	return &TxInfo{
 		BlockNumber: log.BlockNumber,
 		Timestamp:   bt.Timestamp,
-		Link:        FormatLogTxLinkURL(log),
+		Link:        p.cfg.GetChainConfig(log.ChainID).FormatTxLink(log.TransactionHash),
 	}, nil
 }

@@ -22,6 +22,7 @@ chains:
     chain_id: 1
     block_time: 15s
     block_index_interval: 60s
+    explorer_tx_link_format: 'https://etherscan.io/tx/%s'
   xdai:
     rpc:
       host: https://rpc.ankr.com/gnosis
@@ -105,10 +106,11 @@ func TestReadConfigWithEnv(t *testing.T) {
 			Timeout: 30 * time.Second,
 			RPS:     10,
 		},
-		ChainID:            "1",
-		BlockTime:          15 * time.Second,
-		BlockIndexInterval: 60 * time.Second,
-		SafeLogsRequest:    false,
+		ChainID:              "1",
+		BlockTime:            15 * time.Second,
+		BlockIndexInterval:   60 * time.Second,
+		SafeLogsRequest:      false,
+		ExplorerTxLinkFormat: "https://etherscan.io/tx/%s",
 	}
 	xdaiChainCfg := &config.ChainConfig{
 		RPC: &config.RPCConfig{
@@ -222,18 +224,18 @@ func TestBridgeSideConfig_ErcToNativeTokenAddresses(t *testing.T) {
 	cfg, err := config.ReadConfig([]byte(testCfg))
 	require.NoError(t, err)
 	tokenAddresses := cfg.Bridges["xdai"].Foreign.ErcToNativeTokenAddresses(7000000, 11000000)
-	require.Equal(t, tokenAddresses, []common.Address{
+	require.Equal(t, []common.Address{
 		common.HexToAddress("0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359"),
 		common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-	})
+	}, tokenAddresses)
 	tokenAddresses = cfg.Bridges["xdai"].Foreign.ErcToNativeTokenAddresses(7000000, 8000000)
-	require.Equal(t, tokenAddresses, []common.Address{
+	require.Equal(t, []common.Address{
 		common.HexToAddress("0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359"),
-	})
+	}, tokenAddresses)
 	tokenAddresses = cfg.Bridges["xdai"].Foreign.ErcToNativeTokenAddresses(10000000, 11000000)
-	require.Equal(t, tokenAddresses, []common.Address{
+	require.Equal(t, []common.Address{
 		common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-	})
+	}, tokenAddresses)
 }
 
 func TestBridgeSideConfig_ContractAddresses(t *testing.T) {
@@ -241,10 +243,34 @@ func TestBridgeSideConfig_ContractAddresses(t *testing.T) {
 	cfg, err := config.ReadConfig([]byte(testCfg))
 	require.NoError(t, err)
 	tokenAddresses := cfg.Bridges["xdai"].Foreign.ContractAddresses(7000000, 11000000)
-	require.Equal(t, tokenAddresses, []common.Address{
+	require.Equal(t, []common.Address{
 		common.HexToAddress("0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359"),
 		common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
 		common.HexToAddress("0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016"),
 		common.HexToAddress("0xe1579dEbdD2DF16Ebdb9db8694391fa74EeA201E"),
-	})
+	}, tokenAddresses)
+}
+
+func TestConfig_GetChainConfig(t *testing.T) {
+	t.Parallel()
+	cfg, err := config.ReadConfig([]byte(testCfg))
+	require.NoError(t, err)
+
+	require.NotNil(t, cfg.GetChainConfig("xdai"))
+	require.Equal(t, "100", cfg.GetChainConfig("xdai").ChainID)
+	require.NotNil(t, cfg.GetChainConfig("100"))
+	require.Equal(t, "100", cfg.GetChainConfig("100").ChainID)
+	require.Nil(t, cfg.GetChainConfig("123"))
+}
+
+func TestChainConfig_FormatTxLink(t *testing.T) {
+	t.Parallel()
+	cfg, err := config.ReadConfig([]byte(testCfg))
+	require.NoError(t, err)
+
+	txHash := "0x0000000000000000000000000000000000000000000000000000000000000000"
+	link := "https://etherscan.io/tx/0x0000000000000000000000000000000000000000000000000000000000000000"
+	require.Equal(t, link, cfg.GetChainConfig("mainnet").FormatTxLink(common.Hash{}))
+	require.Equal(t, link, cfg.GetChainConfig("1").FormatTxLink(common.Hash{}))
+	require.Equal(t, txHash, cfg.GetChainConfig("123").FormatTxLink(common.Hash{}))
 }

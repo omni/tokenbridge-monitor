@@ -71,13 +71,7 @@ func GetChainConfigMiddleware(cfg *config.Config) func(http.Handler) http.Handle
 				}
 			}
 
-			var chainCfg *config.ChainConfig
-			for _, c := range cfg.Chains {
-				if c.ChainID == chainID {
-					chainCfg = c
-					break
-				}
-			}
+			chainCfg := cfg.GetChainConfig(chainID)
 			if chainCfg == nil {
 				render.JSON(w, r, http.StatusNotFound, fmt.Sprintf("chain with id %s not found", chainID))
 				return

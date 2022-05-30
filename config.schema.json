@@ -42,6 +42,9 @@
           },
           "safe_logs_request": {
             "type": "boolean"
+          },
+          "explorer_tx_link_format": {
+            "type": "string"
           }
         },
         "required": [

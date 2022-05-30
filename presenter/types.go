@@ -101,3 +101,36 @@ type TxInfo struct {
 	Timestamp   time.Time
 	Link        string
 }
+
+func NewMessageInfo(msg *entity.Message) *MessageInfo {
+	return &MessageInfo{
+		BridgeID:  msg.BridgeID,
+		MsgHash:   msg.MsgHash,
+		MessageID: msg.MessageID,
+		Direction: msg.Direction,
+		Sender:    msg.Sender,
+		Executor:  msg.Executor,
+		DataType:  msg.DataType,
+	}
+}
+
+func NewInformationRequestInfo(req *entity.InformationRequest) *InformationRequestInfo {
+	return &InformationRequestInfo{
+		BridgeID:  req.BridgeID,
+		MessageID: req.MessageID,
+		Direction: req.Direction,
+		Sender:    req.Sender,
+		Executor:  req.Executor,
+	}
+}
+
+func NewErcToNativeMessageInfo(req *entity.ErcToNativeMessage) *ErcToNativeMessageInfo {
+	return &ErcToNativeMessageInfo{
+		BridgeID:  req.BridgeID,
+		MsgHash:   req.MsgHash,
+		Direction: req.Direction,
+		Sender:    req.Sender,
+		Receiver:  req.Receiver,
+		Value:     req.Value,
+	}
+}

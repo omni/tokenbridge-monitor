@@ -1,7 +1,6 @@
 package config
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -26,11 +24,12 @@ type RPCConfig struct {
 }
 
 type ChainConfig struct {
-	RPC                *RPCConfig    `yaml:"rpc"`
-	ChainID            string        `yaml:"chain_id"`
-	BlockTime          time.Duration `yaml:"block_time"`
-	BlockIndexInterval time.Duration `yaml:"block_index_interval"`
-	SafeLogsRequest    bool          `yaml:"safe_logs_request"`
+	RPC                  *RPCConfig    `yaml:"rpc"`
+	ChainID              string        `yaml:"chain_id"`
+	BlockTime            time.Duration `yaml:"block_time"`
+	BlockIndexInterval   time.Duration `yaml:"block_index_interval"`
+	SafeLogsRequest      bool          `yaml:"safe_logs_request"`
+	ExplorerTxLinkFormat string        `yaml:"explorer_tx_link_format"`
 }
 
 type TokenConfig struct {
@@ -94,11 +93,21 @@ type Config struct {
 	Presenter       *PresenterConfig         `yaml:"presenter"`
 }
 
-func parseYaml(out *Config, blob []byte) error {
-	dec := yaml.NewDecoder(bytes.NewReader(blob))
-	dec.KnownFields(true)
-	if err := dec.Decode(out); err != nil {
-		return fmt.Errorf("can't parse yaml: %w", err)
+func (cfg *ChainConfig) FormatTxLink(txHash fmt.Stringer) string {
+	if cfg == nil || cfg.ExplorerTxLinkFormat == "" {
+		return txHash.String()
+	}
+	return fmt.Sprintf(cfg.ExplorerTxLinkFormat, txHash)
+}
+
+func (cfg *Config) GetChainConfig(chainID string) *ChainConfig {
+	if chainCfg, ok := cfg.Chains[chainID]; ok {
+		return chainCfg
+	}
+	for _, chainCfg := range cfg.Chains {
+		if chainCfg.ChainID == chainID {
+			return chainCfg
+		}
 	}
 	return nil
 }

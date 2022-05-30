@@ -7,6 +7,7 @@ chains:
     chain_id: 1
     block_time: 15s
     block_index_interval: 60s
+    explorer_tx_link_format: 'https://etherscan.io/tx/%s'
   bsc:
     rpc:
       host: https://bsc-dataseed2.defibit.io
@@ -16,6 +17,7 @@ chains:
     block_time: 3s
     block_index_interval: 60s
     safe_logs_request: true
+    explorer_tx_link_format: 'https://bscscan.com/tx/%s'
   kovan:
     rpc:
       host: https://kovan.infura.io/v3/${INFURA_PROJECT_KEY}
@@ -24,15 +26,17 @@ chains:
     chain_id: 42
     block_time: 5s
     block_index_interval: 60s
+    explorer_tx_link_format: 'https://kovan.etherscan.io/tx/%s'
   xdai:
     rpc:
-      host: https://rpc.xdaichain.com/oe-only
+      host: https://rpc.ankr.com/gnosis
       timeout: 20s
       rps: 10
     chain_id: 100
     block_time: 5s
     block_index_interval: 30s
     safe_logs_request: true
+    explorer_tx_link_format: 'https://blockscout.com/xdai/mainnet/tx/%s'
   poa:
     rpc:
       host: https://core.poanetwork.dev
@@ -41,6 +45,7 @@ chains:
     chain_id: 99
     block_time: 5s
     block_index_interval: 30s
+    explorer_tx_link_format: 'https://blockscout.com/poa/core/tx/%s'
   sokol:
     rpc:
       host: https://sokol.poa.network
@@ -49,6 +54,7 @@ chains:
     chain_id: 77
     block_time: 5s
     block_index_interval: 30s
+    explorer_tx_link_format: 'https://blockscout.com/poa/sokol/tx/%s'
   rinkeby:
     rpc:
       host: https://rinkeby.infura.io/v3/${INFURA_PROJECT_KEY}
@@ -57,6 +63,7 @@ chains:
     chain_id: 4
     block_time: 15s
     block_index_interval: 60s
+    explorer_tx_link_format: 'https://rinkeby.etherscan.io/tx/%s'
 bridges:
   xdai:
     bridge_mode: ERC_TO_NATIVE
@@ -158,7 +165,7 @@ bridges:
       validator_contract_address: 0x6f00218e7D985FE1211f5d47B350708fF915A842
       start_block: 14496719
       required_block_confirmations: 12
-      max_block_range_size: 10000
+      max_block_range_size: 2000
     foreign:
       chain: bsc
       address: 0x05185872898b6f94AA600177EF41B9334B1FA48B
@@ -186,7 +193,7 @@ bridges:
       validator_contract_address: 0xAC91dfb485ED2B96381686D3d299e3D041dB4051
       start_block: 10030209
       required_block_confirmations: 12
-      max_block_range_size: 20000
+      max_block_range_size: 2000
     foreign:
       chain: rinkeby
       address: 0xD4075FB57fCf038bFc702c915Ef9592534bED5c1
@@ -212,7 +219,7 @@ bridges:
       validator_contract_address: 0x72C5E5f2C905f9b57FD433a58d6215AC8109991C
       start_block: 17976494
       required_block_confirmations: 12
-      max_block_range_size: 10000
+      max_block_range_size: 2000
     foreign:
       chain: poa
       address: 0xB2218bdEbe8e90f80D04286772B0968ead666942

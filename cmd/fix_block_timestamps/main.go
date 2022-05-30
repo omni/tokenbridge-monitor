@@ -82,13 +82,7 @@ WHERE not exists(SELECT *
 		}
 		client, ok := clients[bt.ChainID]
 		if !ok {
-			var chainCfg *config.ChainConfig
-			for _, c := range cfg.Chains {
-				if c.ChainID == bt.ChainID {
-					chainCfg = c
-					break
-				}
-			}
+			chainCfg := cfg.GetChainConfig(bt.ChainID)
 			if chainCfg == nil {
 				logger.WithFields(fields).Fatal("can't find chain config")
 			}
