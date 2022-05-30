@@ -83,7 +83,7 @@ func getCurrentFuncName(skip int) string {
 		return "unknown"
 	}
 	name := details.Name()
-	name = name[strings.Index(name, ".")+1:]
+	name = name[strings.LastIndex(name, ".")+1:]
 	name = strings.TrimPrefix(name, "(*")
 	name = strings.Replace(name, ")", "", 1)
 	return name
