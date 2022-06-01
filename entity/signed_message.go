@@ -18,7 +18,7 @@ type SignedMessage struct {
 
 type SignedMessagesRepo interface {
 	Ensure(ctx context.Context, msg *SignedMessage) error
-	FindByLogID(ctx context.Context, logID uint) (*SignedMessage, error)
+	GetByLogID(ctx context.Context, logID uint) (*SignedMessage, error)
 	FindByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) ([]*SignedMessage, error)
-	FindLatest(ctx context.Context, bridgeID, chainID string, signer common.Address) (*SignedMessage, error)
+	GetLatest(ctx context.Context, bridgeID, chainID string, signer common.Address) (*SignedMessage, error)
 }

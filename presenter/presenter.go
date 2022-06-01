@@ -129,11 +129,8 @@ func (p *Presenter) getBridgeSideInfo(ctx context.Context, bridgeID string, cfg 
 
 func (p *Presenter) getBlockTimeOrDefault(ctx context.Context, chainID string, blockNumber uint) (time.Time, error) {
 	bt, err := p.repo.BlockTimestamps.GetByBlockNumber(ctx, chainID, blockNumber)
-	if err != nil && !errors.Is(err, db.ErrNotFound) {
-		if errors.Is(err, db.ErrNotFound) {
-			return time.Time{}, nil
-		}
-		return time.Time{}, fmt.Errorf("failed to get block timestamp: %w", err)
+	if err != nil {
+		return time.Time{}, db.IgnoreErrNotFound(fmt.Errorf("failed to get block timestamp: %w", err))
 	}
 	return bt.Timestamp, nil
 }
@@ -200,10 +197,10 @@ func (p *Presenter) GetBridgeValidators(w http.ResponseWriter, r *http.Request) 
 		valInfo := &ValidatorInfo{
 			Address: val.Address,
 		}
-		confirmation, err2 := p.repo.SignedMessages.FindLatest(ctx, cfg.ID, cfg.Home.Chain.ChainID, val.Address)
+		confirmation, err2 := p.repo.SignedMessages.GetLatest(ctx, cfg.ID, cfg.Home.Chain.ChainID, val.Address)
 		if err2 != nil {
-			if !errors.Is(err, db.ErrNotFound) {
-				render.Error(w, r, fmt.Errorf("failed to find latest validator confirmation: %w", err))
+			if !errors.Is(err2, db.ErrNotFound) {
+				render.Error(w, r, fmt.Errorf("failed to find latest validator confirmation: %w", err2))
 				return
 			}
 		} else {
@@ -256,20 +253,9 @@ func (p *Presenter) GetLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := make([]*LogResult, len(logs))
+	res := make([]*LogInfo, len(logs))
 	for i, log := range logs {
-		res[i] = &LogResult{
-			LogID:       log.ID,
-			ChainID:     log.ChainID,
-			Address:     log.Address,
-			Topic0:      log.Topic0,
-			Topic1:      log.Topic1,
-			Topic2:      log.Topic2,
-			Topic3:      log.Topic3,
-			Data:        log.Data,
-			TxHash:      log.TransactionHash,
-			BlockNumber: log.BlockNumber,
-		}
+		res[i] = NewLogInfo(log)
 	}
 
 	render.JSON(w, r, http.StatusOK, res)
@@ -307,7 +293,7 @@ func (p *Presenter) searchForMessagesInLogs(ctx context.Context, logs []*entity.
 }
 
 func (p *Presenter) searchSentMessage(ctx context.Context, log *entity.Log) (*SearchResult, error) {
-	sent, err := p.repo.SentMessages.FindByLogID(ctx, log.ID)
+	sent, err := p.repo.SentMessages.GetByLogID(ctx, log.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +302,7 @@ func (p *Presenter) searchSentMessage(ctx context.Context, log *entity.Log) (*Se
 }
 
 func (p *Presenter) searchSignedMessage(ctx context.Context, log *entity.Log) (*SearchResult, error) {
-	sig, err := p.repo.SignedMessages.FindByLogID(ctx, log.ID)
+	sig, err := p.repo.SignedMessages.GetByLogID(ctx, log.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +311,7 @@ func (p *Presenter) searchSignedMessage(ctx context.Context, log *entity.Log) (*
 }
 
 func (p *Presenter) searchExecutedMessage(ctx context.Context, log *entity.Log) (*SearchResult, error) {
-	executed, err := p.repo.ExecutedMessages.FindByLogID(ctx, log.ID)
+	executed, err := p.repo.ExecutedMessages.GetByLogID(ctx, log.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -342,16 +328,13 @@ func (p *Presenter) buildSearchResultForMessage(ctx context.Context, bridgeID st
 	var searchID common.Hash
 	if msgHash != nil {
 		searchID = *msgHash
-		msg, err = p.repo.Messages.FindByMsgHash(ctx, bridgeID, *msgHash)
+		msg, err = p.repo.Messages.GetByMsgHash(ctx, bridgeID, *msgHash)
 	} else {
 		searchID = *messageID
-		msg, err = p.repo.Messages.FindByMessageID(ctx, bridgeID, *messageID)
-	}
-	if err != nil && !errors.Is(err, db.ErrNotFound) {
-		return nil, err
+		msg, err = p.repo.Messages.GetByMessageID(ctx, bridgeID, *messageID)
 	}
 	if errors.Is(err, db.ErrNotFound) {
-		ercToNativeMsg, err2 := p.repo.ErcToNativeMessages.FindByMsgHash(ctx, bridgeID, searchID)
+		ercToNativeMsg, err2 := p.repo.ErcToNativeMessages.GetByMsgHash(ctx, bridgeID, searchID)
 		if err2 != nil {
 			return nil, err2
 		}
@@ -364,6 +347,9 @@ func (p *Presenter) buildSearchResultForMessage(ctx context.Context, bridgeID st
 			RelatedEvents: events,
 		}, nil
 	}
+	if err != nil {
+		return nil, err
+	}
 	events, err := p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
 	if err != nil {
 		return nil, err
@@ -375,7 +361,7 @@ func (p *Presenter) buildSearchResultForMessage(ctx context.Context, bridgeID st
 }
 
 func (p *Presenter) searchSentInformationRequest(ctx context.Context, log *entity.Log) (*SearchResult, error) {
-	sent, err := p.repo.SentInformationRequests.FindByLogID(ctx, log.ID)
+	sent, err := p.repo.SentInformationRequests.GetByLogID(ctx, log.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +370,7 @@ func (p *Presenter) searchSentInformationRequest(ctx context.Context, log *entit
 }
 
 func (p *Presenter) searchSignedInformationRequest(ctx context.Context, log *entity.Log) (*SearchResult, error) {
-	signed, err := p.repo.SignedInformationRequests.FindByLogID(ctx, log.ID)
+	signed, err := p.repo.SignedInformationRequests.GetByLogID(ctx, log.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -393,7 +379,7 @@ func (p *Presenter) searchSignedInformationRequest(ctx context.Context, log *ent
 }
 
 func (p *Presenter) searchExecutedInformationRequest(ctx context.Context, log *entity.Log) (*SearchResult, error) {
-	executed, err := p.repo.ExecutedInformationRequests.FindByLogID(ctx, log.ID)
+	executed, err := p.repo.ExecutedInformationRequests.GetByLogID(ctx, log.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +388,7 @@ func (p *Presenter) searchExecutedInformationRequest(ctx context.Context, log *e
 }
 
 func (p *Presenter) buildSearchResultForInformationRequest(ctx context.Context, bridgeID string, messageID common.Hash) (*SearchResult, error) {
-	req, err := p.repo.InformationRequests.FindByMessageID(ctx, bridgeID, messageID)
+	req, err := p.repo.InformationRequests.GetByMessageID(ctx, bridgeID, messageID)
 	if err != nil {
 		return nil, err
 	}
@@ -416,22 +402,21 @@ func (p *Presenter) buildSearchResultForInformationRequest(ctx context.Context, 
 	}, nil
 }
 
-//nolint:cyclop
 func (p *Presenter) buildMessageEvents(ctx context.Context, bridgeID string, msgHash, messageID common.Hash) ([]*EventInfo, error) {
-	sent, err := p.repo.SentMessages.FindByMsgHash(ctx, bridgeID, msgHash)
-	if err != nil && !errors.Is(err, db.ErrNotFound) {
+	sent, err := p.repo.SentMessages.GetByMsgHash(ctx, bridgeID, msgHash)
+	if err = db.IgnoreErrNotFound(err); err != nil {
 		return nil, err
 	}
 	signed, err := p.repo.SignedMessages.FindByMsgHash(ctx, bridgeID, msgHash)
 	if err != nil {
 		return nil, err
 	}
-	collected, err := p.repo.CollectedMessages.FindByMsgHash(ctx, bridgeID, msgHash)
-	if err != nil && !errors.Is(err, db.ErrNotFound) {
+	collected, err := p.repo.CollectedMessages.GetByMsgHash(ctx, bridgeID, msgHash)
+	if err = db.IgnoreErrNotFound(err); err != nil {
 		return nil, err
 	}
-	executed, err := p.repo.ExecutedMessages.FindByMessageID(ctx, bridgeID, messageID)
-	if err != nil && !errors.Is(err, db.ErrNotFound) {
+	executed, err := p.repo.ExecutedMessages.GetByMessageID(ctx, bridgeID, messageID)
+	if err = db.IgnoreErrNotFound(err); err != nil {
 		return nil, err
 	}
 
@@ -467,16 +452,16 @@ func (p *Presenter) buildMessageEvents(ctx context.Context, bridgeID string, msg
 }
 
 func (p *Presenter) buildInformationRequestEvents(ctx context.Context, req *entity.InformationRequest) ([]*EventInfo, error) {
-	sent, err := p.repo.SentInformationRequests.FindByMessageID(ctx, req.BridgeID, req.MessageID)
-	if err != nil && !errors.Is(err, db.ErrNotFound) {
+	sent, err := p.repo.SentInformationRequests.GetByMessageID(ctx, req.BridgeID, req.MessageID)
+	if err = db.IgnoreErrNotFound(err); err != nil {
 		return nil, err
 	}
 	signed, err := p.repo.SignedInformationRequests.FindByMessageID(ctx, req.BridgeID, req.MessageID)
 	if err != nil {
 		return nil, err
 	}
-	executed, err := p.repo.ExecutedInformationRequests.FindByMessageID(ctx, req.BridgeID, req.MessageID)
-	if err != nil && !errors.Is(err, db.ErrNotFound) {
+	executed, err := p.repo.ExecutedInformationRequests.GetByMessageID(ctx, req.BridgeID, req.MessageID)
+	if err = db.IgnoreErrNotFound(err); err != nil {
 		return nil, err
 	}
 

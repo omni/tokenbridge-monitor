@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -36,7 +34,7 @@ func (r *executedMessagesRepo) Ensure(ctx context.Context, msg *entity.ExecutedM
 	return nil
 }
 
-func (r *executedMessagesRepo) FindByLogID(ctx context.Context, logID uint) (*entity.ExecutedMessage, error) {
+func (r *executedMessagesRepo) GetByLogID(ctx context.Context, logID uint) (*entity.ExecutedMessage, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"log_id": logID}).
@@ -48,15 +46,12 @@ func (r *executedMessagesRepo) FindByLogID(ctx context.Context, logID uint) (*en
 	msg := new(entity.ExecutedMessage)
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get executed message: %w", err)
 	}
 	return msg, nil
 }
 
-func (r *executedMessagesRepo) FindByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*entity.ExecutedMessage, error) {
+func (r *executedMessagesRepo) GetByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*entity.ExecutedMessage, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"bridge_id": bridgeID, "message_id": messageID}).
@@ -68,9 +63,6 @@ func (r *executedMessagesRepo) FindByMessageID(ctx context.Context, bridgeID str
 	msg := new(entity.ExecutedMessage)
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get executed message: %w", err)
 	}
 	return msg, nil

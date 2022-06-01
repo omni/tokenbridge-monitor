@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -48,9 +46,6 @@ func (r *logsCursorsRepo) GetByChainIDAndAddress(ctx context.Context, chainID st
 	log := new(entity.LogsCursor)
 	err = r.db.GetContext(ctx, log, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get logs cursor by chain_id and address: %w", err)
 	}
 	return log, nil

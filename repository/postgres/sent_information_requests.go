@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -36,7 +34,7 @@ func (r *sentInformationRequestsRepo) Ensure(ctx context.Context, msg *entity.Se
 	return nil
 }
 
-func (r *sentInformationRequestsRepo) FindByLogID(ctx context.Context, logID uint) (*entity.SentInformationRequest, error) {
+func (r *sentInformationRequestsRepo) GetByLogID(ctx context.Context, logID uint) (*entity.SentInformationRequest, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"log_id": logID}).
@@ -48,15 +46,12 @@ func (r *sentInformationRequestsRepo) FindByLogID(ctx context.Context, logID uin
 	req := new(entity.SentInformationRequest)
 	err = r.db.GetContext(ctx, req, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get sent information requesst: %w", err)
 	}
 	return req, nil
 }
 
-func (r *sentInformationRequestsRepo) FindByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*entity.SentInformationRequest, error) {
+func (r *sentInformationRequestsRepo) GetByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*entity.SentInformationRequest, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"bridge_id": bridgeID, "message_id": messageID}).
@@ -68,9 +63,6 @@ func (r *sentInformationRequestsRepo) FindByMessageID(ctx context.Context, bridg
 	req := new(entity.SentInformationRequest)
 	err = r.db.GetContext(ctx, req, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get sent information request: %w", err)
 	}
 	return req, nil

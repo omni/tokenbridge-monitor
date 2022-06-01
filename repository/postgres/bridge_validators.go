@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -36,7 +34,7 @@ func (r *bridgeValidatorsRepo) Ensure(ctx context.Context, val *entity.BridgeVal
 	return nil
 }
 
-func (r *bridgeValidatorsRepo) FindActiveValidator(ctx context.Context, bridgeID, chainID string, address common.Address) (*entity.BridgeValidator, error) {
+func (r *bridgeValidatorsRepo) GetActiveValidator(ctx context.Context, bridgeID, chainID string, address common.Address) (*entity.BridgeValidator, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{
@@ -53,9 +51,6 @@ func (r *bridgeValidatorsRepo) FindActiveValidator(ctx context.Context, bridgeID
 	val := new(entity.BridgeValidator)
 	err = r.db.GetContext(ctx, val, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get bridge validator: %w", err)
 	}
 	return val, nil

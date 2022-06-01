@@ -17,6 +17,6 @@ type SentInformationRequest struct {
 
 type SentInformationRequestsRepo interface {
 	Ensure(ctx context.Context, msg *SentInformationRequest) error
-	FindByLogID(ctx context.Context, logID uint) (*SentInformationRequest, error)
-	FindByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*SentInformationRequest, error)
+	GetByLogID(ctx context.Context, logID uint) (*SentInformationRequest, error)
+	GetByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*SentInformationRequest, error)
 }

@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -50,9 +48,6 @@ func (r *blockTimestampsRepo) GetByBlockNumber(ctx context.Context, chainID stri
 	bt := new(entity.BlockTimestamp)
 	err = r.db.GetContext(ctx, bt, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get block timestamp: %w", err)
 	}
 	return bt, nil

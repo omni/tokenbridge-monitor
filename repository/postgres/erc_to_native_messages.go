@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -36,7 +34,7 @@ func (r *ercToNativeMessagesRepo) Ensure(ctx context.Context, msg *entity.ErcToN
 	return nil
 }
 
-func (r *ercToNativeMessagesRepo) FindByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*entity.ErcToNativeMessage, error) {
+func (r *ercToNativeMessagesRepo) GetByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*entity.ErcToNativeMessage, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"bridge_id": bridgeID, "msg_hash": msgHash}).
@@ -48,9 +46,6 @@ func (r *ercToNativeMessagesRepo) FindByMsgHash(ctx context.Context, bridgeID st
 	msg := new(entity.ErcToNativeMessage)
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get message: %w", err)
 	}
 	return msg, nil

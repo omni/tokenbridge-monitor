@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -36,7 +34,7 @@ func (r *collectedMessagesRepo) Ensure(ctx context.Context, msg *entity.Collecte
 	return nil
 }
 
-func (r *collectedMessagesRepo) FindByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*entity.CollectedMessage, error) {
+func (r *collectedMessagesRepo) GetByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*entity.CollectedMessage, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"bridge_id": bridgeID, "msg_hash": msgHash}).
@@ -48,9 +46,6 @@ func (r *collectedMessagesRepo) FindByMsgHash(ctx context.Context, bridgeID stri
 	msg := new(entity.CollectedMessage)
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get collected message: %w", err)
 	}
 	return msg, nil

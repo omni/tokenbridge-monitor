@@ -54,7 +54,7 @@ type SearchResult struct {
 	RelatedEvents []*EventInfo
 }
 
-type LogResult struct {
+type LogInfo struct {
 	LogID       uint
 	ChainID     string
 	Address     common.Address
@@ -100,6 +100,21 @@ type TxInfo struct {
 	BlockNumber uint
 	Timestamp   time.Time
 	Link        string
+}
+
+func NewLogInfo(log *entity.Log) *LogInfo {
+	return &LogInfo{
+		LogID:       log.ID,
+		ChainID:     log.ChainID,
+		Address:     log.Address,
+		Topic0:      log.Topic0,
+		Topic1:      log.Topic1,
+		Topic2:      log.Topic2,
+		Topic3:      log.Topic3,
+		Data:        log.Data,
+		TxHash:      log.TransactionHash,
+		BlockNumber: log.BlockNumber,
+	}
 }
 
 func NewMessageInfo(msg *entity.Message) *MessageInfo {

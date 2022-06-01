@@ -27,11 +27,11 @@ type DB struct {
 func (db *DB) Migrate() error {
 	m, err := migrate.New("file://db/migrations", db.dbURL("pgx"))
 	if err != nil {
-		return err
+		return fmt.Errorf("can't connect to postgres database: %w", err)
 	}
 	err = m.Up()
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return err
+		return fmt.Errorf("can't apply postgres database migrations: %w", err)
 	}
 	return nil
 }
@@ -46,11 +46,23 @@ func NewDB(cfg *config.DBConfig) (*DB, error) {
 	}
 	conn, err := sqlx.ConnectContext(context.Background(), "pgx", db.dbURL("postgres"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't connect to postgres database (): %w", err)
 	}
 	conn.SetMaxIdleConns(3)
 	conn.SetMaxOpenConns(10)
 	db.db = conn
+	return db, nil
+}
+
+func ConnectToDBAndMigrate(cfg *config.DBConfig) (*DB, error) {
+	db, err := NewDB(cfg)
+	if err != nil {
+		return nil, err
+	}
+	err = db.Migrate()
+	if err != nil {
+		return nil, err
+	}
 	return db, nil
 }
 
@@ -65,7 +77,11 @@ func (db *DB) ExecContext(ctx context.Context, query string, args ...interface{}
 
 func (db *DB) GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	defer ObserveDuration(getCurrentFuncName(2))()
-	return db.db.GetContext(ctx, dest, query, args...)
+	err := db.db.GetContext(ctx, dest, query, args...)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	return err
 }
 
 func (db *DB) SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {

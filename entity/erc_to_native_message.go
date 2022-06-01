@@ -21,5 +21,5 @@ type ErcToNativeMessage struct {
 
 type ErcToNativeMessagesRepo interface {
 	Ensure(ctx context.Context, msg *ErcToNativeMessage) error
-	FindByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*ErcToNativeMessage, error)
+	GetByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*ErcToNativeMessage, error)
 }

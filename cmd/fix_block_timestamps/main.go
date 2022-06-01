@@ -24,15 +24,11 @@ func main() {
 	}
 	logger.SetLevel(cfg.LogLevel)
 
-	dbConn, err := db.NewDB(cfg.DBConfig)
+	dbConn, err := db.ConnectToDBAndMigrate(cfg.DBConfig)
 	if err != nil {
-		logger.WithError(err).Fatal("can't connect to database")
+		logger.WithError(err).Fatal("can't connect to database and apply migrations")
 	}
 	defer dbConn.Close()
-
-	if err = dbConn.Migrate(); err != nil {
-		logger.WithError(err).Fatal("can't run database migrations")
-	}
 
 	repo := repository.NewRepo(dbConn)
 

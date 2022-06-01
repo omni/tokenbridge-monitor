@@ -144,12 +144,8 @@ func (m *ContractMonitor) ProcessBlockRange(ctx context.Context, fromBlock, toBl
 		return fmt.Errorf("can't manually process logs further then current lastProcessedBlock: %w", config.ErrInvalidConfig)
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 	m.blocksRangeChan <- nil
 	go func() {
-		defer wg.Done()
-
 		batches := SplitBlockRange(fromBlock, toBlock, m.cfg.MaxBlockRangeSize)
 		for _, batch := range batches {
 			m.logger.WithFields(logrus.Fields{

@@ -19,6 +19,6 @@ type BridgeValidator struct {
 
 type BridgeValidatorsRepo interface {
 	Ensure(ctx context.Context, val *BridgeValidator) error
-	FindActiveValidator(ctx context.Context, bridgeID, chainID string, address common.Address) (*BridgeValidator, error)
+	GetActiveValidator(ctx context.Context, bridgeID, chainID string, address common.Address) (*BridgeValidator, error)
 	FindActiveValidators(ctx context.Context, bridgeID, chainID string) ([]*BridgeValidator, error)
 }

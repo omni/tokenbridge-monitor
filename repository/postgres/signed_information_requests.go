@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -39,7 +37,7 @@ func (r *signedInformationRequestsRepo) Ensure(ctx context.Context, msg *entity.
 	return nil
 }
 
-func (r *signedInformationRequestsRepo) FindByLogID(ctx context.Context, logID uint) (*entity.SignedInformationRequest, error) {
+func (r *signedInformationRequestsRepo) GetByLogID(ctx context.Context, logID uint) (*entity.SignedInformationRequest, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"log_id": logID}).
@@ -51,9 +49,6 @@ func (r *signedInformationRequestsRepo) FindByLogID(ctx context.Context, logID u
 	req := new(entity.SignedInformationRequest)
 	err = r.db.GetContext(ctx, req, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get signed information requesst: %w", err)
 	}
 	return req, nil

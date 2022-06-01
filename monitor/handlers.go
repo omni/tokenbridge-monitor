@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -533,12 +532,9 @@ func (p *BridgeEventHandler) HandleValidatorRemoved(ctx context.Context, log *en
 	if !ok {
 		return fmt.Errorf("validator type %T is invalid: %w", data["validator"], ErrWrongArgumentType)
 	}
-	val, err := p.repo.BridgeValidators.FindActiveValidator(ctx, p.bridgeID, log.ChainID, validator)
+	val, err := p.repo.BridgeValidators.GetActiveValidator(ctx, p.bridgeID, log.ChainID, validator)
 	if err != nil {
-		if errors.Is(err, db.ErrNotFound) {
-			return nil
-		}
-		return err
+		return db.IgnoreErrNotFound(err)
 	}
 	val.RemovedLogID = &log.ID
 	return p.repo.BridgeValidators.Ensure(ctx, val)

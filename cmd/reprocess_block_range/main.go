@@ -62,15 +62,11 @@ func main() {
 		}).Fatal("toBlock < fromBlock is not specified")
 	}
 
-	dbConn, err := db.NewDB(cfg.DBConfig)
+	dbConn, err := db.ConnectToDBAndMigrate(cfg.DBConfig)
 	if err != nil {
-		logger.WithError(err).Fatal("can't connect to database")
+		logger.WithError(err).Fatal("can't connect to database and apply migrations")
 	}
 	defer dbConn.Close()
-
-	if err = dbConn.Migrate(); err != nil {
-		logger.WithError(err).Fatal("can't run database migrations")
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	repo := repository.NewRepo(dbConn)

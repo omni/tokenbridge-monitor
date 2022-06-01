@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -36,7 +34,7 @@ func (r *signedMessagesRepo) Ensure(ctx context.Context, msg *entity.SignedMessa
 	return nil
 }
 
-func (r *signedMessagesRepo) FindByLogID(ctx context.Context, logID uint) (*entity.SignedMessage, error) {
+func (r *signedMessagesRepo) GetByLogID(ctx context.Context, logID uint) (*entity.SignedMessage, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"log_id": logID}).
@@ -48,9 +46,6 @@ func (r *signedMessagesRepo) FindByLogID(ctx context.Context, logID uint) (*enti
 	msg := new(entity.SignedMessage)
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get signed messages: %w", err)
 	}
 	return msg, nil
@@ -74,7 +69,7 @@ func (r *signedMessagesRepo) FindByMsgHash(ctx context.Context, bridgeID string,
 	return msgs, nil
 }
 
-func (r *signedMessagesRepo) FindLatest(ctx context.Context, bridgeID, chainID string, signer common.Address) (*entity.SignedMessage, error) {
+func (r *signedMessagesRepo) GetLatest(ctx context.Context, bridgeID, chainID string, signer common.Address) (*entity.SignedMessage, error) {
 	q, args, err := sq.Select(r.table + ".*").
 		From(r.table).
 		Join("logs l ON l.id = log_id").
@@ -89,9 +84,6 @@ func (r *signedMessagesRepo) FindLatest(ctx context.Context, bridgeID, chainID s
 	msg := new(entity.SignedMessage)
 	err = r.db.GetContext(ctx, msg, q, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, db.ErrNotFound
-		}
 		return nil, fmt.Errorf("can't get latest signed message: %w", err)
 	}
 	return msg, nil
