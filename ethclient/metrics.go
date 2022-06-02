@@ -24,7 +24,7 @@ var (
 		Subsystem: "rpc",
 		Name:      "request_duration_seconds",
 		Help:      "Shows RPC query durations.",
-		Buckets:   []float64{0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20},
+		Buckets:   []float64{0.05, 0.1, 0.2, 0.5, 1, 2, 4, 6, 8, 10, 12, 15, 20},
 	}, []string{"chain_id", "url", "query"})
 )
 

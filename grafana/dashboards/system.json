@@ -21,7 +21,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1653254191537,
+  "iteration": 1654167834916,
   "links": [],
   "panels": [
     {
@@ -258,7 +258,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "histogram_quantile(0.9, increase(monitor_db_query_duration_seconds_bucket[6m]))",
+          "expr": "histogram_quantile(0.9, increase(monitor_db_query_duration_seconds_bucket[12m]))",
           "instant": false,
           "interval": "",
           "legendFormat": "{{query}}",
@@ -413,5 +413,5 @@
   "timezone": "",
   "title": "Monitor health dashboard",
   "uid": "7fnHj1Hnz",
-  "version": 2
+  "version": 3
 }
