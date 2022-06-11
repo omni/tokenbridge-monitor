@@ -22,4 +22,5 @@ type ErcToNativeMessage struct {
 type ErcToNativeMessagesRepo interface {
 	Ensure(ctx context.Context, msg *ErcToNativeMessage) error
 	GetByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*ErcToNativeMessage, error)
+	FindPendingMessages(ctx context.Context, bridgeID string) ([]*ErcToNativeMessage, error)
 }

@@ -4,6 +4,9 @@ package bridgeabi
 import (
 	_ "embed"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/poanetwork/tokenbridge-monitor/contract/abi"
 )
 
@@ -46,4 +49,31 @@ var (
 
 	ErcToNativeTransferEventSignature                  = ErcToNativeABI.Events["Transfer"].ID
 	ErcToNativeUserRequestForAffirmationEventSignature = ErcToNativeABI.Events["UserRequestForAffirmation"].ID
+
+	ArbitraryMessageMethods = []string{
+		"eth_call(address,bytes)",
+		"eth_call(address,bytes,uint256)",
+		"eth_call(address,address,uint256,bytes)",
+		"eth_blockNumber()",
+		"eth_getBlockByNumber()",
+		"eth_getBlockByNumber(uint256)",
+		"eth_getBlockByHash(bytes32)",
+		"eth_getBalance(address)",
+		"eth_getBalance(address,uint256)",
+		"eth_getTransactionCount(address)",
+		"eth_getTransactionCount(address,uint256)",
+		"eth_getTransactionByHash(bytes32)",
+		"eth_getTransactionReceipt(bytes32)",
+		"eth_getStorageAt(address,bytes32)",
+		"eth_getStorageAt(address,bytes32,uint256)",
+	}
+	ArbitraryMessageSelectors = newKeccakMapping(ArbitraryMessageMethods)
 )
+
+func newKeccakMapping(ss []string) map[common.Hash]string {
+	mapping := make(map[common.Hash]string, len(ss))
+	for _, s := range ss {
+		mapping[crypto.Keccak256Hash([]byte(s))] = s
+	}
+	return mapping
+}

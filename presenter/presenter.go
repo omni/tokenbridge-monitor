@@ -60,6 +60,7 @@ func (p *Presenter) Serve(addr string) error {
 		r.Get("/info", p.GetBridgeInfo)
 		r.Get("/config", p.GetBridgeConfig)
 		r.Get("/validators", p.GetBridgeValidators)
+		r.Get("/pending", p.GetPendingMessages)
 	})
 	p.root.Route("/chain/{chainID:[0-9]+}", func(r chi.Router) {
 		r.Use(middleware.GetChainConfigMiddleware(p.cfg))
@@ -214,6 +215,39 @@ func (p *Presenter) GetBridgeValidators(w http.ResponseWriter, r *http.Request) 
 	}
 
 	render.JSON(w, r, http.StatusOK, res)
+}
+
+func (p *Presenter) GetPendingMessages(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	cfg := middleware.BridgeConfig(ctx)
+
+	if cfg.BridgeMode == config.BridgeModeErcToNative {
+		messages, err := p.repo.ErcToNativeMessages.FindPendingMessages(ctx, cfg.ID)
+		if err != nil {
+			render.Error(w, r, fmt.Errorf("can't find pending messages: %w", err))
+			return
+		}
+
+		res := make([]*ErcToNativeMessageInfo, len(messages))
+		for i, m := range messages {
+			res[i] = NewErcToNativeMessageInfo(m)
+		}
+
+		render.JSON(w, r, http.StatusOK, res)
+	} else {
+		messages, err := p.repo.Messages.FindPendingMessages(ctx, cfg.ID)
+		if err != nil {
+			render.Error(w, r, fmt.Errorf("can't find pending messages: %w", err))
+			return
+		}
+
+		res := make([]*MessageInfo, len(messages))
+		for i, m := range messages {
+			res[i] = NewMessageInfo(m)
+		}
+
+		render.JSON(w, r, http.StatusOK, res)
+	}
 }
 
 func (p *Presenter) getFilteredLogs(ctx context.Context) ([]*entity.Log, error) {

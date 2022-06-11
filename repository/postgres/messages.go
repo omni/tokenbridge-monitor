@@ -67,3 +67,21 @@ func (r *messagesRepo) GetByMessageID(ctx context.Context, bridgeID string, mess
 	}
 	return msg, nil
 }
+
+func (r *messagesRepo) FindPendingMessages(ctx context.Context, bridgeID string) ([]*entity.Message, error) {
+	q, args, err := sq.Select("m.*").
+		From(r.table + " m").
+		LeftJoin("executed_messages em ON em.message_id = m.message_id AND em.bridge_id = m.bridge_id").
+		Where(sq.Eq{"m.bridge_id": bridgeID, "em.log_id": nil}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	msgs := make([]*entity.Message, 0, 10)
+	err = r.db.SelectContext(ctx, &msgs, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("can't find messages: %w", err)
+	}
+	return msgs, nil
+}

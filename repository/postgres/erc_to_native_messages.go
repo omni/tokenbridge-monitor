@@ -50,3 +50,21 @@ func (r *ercToNativeMessagesRepo) GetByMsgHash(ctx context.Context, bridgeID str
 	}
 	return msg, nil
 }
+
+func (r *ercToNativeMessagesRepo) FindPendingMessages(ctx context.Context, bridgeID string) ([]*entity.ErcToNativeMessage, error) {
+	q, args, err := sq.Select("m.*").
+		From(r.table + " m").
+		LeftJoin("executed_messages em ON em.message_id = m.msg_hash AND em.bridge_id = m.bridge_id").
+		Where(sq.Eq{"m.bridge_id": bridgeID, "em.log_id": nil}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	msgs := make([]*entity.ErcToNativeMessage, 0, 10)
+	err = r.db.SelectContext(ctx, &msgs, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("can't find messages: %w", err)
+	}
+	return msgs, nil
+}

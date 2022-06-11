@@ -33,4 +33,5 @@ type MessagesRepo interface {
 	Ensure(ctx context.Context, msg *Message) error
 	GetByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*Message, error)
 	GetByMessageID(ctx context.Context, bridgeID string, messageID common.Hash) (*Message, error)
+	FindPendingMessages(ctx context.Context, bridgeID string) ([]*Message, error)
 }

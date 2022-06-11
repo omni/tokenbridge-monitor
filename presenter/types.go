@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/poanetwork/tokenbridge-monitor/config"
+	"github.com/poanetwork/tokenbridge-monitor/contract/bridgeabi"
 	"github.com/poanetwork/tokenbridge-monitor/entity"
 )
 
@@ -18,6 +19,7 @@ type MessageInfo struct {
 	Sender    common.Address
 	Executor  common.Address
 	DataType  uint
+	Data      hexutil.Bytes
 }
 
 type InformationRequestInfo struct {
@@ -26,6 +28,8 @@ type InformationRequestInfo struct {
 	Direction entity.Direction
 	Sender    common.Address
 	Executor  common.Address
+	Method    string
+	Data      hexutil.Bytes
 }
 
 type ErcToNativeMessageInfo struct {
@@ -126,7 +130,15 @@ func NewMessageInfo(msg *entity.Message) *MessageInfo {
 		Sender:    msg.Sender,
 		Executor:  msg.Executor,
 		DataType:  msg.DataType,
+		Data:      msg.Data,
 	}
+}
+
+func decodeRequestSelector(selector common.Hash) string {
+	if decoded, ok := bridgeabi.ArbitraryMessageSelectors[selector]; ok {
+		return decoded
+	}
+	return selector.String()
 }
 
 func NewInformationRequestInfo(req *entity.InformationRequest) *InformationRequestInfo {
@@ -136,6 +148,8 @@ func NewInformationRequestInfo(req *entity.InformationRequest) *InformationReque
 		Direction: req.Direction,
 		Sender:    req.Sender,
 		Executor:  req.Executor,
+		Method:    decodeRequestSelector(req.RequestSelector),
+		Data:      req.Data,
 	}
 }
 
