@@ -73,6 +73,7 @@ func (r *messagesRepo) FindPendingMessages(ctx context.Context, bridgeID string)
 		From(r.table + " m").
 		LeftJoin("executed_messages em ON em.message_id = m.message_id AND em.bridge_id = m.bridge_id").
 		Where(sq.Eq{"m.bridge_id": bridgeID, "em.log_id": nil}).
+		OrderBy("m.created_at").
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {

@@ -22,6 +22,7 @@ var (
 )
 
 type Client interface {
+	Close()
 	BlockNumber(ctx context.Context) (uint, error)
 	HeaderByNumber(ctx context.Context, n uint) (*types.Header, error)
 	FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error)
@@ -67,6 +68,10 @@ func NewClient(url string, timeout time.Duration, chainID string) (Client, error
 	}
 	client.signer = types.NewLondonSigner(rpcChainID)
 	return client, nil
+}
+
+func (c *rpcClient) Close() {
+	c.rawClient.Close()
 }
 
 func (c *rpcClient) BlockNumber(ctx context.Context) (uint, error) {

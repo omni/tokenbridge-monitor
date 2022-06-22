@@ -20,6 +20,22 @@ type ErcToNativeMessage struct {
 	UpdatedAt  *time.Time     `db:"updated_at"`
 }
 
+func (m *ErcToNativeMessage) GetMsgHash() common.Hash {
+	return m.MsgHash
+}
+
+func (m *ErcToNativeMessage) GetMessageID() common.Hash {
+	return m.MsgHash
+}
+
+func (m *ErcToNativeMessage) GetDirection() Direction {
+	return m.Direction
+}
+
+func (m *ErcToNativeMessage) GetRawMessage() []byte {
+	return m.RawMessage
+}
+
 type ErcToNativeMessagesRepo interface {
 	Ensure(ctx context.Context, msg *ErcToNativeMessage) error
 	GetByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*ErcToNativeMessage, error)

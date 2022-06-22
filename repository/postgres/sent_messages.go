@@ -67,3 +67,20 @@ func (r *sentMessagesRepo) GetByMsgHash(ctx context.Context, bridgeID string, ms
 	}
 	return msg, nil
 }
+
+func (r *sentMessagesRepo) FindByMsgHashes(ctx context.Context, bridgeID string, msgHashes []common.Hash) ([]*entity.SentMessage, error) {
+	q, args, err := sq.Select("*").
+		From(r.table).
+		Where(sq.Eq{"bridge_id": bridgeID, "msg_hash": msgHashes}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	msgs := make([]*entity.SentMessage, 0, 10)
+	err = r.db.SelectContext(ctx, &msgs, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("can't find sent messages: %w", err)
+	}
+	return msgs, nil
+}

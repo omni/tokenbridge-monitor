@@ -19,4 +19,5 @@ type SentMessagesRepo interface {
 	Ensure(ctx context.Context, msg *SentMessage) error
 	GetByLogID(ctx context.Context, logID uint) (*SentMessage, error)
 	GetByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*SentMessage, error)
+	FindByMsgHashes(ctx context.Context, bridgeID string, msgHashes []common.Hash) ([]*SentMessage, error)
 }

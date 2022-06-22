@@ -114,3 +114,21 @@ func (r *logsRepo) Find(ctx context.Context, filter entity.LogsFilter) ([]*entit
 	}
 	return logs, nil
 }
+
+func (r *logsRepo) FindByIDs(ctx context.Context, ids []uint) ([]*entity.Log, error) {
+	q, args, err := sq.Select("*").
+		From(r.table).
+		Where(sq.Eq{"id": ids}).
+		OrderBy("chain_id", "block_number", "log_index").
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("can't build query: %w", err)
+	}
+	logs := make([]*entity.Log, 0, 10)
+	err = r.db.SelectContext(ctx, &logs, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("can't find logs by ids: %w", err)
+	}
+	return logs, nil
+}

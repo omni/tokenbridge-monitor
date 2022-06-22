@@ -1,6 +1,10 @@
 package repository
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/poanetwork/tokenbridge-monitor/config"
 	"github.com/poanetwork/tokenbridge-monitor/db"
 	"github.com/poanetwork/tokenbridge-monitor/entity"
 	"github.com/poanetwork/tokenbridge-monitor/repository/postgres"
@@ -40,4 +44,19 @@ func NewRepo(db *db.DB) *Repo {
 		ExecutedInformationRequests: postgres.NewExecutedInformationRequestsRepo("executed_information_requests", db),
 		BridgeValidators:            postgres.NewBridgeValidatorsRepo("bridge_validators", db),
 	}
+}
+
+func (r *Repo) FindPendingMessages(ctx context.Context, bridgeID string, bridgeMode config.BridgeMode) ([]entity.BridgeMessage, error) {
+	if bridgeMode == config.BridgeModeErcToNative {
+		msgs, err := r.ErcToNativeMessages.FindPendingMessages(ctx, bridgeID)
+		if err != nil {
+			return nil, fmt.Errorf("can't find pending erc-to-native messages: %w", err)
+		}
+		return entity.ToBridgeMessages(msgs), nil
+	}
+	msgs, err := r.Messages.FindPendingMessages(ctx, bridgeID)
+	if err != nil {
+		return nil, fmt.Errorf("can't find pending amb messages: %w", err)
+	}
+	return entity.ToBridgeMessages(msgs), nil
 }

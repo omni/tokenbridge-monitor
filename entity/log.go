@@ -41,6 +41,7 @@ type LogsRepo interface {
 	Ensure(ctx context.Context, logs ...*Log) error
 	GetByID(ctx context.Context, id uint) (*Log, error)
 	Find(ctx context.Context, filter LogsFilter) ([]*Log, error)
+	FindByIDs(ctx context.Context, ids []uint) ([]*Log, error)
 }
 
 func NewLog(chainID string, log types.Log) *Log {

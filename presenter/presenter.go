@@ -2,22 +2,27 @@ package presenter
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/poanetwork/tokenbridge-monitor/config"
+	"github.com/poanetwork/tokenbridge-monitor/contract"
 	"github.com/poanetwork/tokenbridge-monitor/db"
 	"github.com/poanetwork/tokenbridge-monitor/entity"
+	"github.com/poanetwork/tokenbridge-monitor/ethclient"
 	"github.com/poanetwork/tokenbridge-monitor/logging"
 	"github.com/poanetwork/tokenbridge-monitor/presenter/http/middleware"
 	"github.com/poanetwork/tokenbridge-monitor/presenter/http/render"
 	"github.com/poanetwork/tokenbridge-monitor/repository"
+	"github.com/poanetwork/tokenbridge-monitor/utils"
 )
 
 var (
@@ -61,6 +66,7 @@ func (p *Presenter) Serve(addr string) error {
 		r.Get("/config", p.GetBridgeConfig)
 		r.Get("/validators", p.GetBridgeValidators)
 		r.Get("/pending", p.GetPendingMessages)
+		r.Post("/unsigned", p.GetMessagesWithMissingSignatures)
 	})
 	p.root.Route("/chain/{chainID:[0-9]+}", func(r chi.Router) {
 		r.Use(middleware.GetChainConfigMiddleware(p.cfg))
@@ -88,6 +94,18 @@ func (p *Presenter) Serve(addr string) error {
 	return http.ListenAndServe(addr, p.root)
 }
 
+func (p *Presenter) findActiveValidatorAddresses(ctx context.Context, bridgeID, chainID string) ([]common.Address, error) {
+	validators, err := p.repo.BridgeValidators.FindActiveValidators(ctx, bridgeID, chainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find validators for bridge id: %w", err)
+	}
+	validatorAddresses := make([]common.Address, len(validators))
+	for i, v := range validators {
+		validatorAddresses[i] = v.Address
+	}
+	return validatorAddresses, nil
+}
+
 func (p *Presenter) getBridgeSideInfo(ctx context.Context, bridgeID string, cfg *config.BridgeSideConfig) (*BridgeSideInfo, error) {
 	cursor, err := p.repo.LogsCursors.GetByChainIDAndAddress(ctx, cfg.Chain.ChainID, cfg.Address)
 	if err != nil {
@@ -107,13 +125,9 @@ func (p *Presenter) getBridgeSideInfo(ctx context.Context, bridgeID string, cfg 
 		}
 	}
 
-	validators, err := p.repo.BridgeValidators.FindActiveValidators(ctx, bridgeID, cfg.Chain.ChainID)
+	validators, err := p.findActiveValidatorAddresses(ctx, bridgeID, cfg.Chain.ChainID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find validators for bridge id: %w", err)
-	}
-	validatorAddresses := make([]common.Address, len(validators))
-	for i, v := range validators {
-		validatorAddresses[i] = v.Address
+		return nil, err
 	}
 
 	return &BridgeSideInfo{
@@ -124,7 +138,7 @@ func (p *Presenter) getBridgeSideInfo(ctx context.Context, bridgeID string, cfg 
 		LastFetchBlockTime:     lastFetchedBlockTime,
 		LastProcessedBlock:     cursor.LastProcessedBlock,
 		LastProcessedBlockTime: lastProcessedBlockTime,
-		Validators:             validatorAddresses,
+		Validators:             validators,
 	}, nil
 }
 
@@ -169,13 +183,13 @@ func (p *Presenter) GetBridgeValidators(w http.ResponseWriter, r *http.Request) 
 	ctx := r.Context()
 	cfg := middleware.BridgeConfig(ctx)
 
-	homeValidators, err := p.repo.BridgeValidators.FindActiveValidators(ctx, cfg.ID, cfg.Home.Chain.ChainID)
+	homeValidators, err := p.findActiveValidatorAddresses(ctx, cfg.ID, cfg.Home.Chain.ChainID)
 	if err != nil {
 		render.Error(w, r, fmt.Errorf("failed to find home validators: %w", err))
 		return
 	}
 
-	foreignValidators, err := p.repo.BridgeValidators.FindActiveValidators(ctx, cfg.ID, cfg.Home.Chain.ChainID)
+	foreignValidators, err := p.findActiveValidatorAddresses(ctx, cfg.ID, cfg.Home.Chain.ChainID)
 	if err != nil {
 		render.Error(w, r, fmt.Errorf("failed to find home validators: %w", err))
 		return
@@ -190,15 +204,15 @@ func (p *Presenter) GetBridgeValidators(w http.ResponseWriter, r *http.Request) 
 
 	seenValidators := make(map[common.Address]bool, len(validators))
 	for _, val := range validators {
-		if seenValidators[val.Address] {
+		if seenValidators[val] {
 			continue
 		}
-		seenValidators[val.Address] = true
+		seenValidators[val] = true
 
 		valInfo := &ValidatorInfo{
-			Address: val.Address,
+			Address: val,
 		}
-		confirmation, err2 := p.repo.SignedMessages.GetLatest(ctx, cfg.ID, cfg.Home.Chain.ChainID, val.Address)
+		confirmation, err2 := p.repo.SignedMessages.GetLatest(ctx, cfg.ID, cfg.Home.Chain.ChainID, val)
 		if err2 != nil {
 			if !errors.Is(err2, db.ErrNotFound) {
 				render.Error(w, r, fmt.Errorf("failed to find latest validator confirmation: %w", err2))
@@ -221,33 +235,169 @@ func (p *Presenter) GetPendingMessages(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	cfg := middleware.BridgeConfig(ctx)
 
-	if cfg.BridgeMode == config.BridgeModeErcToNative {
-		messages, err := p.repo.ErcToNativeMessages.FindPendingMessages(ctx, cfg.ID)
-		if err != nil {
-			render.Error(w, r, fmt.Errorf("can't find pending messages: %w", err))
-			return
-		}
-
-		res := make([]*ErcToNativeMessageInfo, len(messages))
-		for i, m := range messages {
-			res[i] = NewErcToNativeMessageInfo(m)
-		}
-
-		render.JSON(w, r, http.StatusOK, res)
-	} else {
-		messages, err := p.repo.Messages.FindPendingMessages(ctx, cfg.ID)
-		if err != nil {
-			render.Error(w, r, fmt.Errorf("can't find pending messages: %w", err))
-			return
-		}
-
-		res := make([]*MessageInfo, len(messages))
-		for i, m := range messages {
-			res[i] = NewMessageInfo(m)
-		}
-
-		render.JSON(w, r, http.StatusOK, res)
+	msgs, err := p.repo.FindPendingMessages(ctx, cfg.ID, cfg.BridgeMode)
+	if err != nil {
+		render.Error(w, r, fmt.Errorf("can't find pending messages: %w", err))
+		return
 	}
+	res := make([]interface{}, len(msgs))
+	for i, m := range msgs {
+		res[i] = NewBridgeMessageInfo(m)
+	}
+	render.JSON(w, r, http.StatusOK, res)
+}
+
+//nolint:funlen,cyclop
+func (p *Presenter) GetMessagesWithMissingSignatures(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	cfg := middleware.BridgeConfig(ctx)
+
+	foreignClient, err := ethclient.NewClient(cfg.Foreign.Chain.RPC.Host, cfg.Foreign.Chain.RPC.Timeout, cfg.Foreign.Chain.ChainID)
+	if err != nil {
+		render.Error(w, r, fmt.Errorf("can't connect to foreign chain: %w", err))
+		return
+	}
+	defer foreignClient.Close()
+
+	bridgeContract := contract.NewBridgeContract(foreignClient, cfg.Foreign.Address, cfg.BridgeMode)
+	requiredSignatures, err := bridgeContract.RequiredSignatures(ctx)
+	if err != nil {
+		render.Error(w, r, fmt.Errorf("can't get required signatures: %w", err))
+		return
+	}
+
+	validators, err := p.findActiveValidatorAddresses(ctx, cfg.ID, cfg.Foreign.Chain.ChainID)
+	if err != nil {
+		render.Error(w, r, fmt.Errorf("can't get active validators: %w", err))
+		return
+	}
+
+	msgs, err := p.repo.FindPendingMessages(ctx, cfg.ID, cfg.BridgeMode)
+	if err != nil {
+		render.Error(w, r, fmt.Errorf("can't find pending messages: %w", err))
+		return
+	}
+	msgHashes := make([]common.Hash, len(msgs))
+	messages := make(map[common.Hash]entity.BridgeMessage, len(msgs))
+	rawMessages := make(map[common.Hash][]byte, len(msgs))
+	sentTxLinks := make(map[common.Hash]string, len(msgs))
+	for i, msg := range msgs {
+		if msg.GetDirection() == entity.DirectionHomeToForeign {
+			msgHashes[i] = msg.GetMsgHash()
+			messages[msg.GetMsgHash()] = msg
+			rawMessages[msg.GetMsgHash()] = msg.GetRawMessage()
+		}
+	}
+
+	signatures, err := p.repo.SignedMessages.FindByMsgHashes(ctx, cfg.ID, msgHashes)
+	if err != nil {
+		render.Error(w, r, fmt.Errorf("can't find signed signatures: %w", err))
+		return
+	}
+
+	sentMsgs, err := p.repo.SentMessages.FindByMsgHashes(ctx, cfg.ID, msgHashes)
+	if err != nil {
+		render.Error(w, r, fmt.Errorf("can't find sent messages: %w", err))
+		return
+	}
+
+	logIDs := make([]uint, len(sentMsgs))
+	sentMsgHashMap := make(map[uint]common.Hash, len(sentMsgs))
+	for i, sentMsg := range sentMsgs {
+		logIDs[i] = sentMsg.LogID
+		sentMsgHashMap[sentMsg.LogID] = sentMsg.MsgHash
+	}
+
+	logs, err := p.repo.Logs.FindByIDs(ctx, logIDs)
+	if err != nil {
+		render.Error(w, r, fmt.Errorf("can't find logs: %w", err))
+		return
+	}
+	for _, log := range logs {
+		sentTxLinks[sentMsgHashMap[log.ID]] = p.cfg.GetChainConfig(log.ChainID).FormatTxLink(log.TransactionHash)
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 5<<20)
+	manualSigners, err := p.parseManualSignatures(r, rawMessages)
+	if err != nil {
+		render.Error(w, r, fmt.Errorf("can't parse manual signatures: %w", err))
+		return
+	}
+
+	signersMap := p.makeSignersMap(msgHashes, signatures, manualSigners)
+
+	res := make([]*UnsignedMessageInfo, 0, len(messages))
+	for hash, msg := range messages {
+		var signers, missingSigners []common.Address
+		for _, signer := range validators {
+			if signersMap[hash][signer] {
+				signers = append(signers, signer)
+			} else {
+				missingSigners = append(missingSigners, signer)
+			}
+		}
+		if uint(len(signers)) < requiredSignatures {
+			res = append(res, &UnsignedMessageInfo{
+				Message:        NewBridgeMessageInfo(msg),
+				Link:           sentTxLinks[hash],
+				Signers:        signers,
+				MissingSigners: missingSigners,
+			})
+		}
+	}
+	render.JSON(w, r, http.StatusOK, UnsignedMessagesInfo{
+		RequiredSignatures:    requiredSignatures,
+		ActiveValidators:      validators,
+		TotalPendingMessages:  uint(len(msgHashes)),
+		TotalUnsignedMessages: uint(len(res)),
+		UnsignedMessages:      res,
+	})
+}
+
+func (p *Presenter) makeSignersMap(msgHashes []common.Hash, signatures []*entity.SignedMessage, manualSigners map[common.Hash][]common.Address) map[common.Hash]map[common.Address]bool {
+	signersMap := make(map[common.Hash]map[common.Address]bool, len(msgHashes))
+	for _, hash := range msgHashes {
+		signersMap[hash] = make(map[common.Address]bool, 10)
+	}
+	for _, sig := range signatures {
+		signersMap[sig.MsgHash][sig.Signer] = true
+	}
+	for hash, signers := range manualSigners {
+		if signersMap[hash] == nil {
+			continue
+		}
+		for _, signer := range signers {
+			signersMap[hash][signer] = true
+		}
+	}
+	return signersMap
+}
+
+func (p *Presenter) parseManualSignatures(r *http.Request, messages map[common.Hash][]byte) (map[common.Hash][]common.Address, error) {
+	err := r.ParseMultipartForm(32 << 20)
+	if err != nil {
+		return nil, fmt.Errorf("can't parse multipart form: %w", err)
+	}
+	res := make(map[common.Hash][]common.Address, 100)
+	for _, hdr := range r.MultipartForm.File["signatures"] {
+		file, err2 := hdr.Open()
+		if err2 != nil {
+			return nil, fmt.Errorf("can't open file: %w", err2)
+		}
+		signatures := make(map[common.Hash]hexutil.Bytes)
+		err = json.NewDecoder(file).Decode(&signatures)
+		if err != nil {
+			return nil, fmt.Errorf("can't decode json file: %w", err)
+		}
+		for hash, sig := range signatures {
+			signer, err3 := utils.RestoreSignerAddress(messages[hash], sig)
+			if err3 != nil {
+				return nil, err3
+			}
+			res[hash] = append(res[hash], signer)
+		}
+	}
+	return res, nil
 }
 
 func (p *Presenter) getFilteredLogs(ctx context.Context) ([]*entity.Log, error) {
@@ -357,7 +507,7 @@ func (p *Presenter) buildSearchResultForMessage(ctx context.Context, bridgeID st
 	if msgHash == nil && messageID == nil {
 		return nil, ErrMissingMsgHashAndMessageID
 	}
-	var msg *entity.Message
+	var msg entity.BridgeMessage
 	var err error
 	var searchID common.Hash
 	if msgHash != nil {
@@ -368,28 +518,17 @@ func (p *Presenter) buildSearchResultForMessage(ctx context.Context, bridgeID st
 		msg, err = p.repo.Messages.GetByMessageID(ctx, bridgeID, *messageID)
 	}
 	if errors.Is(err, db.ErrNotFound) {
-		ercToNativeMsg, err2 := p.repo.ErcToNativeMessages.GetByMsgHash(ctx, bridgeID, searchID)
-		if err2 != nil {
-			return nil, err2
-		}
-		events, err2 := p.buildMessageEvents(ctx, ercToNativeMsg.BridgeID, ercToNativeMsg.MsgHash, ercToNativeMsg.MsgHash)
-		if err2 != nil {
-			return nil, err2
-		}
-		return &SearchResult{
-			Message:       NewErcToNativeMessageInfo(ercToNativeMsg),
-			RelatedEvents: events,
-		}, nil
+		msg, err = p.repo.ErcToNativeMessages.GetByMsgHash(ctx, bridgeID, searchID)
 	}
 	if err != nil {
 		return nil, err
 	}
-	events, err := p.buildMessageEvents(ctx, msg.BridgeID, msg.MsgHash, msg.MessageID)
+	events, err := p.buildMessageEvents(ctx, bridgeID, msg.GetMsgHash(), msg.GetMessageID())
 	if err != nil {
 		return nil, err
 	}
 	return &SearchResult{
-		Message:       NewMessageInfo(msg),
+		Message:       NewBridgeMessageInfo(msg),
 		RelatedEvents: events,
 	}, nil
 }
@@ -441,7 +580,7 @@ func (p *Presenter) buildMessageEvents(ctx context.Context, bridgeID string, msg
 	if err = db.IgnoreErrNotFound(err); err != nil {
 		return nil, err
 	}
-	signed, err := p.repo.SignedMessages.FindByMsgHash(ctx, bridgeID, msgHash)
+	signed, err := p.repo.SignedMessages.FindByMsgHashes(ctx, bridgeID, []common.Hash{msgHash})
 	if err != nil {
 		return nil, err
 	}

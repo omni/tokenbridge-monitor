@@ -3,6 +3,7 @@ package contract
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -33,4 +34,12 @@ func (c *BridgeContract) ValidatorContractAddress(ctx context.Context) (common.A
 		return common.Address{}, fmt.Errorf("cannot obtain validator contract address: %w", err)
 	}
 	return common.BytesToAddress(res), nil
+}
+
+func (c *BridgeContract) RequiredSignatures(ctx context.Context) (uint, error) {
+	res, err := c.Call(ctx, "requiredSignatures")
+	if err != nil {
+		return 0, fmt.Errorf("cannot obtain required signatures: %w", err)
+	}
+	return uint(new(big.Int).SetBytes(res).Uint64()), nil
 }

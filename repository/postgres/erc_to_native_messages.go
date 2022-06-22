@@ -56,6 +56,7 @@ func (r *ercToNativeMessagesRepo) FindPendingMessages(ctx context.Context, bridg
 		From(r.table + " m").
 		LeftJoin("executed_messages em ON em.message_id = m.msg_hash AND em.bridge_id = m.bridge_id").
 		Where(sq.Eq{"m.bridge_id": bridgeID, "em.log_id": nil}).
+		OrderBy("m.created_at").
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {

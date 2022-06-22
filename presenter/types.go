@@ -106,6 +106,21 @@ type TxInfo struct {
 	Link        string
 }
 
+type UnsignedMessagesInfo struct {
+	RequiredSignatures    uint
+	ActiveValidators      []common.Address
+	TotalPendingMessages  uint
+	TotalUnsignedMessages uint
+	UnsignedMessages      []*UnsignedMessageInfo
+}
+
+type UnsignedMessageInfo struct {
+	Message        interface{}
+	Link           string
+	Signers        []common.Address
+	MissingSigners []common.Address
+}
+
 func NewLogInfo(log *entity.Log) *LogInfo {
 	return &LogInfo{
 		LogID:       log.ID,
@@ -161,5 +176,16 @@ func NewErcToNativeMessageInfo(req *entity.ErcToNativeMessage) *ErcToNativeMessa
 		Sender:    req.Sender,
 		Receiver:  req.Receiver,
 		Value:     req.Value,
+	}
+}
+
+func NewBridgeMessageInfo(req entity.BridgeMessage) interface{} {
+	switch msg := req.(type) {
+	case *entity.Message:
+		return NewMessageInfo(msg)
+	case *entity.ErcToNativeMessage:
+		return NewErcToNativeMessageInfo(msg)
+	default:
+		return nil
 	}
 }

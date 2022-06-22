@@ -30,6 +30,22 @@ type Message struct {
 	UpdatedAt  *time.Time     `db:"updated_at"`
 }
 
+func (m *Message) GetMsgHash() common.Hash {
+	return m.MsgHash
+}
+
+func (m *Message) GetMessageID() common.Hash {
+	return m.MessageID
+}
+
+func (m *Message) GetDirection() Direction {
+	return m.Direction
+}
+
+func (m *Message) GetRawMessage() []byte {
+	return m.RawMessage
+}
+
 type MessagesRepo interface {
 	Ensure(ctx context.Context, msg *Message) error
 	GetByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) (*Message, error)
