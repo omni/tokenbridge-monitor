@@ -19,8 +19,8 @@ func NewMessagesRepo(table string, db *db.DB) entity.MessagesRepo {
 
 func (r *messagesRepo) Ensure(ctx context.Context, msg *entity.Message) error {
 	q, args, err := sq.Insert(r.table).
-		Columns("bridge_id", "msg_hash", "message_id", "direction", "sender", "executor", "data", "data_type", "gas_limit").
-		Values(msg.BridgeID, msg.MsgHash, msg.MessageID, msg.Direction, msg.Sender, msg.Executor, msg.Data, msg.DataType, msg.GasLimit).
+		Columns("bridge_id", "msg_hash", "message_id", "direction", "sender", "executor", "data", "data_type", "gas_limit", "raw_message").
+		Values(msg.BridgeID, msg.MsgHash, msg.MessageID, msg.Direction, msg.Sender, msg.Executor, msg.Data, msg.DataType, msg.GasLimit, msg.RawMessage).
 		Suffix("ON CONFLICT (bridge_id, msg_hash) DO UPDATE SET updated_at = NOW()").
 		PlaceholderFormat(sq.Dollar).
 		ToSql()

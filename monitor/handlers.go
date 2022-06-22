@@ -95,7 +95,7 @@ func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log 
 		FromBlock: &log.BlockNumber,
 		ToBlock:   &log.BlockNumber,
 		TxHash:    &log.TransactionHash,
-		Topic0:    &bridgeabi.ErcToNativeUserRequestForAffirmationEventSignature,
+		Topic0:    []common.Hash{bridgeabi.ErcToNativeUserRequestForAffirmationEventSignature},
 	}
 	logs, err := p.repo.Logs.Find(ctx, filter)
 	if err != nil {
@@ -112,12 +112,13 @@ func (p *BridgeEventHandler) HandleErcToNativeTransfer(ctx context.Context, log 
 	msgHash := crypto.Keccak256Hash(msg)
 
 	message := &entity.ErcToNativeMessage{
-		BridgeID:  p.bridgeID,
-		Direction: entity.DirectionForeignToHome,
-		MsgHash:   msgHash,
-		Sender:    from,
-		Receiver:  from,
-		Value:     value.String(),
+		BridgeID:   p.bridgeID,
+		Direction:  entity.DirectionForeignToHome,
+		MsgHash:    msgHash,
+		Sender:     from,
+		Receiver:   from,
+		Value:      value.String(),
+		RawMessage: msg,
 	}
 	err = p.repo.ErcToNativeMessages.Ensure(ctx, message)
 	if err != nil {
@@ -152,8 +153,8 @@ func (p *BridgeEventHandler) HandleErcToNativeUserRequestForAffirmation(ctx cont
 		FromBlock:  &log.BlockNumber,
 		ToBlock:    &log.BlockNumber,
 		TxHash:     &log.TransactionHash,
-		Topic0:     &bridgeabi.ErcToNativeTransferEventSignature,
-		Topic2:     hashPtr(p.cfg.Foreign.Address.Hash()),
+		Topic0:     []common.Hash{bridgeabi.ErcToNativeTransferEventSignature},
+		Topic2:     []common.Hash{p.cfg.Foreign.Address.Hash()},
 		DataLength: uintPtr(32),
 	}
 	logs, err := p.repo.Logs.Find(ctx, filter)
@@ -169,12 +170,13 @@ func (p *BridgeEventHandler) HandleErcToNativeUserRequestForAffirmation(ctx cont
 	}
 
 	message := &entity.ErcToNativeMessage{
-		BridgeID:  p.bridgeID,
-		Direction: entity.DirectionForeignToHome,
-		MsgHash:   msgHash,
-		Sender:    sender,
-		Receiver:  recipient,
-		Value:     value.String(),
+		BridgeID:   p.bridgeID,
+		Direction:  entity.DirectionForeignToHome,
+		MsgHash:    msgHash,
+		Sender:     sender,
+		Receiver:   recipient,
+		Value:      value.String(),
+		RawMessage: msg,
 	}
 	err = p.repo.ErcToNativeMessages.Ensure(ctx, message)
 	if err != nil {
@@ -252,12 +254,13 @@ func (p *BridgeEventHandler) HandleErcToNativeUserRequestForSignature(ctx contex
 	}
 
 	message := &entity.ErcToNativeMessage{
-		BridgeID:  p.bridgeID,
-		Direction: entity.DirectionHomeToForeign,
-		MsgHash:   msgHash,
-		Sender:    sender,
-		Receiver:  recipient,
-		Value:     value.String(),
+		BridgeID:   p.bridgeID,
+		Direction:  entity.DirectionHomeToForeign,
+		MsgHash:    msgHash,
+		Sender:     sender,
+		Receiver:   recipient,
+		Value:      value.String(),
+		RawMessage: msg,
 	}
 	err = p.repo.ErcToNativeMessages.Ensure(ctx, message)
 	if err != nil {

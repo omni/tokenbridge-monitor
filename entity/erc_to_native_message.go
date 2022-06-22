@@ -8,15 +8,16 @@ import (
 )
 
 type ErcToNativeMessage struct {
-	ID        uint           `db:"id"`
-	BridgeID  string         `db:"bridge_id"`
-	MsgHash   common.Hash    `db:"msg_hash"`
-	Direction Direction      `db:"direction"`
-	Sender    common.Address `db:"sender"`
-	Receiver  common.Address `db:"receiver"`
-	Value     string         `db:"value"`
-	CreatedAt *time.Time     `db:"created_at"`
-	UpdatedAt *time.Time     `db:"updated_at"`
+	ID         uint           `db:"id"`
+	BridgeID   string         `db:"bridge_id"`
+	MsgHash    common.Hash    `db:"msg_hash"`
+	Direction  Direction      `db:"direction"`
+	Sender     common.Address `db:"sender"`
+	Receiver   common.Address `db:"receiver"`
+	Value      string         `db:"value"`
+	RawMessage []byte         `db:"raw_message"`
+	CreatedAt  *time.Time     `db:"created_at"`
+	UpdatedAt  *time.Time     `db:"updated_at"`
 }
 
 type ErcToNativeMessagesRepo interface {

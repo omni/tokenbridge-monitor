@@ -82,17 +82,17 @@ func (r *logsRepo) Find(ctx context.Context, filter entity.LogsFilter) ([]*entit
 	if filter.TxHash != nil {
 		cond = append(cond, sq.Eq{"transaction_hash": *filter.TxHash})
 	}
-	if filter.Topic0 != nil {
-		cond = append(cond, sq.Eq{"topic0": *filter.Topic0})
+	if len(filter.Topic0) > 0 {
+		cond = append(cond, sq.Eq{"topic0": filter.Topic0})
 	}
-	if filter.Topic1 != nil {
-		cond = append(cond, sq.Eq{"topic1": *filter.Topic1})
+	if len(filter.Topic1) > 0 {
+		cond = append(cond, sq.Eq{"topic1": filter.Topic1})
 	}
-	if filter.Topic2 != nil {
-		cond = append(cond, sq.Eq{"topic2": *filter.Topic2})
+	if len(filter.Topic2) > 0 {
+		cond = append(cond, sq.Eq{"topic2": filter.Topic2})
 	}
-	if filter.Topic3 != nil {
-		cond = append(cond, sq.Eq{"topic3": *filter.Topic3})
+	if len(filter.Topic3) > 0 {
+		cond = append(cond, sq.Eq{"topic3": filter.Topic3})
 	}
 	if filter.DataLength != nil {
 		cond = append(cond, sq.Eq{"length(data)": *filter.DataLength})

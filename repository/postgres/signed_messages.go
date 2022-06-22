@@ -51,7 +51,7 @@ func (r *signedMessagesRepo) GetByLogID(ctx context.Context, logID uint) (*entit
 	return msg, nil
 }
 
-func (r *signedMessagesRepo) FindByMsgHash(ctx context.Context, bridgeID string, msgHash common.Hash) ([]*entity.SignedMessage, error) {
+func (r *signedMessagesRepo) FindByMsgHash(ctx context.Context, bridgeID string, msgHash []common.Hash) ([]*entity.SignedMessage, error) {
 	q, args, err := sq.Select("*").
 		From(r.table).
 		Where(sq.Eq{"bridge_id": bridgeID, "msg_hash": msgHash}).

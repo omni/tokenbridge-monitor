@@ -30,10 +30,10 @@ type LogsFilter struct {
 	FromBlock  *uint
 	ToBlock    *uint
 	TxHash     *common.Hash
-	Topic0     *common.Hash
-	Topic1     *common.Hash
-	Topic2     *common.Hash
-	Topic3     *common.Hash
+	Topic0     []common.Hash
+	Topic1     []common.Hash
+	Topic2     []common.Hash
+	Topic3     []common.Hash
 	DataLength *uint
 }
 
