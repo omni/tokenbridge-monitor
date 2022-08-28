@@ -8,12 +8,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/poanetwork/tokenbridge-monitor/config"
-	"github.com/poanetwork/tokenbridge-monitor/contract/bridgeabi"
-	"github.com/poanetwork/tokenbridge-monitor/db"
-	"github.com/poanetwork/tokenbridge-monitor/entity"
-	"github.com/poanetwork/tokenbridge-monitor/ethclient"
-	"github.com/poanetwork/tokenbridge-monitor/repository"
+	"github.com/omni/tokenbridge-monitor/config"
+	"github.com/omni/tokenbridge-monitor/contract/bridgeabi"
+	"github.com/omni/tokenbridge-monitor/db"
+	"github.com/omni/tokenbridge-monitor/entity"
+	"github.com/omni/tokenbridge-monitor/ethclient"
+	"github.com/omni/tokenbridge-monitor/repository"
 )
 
 type EventHandler func(ctx context.Context, log *entity.Log, data map[string]interface{}) error

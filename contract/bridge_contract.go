@@ -7,10 +7,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/poanetwork/tokenbridge-monitor/config"
-	"github.com/poanetwork/tokenbridge-monitor/contract/abi"
-	"github.com/poanetwork/tokenbridge-monitor/contract/bridgeabi"
-	"github.com/poanetwork/tokenbridge-monitor/ethclient"
+	"github.com/omni/tokenbridge-monitor/config"
+	"github.com/omni/tokenbridge-monitor/contract/abi"
+	"github.com/omni/tokenbridge-monitor/contract/bridgeabi"
+	"github.com/omni/tokenbridge-monitor/ethclient"
 )
 
 type BridgeContract struct {

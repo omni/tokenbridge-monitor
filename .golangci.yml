@@ -20,7 +20,7 @@ linters-settings:
     sections:
       - standard
       - default
-      - prefix(github.com/poanetwork/tokenbridge-monitor)
+      - prefix(github.com/omni/tokenbridge-monitor)
   funlen:
     lines: 60
     statements: 40

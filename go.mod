@@ -1,4 +1,4 @@
-module github.com/poanetwork/tokenbridge-monitor
+module github.com/omni/tokenbridge-monitor
 
 go 1.17
 

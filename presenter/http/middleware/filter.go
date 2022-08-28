@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-chi/chi/v5"
 
-	"github.com/poanetwork/tokenbridge-monitor/config"
-	"github.com/poanetwork/tokenbridge-monitor/presenter/http/render"
+	"github.com/omni/tokenbridge-monitor/config"
+	"github.com/omni/tokenbridge-monitor/presenter/http/render"
 )
 
 type ctxKey int

@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/poanetwork/tokenbridge-monitor/utils"
+	"github.com/omni/tokenbridge-monitor/utils"
 )
 
 func TestContextSleep(t *testing.T) {

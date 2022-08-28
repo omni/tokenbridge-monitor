@@ -8,13 +8,13 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/poanetwork/tokenbridge-monitor/config"
-	"github.com/poanetwork/tokenbridge-monitor/db"
-	"github.com/poanetwork/tokenbridge-monitor/ethclient"
-	"github.com/poanetwork/tokenbridge-monitor/logging"
-	"github.com/poanetwork/tokenbridge-monitor/monitor"
-	"github.com/poanetwork/tokenbridge-monitor/presenter"
-	"github.com/poanetwork/tokenbridge-monitor/repository"
+	"github.com/omni/tokenbridge-monitor/config"
+	"github.com/omni/tokenbridge-monitor/db"
+	"github.com/omni/tokenbridge-monitor/ethclient"
+	"github.com/omni/tokenbridge-monitor/logging"
+	"github.com/omni/tokenbridge-monitor/monitor"
+	"github.com/omni/tokenbridge-monitor/presenter"
+	"github.com/omni/tokenbridge-monitor/repository"
 )
 
 func main() {

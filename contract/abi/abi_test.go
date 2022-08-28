@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
 
-	"github.com/poanetwork/tokenbridge-monitor/contract/abi"
-	"github.com/poanetwork/tokenbridge-monitor/entity"
+	"github.com/omni/tokenbridge-monitor/contract/abi"
+	"github.com/omni/tokenbridge-monitor/entity"
 )
 
 //go:embed test_abi.json

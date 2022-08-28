@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/poanetwork/tokenbridge-monitor/logging"
+	"github.com/omni/tokenbridge-monitor/logging"
 )
 
 func JSON(w http.ResponseWriter, r *http.Request, status int, res interface{}) {

@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/poanetwork/tokenbridge-monitor/config"
+	"github.com/omni/tokenbridge-monitor/config"
 )
 
 const testCfg = `

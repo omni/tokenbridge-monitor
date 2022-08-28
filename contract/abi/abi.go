@@ -8,7 +8,7 @@ import (
 	gethabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/poanetwork/tokenbridge-monitor/entity"
+	"github.com/omni/tokenbridge-monitor/entity"
 )
 
 type ABI struct {

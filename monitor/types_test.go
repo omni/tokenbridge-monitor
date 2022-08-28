@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/poanetwork/tokenbridge-monitor/entity"
-	"github.com/poanetwork/tokenbridge-monitor/monitor"
+	"github.com/omni/tokenbridge-monitor/entity"
+	"github.com/omni/tokenbridge-monitor/monitor"
 )
 
 func TestSplitBlockRange(t *testing.T) {

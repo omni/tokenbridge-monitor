@@ -11,7 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
-	"github.com/poanetwork/tokenbridge-monitor/logging"
+	"github.com/omni/tokenbridge-monitor/logging"
 )
 
 type AlertJobParams struct {

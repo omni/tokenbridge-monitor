@@ -4,7 +4,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/poanetwork/tokenbridge-monitor/entity"
+	"github.com/omni/tokenbridge-monitor/entity"
 )
 
 var ErrWrongArgumentType = errors.New("argument has unexpected type")

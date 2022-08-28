@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/poanetwork/tokenbridge-monitor/config"
-	"github.com/poanetwork/tokenbridge-monitor/db"
-	"github.com/poanetwork/tokenbridge-monitor/logging"
+	"github.com/omni/tokenbridge-monitor/config"
+	"github.com/omni/tokenbridge-monitor/db"
+	"github.com/omni/tokenbridge-monitor/logging"
 )
 
 type AlertManager struct {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/poanetwork/tokenbridge-monitor/contract/bridgeabi"
+	"github.com/omni/tokenbridge-monitor/contract/bridgeabi"
 )
 
 func TestEventSignatures(t *testing.T) {

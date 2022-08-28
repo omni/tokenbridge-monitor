@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/lib/pq"
 
-	"github.com/poanetwork/tokenbridge-monitor/db"
+	"github.com/omni/tokenbridge-monitor/db"
 )
 
 type DBAlertsProvider struct {

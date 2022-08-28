@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/poanetwork/tokenbridge-monitor/logging"
+	"github.com/omni/tokenbridge-monitor/logging"
 )
 
 func Recoverer(next http.Handler) http.Handler {

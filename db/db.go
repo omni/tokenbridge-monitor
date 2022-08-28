@@ -16,7 +16,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 
-	"github.com/poanetwork/tokenbridge-monitor/config"
+	"github.com/omni/tokenbridge-monitor/config"
 )
 
 type DB struct {

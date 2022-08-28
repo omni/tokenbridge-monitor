@@ -7,8 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/poanetwork/tokenbridge-monitor/contract/abi"
-	"github.com/poanetwork/tokenbridge-monitor/ethclient"
+	"github.com/omni/tokenbridge-monitor/contract/abi"
+	"github.com/omni/tokenbridge-monitor/ethclient"
 )
 
 type Contract struct {

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/poanetwork/tokenbridge-monitor/config"
-	"github.com/poanetwork/tokenbridge-monitor/db"
-	"github.com/poanetwork/tokenbridge-monitor/entity"
-	"github.com/poanetwork/tokenbridge-monitor/repository/postgres"
+	"github.com/omni/tokenbridge-monitor/config"
+	"github.com/omni/tokenbridge-monitor/db"
+	"github.com/omni/tokenbridge-monitor/entity"
+	"github.com/omni/tokenbridge-monitor/repository/postgres"
 )
 
 type Repo struct {

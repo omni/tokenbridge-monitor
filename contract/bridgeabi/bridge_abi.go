@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/poanetwork/tokenbridge-monitor/contract/abi"
+	"github.com/omni/tokenbridge-monitor/contract/abi"
 )
 
 //go:embed amb.json

@@ -7,12 +7,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/poanetwork/tokenbridge-monitor/config"
-	"github.com/poanetwork/tokenbridge-monitor/db"
-	"github.com/poanetwork/tokenbridge-monitor/entity"
-	"github.com/poanetwork/tokenbridge-monitor/ethclient"
-	"github.com/poanetwork/tokenbridge-monitor/logging"
-	"github.com/poanetwork/tokenbridge-monitor/repository"
+	"github.com/omni/tokenbridge-monitor/config"
+	"github.com/omni/tokenbridge-monitor/db"
+	"github.com/omni/tokenbridge-monitor/entity"
+	"github.com/omni/tokenbridge-monitor/ethclient"
+	"github.com/omni/tokenbridge-monitor/logging"
+	"github.com/omni/tokenbridge-monitor/repository"
 )
 
 func main() {

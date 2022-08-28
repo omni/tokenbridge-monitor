@@ -6,9 +6,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/poanetwork/tokenbridge-monitor/config"
-	"github.com/poanetwork/tokenbridge-monitor/contract/bridgeabi"
-	"github.com/poanetwork/tokenbridge-monitor/entity"
+	"github.com/omni/tokenbridge-monitor/config"
+	"github.com/omni/tokenbridge-monitor/contract/bridgeabi"
+	"github.com/omni/tokenbridge-monitor/entity"
 )
 
 type MessageInfo struct {

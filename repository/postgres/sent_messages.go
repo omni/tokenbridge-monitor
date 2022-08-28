@@ -7,8 +7,8 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/poanetwork/tokenbridge-monitor/db"
-	"github.com/poanetwork/tokenbridge-monitor/entity"
+	"github.com/omni/tokenbridge-monitor/db"
+	"github.com/omni/tokenbridge-monitor/entity"
 )
 
 type sentMessagesRepo basePostgresRepo

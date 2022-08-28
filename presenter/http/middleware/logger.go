@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
 
-	"github.com/poanetwork/tokenbridge-monitor/logging"
+	"github.com/omni/tokenbridge-monitor/logging"
 )
 
 func NewLoggerMiddleware(logger logging.Logger) func(next http.Handler) http.Handler {

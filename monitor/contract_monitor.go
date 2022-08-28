@@ -15,14 +15,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
-	"github.com/poanetwork/tokenbridge-monitor/config"
-	"github.com/poanetwork/tokenbridge-monitor/contract"
-	"github.com/poanetwork/tokenbridge-monitor/db"
-	"github.com/poanetwork/tokenbridge-monitor/entity"
-	"github.com/poanetwork/tokenbridge-monitor/ethclient"
-	"github.com/poanetwork/tokenbridge-monitor/logging"
-	"github.com/poanetwork/tokenbridge-monitor/repository"
-	"github.com/poanetwork/tokenbridge-monitor/utils"
+	"github.com/omni/tokenbridge-monitor/config"
+	"github.com/omni/tokenbridge-monitor/contract"
+	"github.com/omni/tokenbridge-monitor/db"
+	"github.com/omni/tokenbridge-monitor/entity"
+	"github.com/omni/tokenbridge-monitor/ethclient"
+	"github.com/omni/tokenbridge-monitor/logging"
+	"github.com/omni/tokenbridge-monitor/repository"
+	"github.com/omni/tokenbridge-monitor/utils"
 )
 
 const (

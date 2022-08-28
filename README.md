@@ -64,7 +64,7 @@ docker-compose -f docker-compose.dev.yml up monitor
 For final deployment, you will need a VM with a static IP and a DNS domain name attached to that IP.
 SSL certificates will be managed by a Traefik and Let's Encrypt automatically. 
 ```bash
-git clone https://github.com/poanetwork/tokenbridge-monitor.git
+git clone https://github.com/omni/tokenbridge-monitor.git
 cd tokenbridge-monitor
 
 cp .env.example .env
