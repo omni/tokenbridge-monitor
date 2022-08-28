@@ -7,7 +7,7 @@ env:
   DOCKER_USERNAME: ${{ github.actor }}
   DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
   DOCKER_IMAGE_NAME: ${{ github.repository }}
-  GO_VERSION: '^1.17'
+  GO_VERSION: '^1.19'
 
 jobs:
   lint:
@@ -21,7 +21,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.46.2
+          version: v1.49.0
   test:
     runs-on: ubuntu-latest
     steps:
